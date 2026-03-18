@@ -49,6 +49,20 @@ class TaskController extends Controller
         return view('tasks.gantt', compact('student', 'tasks'));
     }
 
+    public function timeline(Student $student)
+    {
+        $this->authorize('view', $student);
+
+        $tasks = $student->tasks()
+            ->whereNotNull('start_date')
+            ->whereNotNull('due_date')
+            ->with('dependencies')
+            ->orderBy('start_date')
+            ->get();
+
+        return view('tasks.timeline', compact('student', 'tasks'));
+    }
+
     public function create(Student $student)
     {
         $this->authorize('view', $student);

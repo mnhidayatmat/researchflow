@@ -35,4 +35,9 @@ class SystemSetting extends Model
 
         Cache::forget("setting.{$key}");
     }
+
+    public static function forget(string $key): void
+    {
+        Cache::forget("setting.{$key}");
+    }
 }

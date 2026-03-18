@@ -42,7 +42,7 @@
         </div>
 
         {{-- Stages --}}
-        <x-card title="Research Journey Structure" :padding="false">
+        <x-card title="Research Journey Structure" :padding='false'>
             @if($template->stages->isEmpty())
                 <div class="p-8 text-center text-secondary">
                     <p class="text-sm">No stages defined</p>

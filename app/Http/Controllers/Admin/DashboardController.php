@@ -8,6 +8,7 @@ use App\Models\ProgressReport;
 use App\Models\Student;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -33,5 +34,24 @@ class DashboardController extends Controller
             ->groupBy('status')->pluck('count', 'status');
 
         return view('admin.dashboard', compact('stats', 'recentStudents', 'pendingApprovals', 'tasksByStatus'));
+    }
+
+    public function switchRole(Request $request)
+    {
+        $validated = $request->validate([
+            'role' => 'required|in:student,supervisor,cosupervisor,admin',
+        ]);
+
+        // Store the role switch in session
+        session()->put('admin_role_switch', $validated['role']);
+
+        return back()->with('success', "Switched to {$validated['role']} view.");
+    }
+
+    public function resetRole()
+    {
+        session()->forget('admin_role_switch');
+
+        return back()->with('success', 'Returned to admin view.');
     }
 }

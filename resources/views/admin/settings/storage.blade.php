@@ -1,12 +1,52 @@
 <x-layouts.app title="Storage Settings">
     <x-slot:header>Settings</x-slot:header>
 
-    <div class="max-w-2xl" x-data="storageSettings('{{ $currentDisk }}')">
+    <div class="max-w-3xl" x-data="storageSettings('{{ $currentDisk }}')" x-init="init()">
         {{-- Page header --}}
         <div class="mb-6">
             <h2 class="text-base font-semibold text-primary">Storage Configuration</h2>
             <p class="text-xs text-secondary mt-0.5">Configure where uploaded files and documents are stored</p>
         </div>
+
+        {{-- Storage Stats Card --}}
+        <x-card title="Current Storage Status" class="mb-4">
+            <div x-show="loadingStats" x-cloak>
+                <div class="flex items-center gap-2 text-xs text-secondary">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Loading storage statistics...
+                </div>
+            </div>
+            <div x-show="!loadingStats" x-cloak class="grid grid-cols-3 gap-4">
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <p class="text-xs text-secondary mb-1">Active Storage</p>
+                    <p class="text-sm font-semibold text-primary capitalize">{{ str_replace('_', ' ', $currentDisk) }}</p>
+                </div>
+                <template x-if="stats.file_count !== undefined">
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-secondary mb-1">Total Files</p>
+                        <p class="text-sm font-semibold text-primary" x-text="stats.file_count?.toLocaleString() || '0'"></p>
+                    </div>
+                </template>
+                <template x-if="stats.total_size_human !== undefined">
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-secondary mb-1">Total Size</p>
+                        <p class="text-sm font-semibold text-primary" x-text="stats.total_size_human || '0 B'"></p>
+                    </div>
+                </template>
+                <template x-if="stats.usage !== undefined">
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-secondary mb-1">Drive Usage</p>
+                        <p class="text-sm font-semibold text-primary" x-text="formatBytes(stats.usage)"></p>
+                    </div>
+                </template>
+                <template x-if="stats.limit !== undefined">
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <p class="text-xs text-secondary mb-1">Drive Limit</p>
+                        <p class="text-sm font-semibold text-primary" x-text="formatBytes(stats.limit)"></p>
+                    </div>
+                </template>
+            </div>
+        </x-card>
 
         {{-- Disk selector --}}
         <x-card title="Storage Driver" class="mb-4">
@@ -16,7 +56,7 @@
                         class="relative flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all"
                         :class="activeDisk === '{{ $disk }}' ? 'border-accent bg-amber-50' : 'border-border hover:border-gray-300 bg-white'"
                     >
-                        <input type="radio" name="disk_selector" value="{{ $disk }}" x-model="activeDisk" class="sr-only">
+                        <input type="radio" name="disk_selector" value="{{ $disk }}" x-model="activeDisk" class="sr-only" @change="onDiskChange()">
                         @if($disk === 'local')
                             <svg class="w-6 h-6" :class="activeDisk === '{{ $disk }}' ? 'text-accent' : 'text-secondary'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>
                         @elseif($disk === 'do_spaces')
@@ -43,7 +83,8 @@
             {{-- Local disk config --}}
             <div x-show="activeDisk === 'local'" x-cloak>
                 <x-card title="Local Disk Settings" class="mb-4">
-                    <p class="text-xs text-secondary">Files are stored on the server's local filesystem. No additional configuration needed.</p>
+                    <p class="text-xs text-secondary">Files are stored on the server's local filesystem at <code class="bg-gray-100 px-1 py-0.5 rounded">storage/app/private</code>. No additional configuration needed.</p>
+                    <p class="text-xs text-amber-600 mt-2">Note: Local storage is not recommended for production deployments.</p>
                 </x-card>
             </div>
 
@@ -93,6 +134,11 @@
                                 <p class="text-xs text-secondary mt-1">Leave blank to use the default Spaces endpoint</p>
                             </div>
                         </div>
+                        <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p class="text-xs text-blue-700">
+                                <strong>Tip:</strong> Create a new Space in your DigitalOcean control panel with "Restrict File Listing" enabled for better security.
+                            </p>
+                        </div>
                     </div>
                 </x-card>
             </div>
@@ -131,11 +177,16 @@
                             placeholder="Root folder ID for uploads"
                         />
                         <div class="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                            <p class="text-xs text-blue-700">
-                                To get a refresh token, authorize your app via the
-                                <a href="https://developers.google.com/oauthplayground" target="_blank" class="underline">Google OAuth Playground</a>
-                                using the Drive API scope.
+                            <p class="text-xs text-blue-700 mb-2">
+                                <strong>How to get credentials:</strong>
                             </p>
+                            <ol class="text-xs text-blue-700 list-decimal list-inside space-y-1">
+                                <li>Go to <a href="https://console.cloud.google.com" target="_blank" class="underline">Google Cloud Console</a> and create a project</li>
+                                <li>Enable the Google Drive API</li>
+                                <li>Create OAuth 2.0 credentials (Desktop app)</li>
+                                <li>Use <a href="https://developers.google.com/oauthplayground" target="_blank" class="underline">OAuth Playground</a> to get a refresh token</li>
+                                <li>Use scopes: <code class="bg-blue-100 px-1 rounded">https://www.googleapis.com/auth/drive</code></li>
+                            </ol>
                         </div>
                     </div>
                 </x-card>
@@ -155,7 +206,12 @@
                         <svg x-show="testing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         <span x-text="testing ? 'Testing...' : 'Test Connection'"></span>
                     </button>
-                    <p x-show="result" x-cloak class="mt-2 text-xs" :class="success ? 'text-green-600' : 'text-red-600'" x-text="result"></p>
+                    <div x-show="result" x-cloak class="mt-2">
+                        <p class="text-xs" :class="success ? 'text-green-600' : 'text-red-600'" x-text="result"></p>
+                        <p x-show="success" class="text-xs text-secondary mt-1">
+                            Tested disk: <span class="font-mono" x-text="testedDisk"></span>
+                        </p>
+                    </div>
                 </div>
                 <div x-show="activeDisk === 'local'"></div>
 
@@ -171,6 +227,44 @@
         function storageSettings(currentDisk) {
             return {
                 activeDisk: currentDisk || 'local',
+                stats: {{ json_encode($storageStats ?? []) }},
+                loadingStats: false,
+
+                init() {
+                    this.loadStats(currentDisk);
+                },
+
+                onDiskChange() {
+                    // Clear stats when changing disk
+                    this.stats = {};
+                },
+
+                async loadStats(disk) {
+                    if (disk === 'local') return;
+
+                    this.loadingStats = true;
+                    try {
+                        const res = await axios.get('{{ route('admin.settings.storage.stats') }}', {
+                            params: { disk: disk }
+                        });
+                        this.stats = res.data.stats || {};
+                    } catch (e) {
+                        this.stats = { error: e.response?.data?.message || 'Failed to load stats' };
+                    } finally {
+                        this.loadingStats = false;
+                    }
+                },
+
+                formatBytes(bytes) {
+                    if (!bytes) return '0 B';
+                    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                    let i = 0;
+                    while (bytes >= 1024 && i < units.length - 1) {
+                        bytes /= 1024;
+                        i++;
+                    }
+                    return bytes.toFixed(2) + ' ' + units[i];
+                }
             }
         }
 
@@ -179,14 +273,16 @@
                 testing: false,
                 result: '',
                 success: false,
+                testedDisk: '',
                 async test() {
                     this.testing = true;
                     this.result = '';
+                    this.testedDisk = document.querySelector('input[name="storage_disk"]').value;
                     try {
                         const res = await axios.post('{{ route('admin.settings.storage.test') }}', {
-                            disk: document.querySelector('input[name="storage_disk"]').value
+                            disk: this.testedDisk
                         });
-                        this.success = true;
+                        this.success = res.data.success;
                         this.result = res.data.message || 'Connection successful';
                     } catch (e) {
                         this.success = false;

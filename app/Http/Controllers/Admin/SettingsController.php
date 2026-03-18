@@ -5,16 +5,33 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AiProvider;
 use App\Models\SystemSetting;
+use App\Services\Storage\StorageManager;
+use App\Services\Storage\StorageTestService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
+    public function __construct(
+        protected StorageManager $storageManager,
+        protected StorageTestService $storageTestService
+    ) {}
+
     public function storage()
     {
         $currentDisk = SystemSetting::get('storage_disk', 'local');
         $settings = SystemSetting::where('group', 'storage')->pluck('value', 'key');
-        return view('admin.settings.storage', compact('currentDisk', 'settings'));
+        $storageStats = [];
+
+        try {
+            if ($currentDisk === 'do_spaces' || $currentDisk === 'google_drive') {
+                $storageStats = $this->storageTestService->getStorageStats($currentDisk);
+            }
+        } catch (\Exception $e) {
+            $storageStats = ['error' => $e->getMessage()];
+        }
+
+        return view('admin.settings.storage', compact('currentDisk', 'settings', 'storageStats'));
     }
 
     public function updateStorage(Request $request)
@@ -32,11 +49,20 @@ class SettingsController extends Controller
             'google_drive_folder_id' => 'nullable|string',
         ]);
 
+        // Don't update placeholder password values
         foreach ($validated as $key => $value) {
-            if ($value !== null) {
+            if ($value === '••••••••') {
+                unset($validated[$key]);
+                continue;
+            }
+
+            if ($value !== null && $key !== 'storage_disk') {
                 SystemSetting::set($key, $value, 'storage');
             }
         }
+
+        // Always update the disk selection
+        SystemSetting::set('storage_disk', $request->input('storage_disk'), 'storage');
 
         return back()->with('success', 'Storage settings updated.');
     }
@@ -45,10 +71,20 @@ class SettingsController extends Controller
     {
         $disk = $request->input('disk', 'local');
 
+        $result = $this->storageTestService->testConnection($disk);
+
+        $statusCode = $result['success'] ? 200 : 422;
+
+        return response()->json($result, $statusCode);
+    }
+
+    public function getStorageStats(Request $request)
+    {
+        $disk = $request->input('disk', 'local');
+
         try {
-            Storage::disk($disk)->put('_test_connection.txt', 'test');
-            Storage::disk($disk)->delete('_test_connection.txt');
-            return response()->json(['success' => true, 'message' => 'Connection successful.']);
+            $stats = $this->storageTestService->getStorageStats($disk);
+            return response()->json(['success' => true, 'stats' => $stats]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

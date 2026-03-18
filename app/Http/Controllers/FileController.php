@@ -5,14 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Student;
-use App\Services\FileService;
+use App\Services\StorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
-    public function __construct(private FileService $fileService) {}
+    public function __construct(private StorageService $storage) {}
 
     public function index(Student $student, Request $request)
     {
@@ -42,12 +41,12 @@ class FileController extends Controller
         $this->authorize('view', $student);
 
         $request->validate([
-            'file' => 'required|file|max:51200', // 50MB
+            'file' => 'required|file|max:51200',
             'folder_id' => 'nullable|exists:folders,id',
             'description' => 'nullable|string|max:500',
         ]);
 
-        $file = $this->fileService->upload(
+        $file = $this->storage->upload(
             $request->file('file'),
             $student,
             Auth::id(),
@@ -64,7 +63,7 @@ class FileController extends Controller
 
         $request->validate(['file' => 'required|file|max:51200']);
 
-        $this->fileService->uploadNewVersion($request->file('file'), $file, Auth::id());
+        $this->storage->uploadNewVersion($request->file('file'), $file, Auth::id());
 
         return back()->with('success', 'New version uploaded.');
     }
@@ -72,7 +71,7 @@ class FileController extends Controller
     public function download(Student $student, File $file)
     {
         $this->authorize('view', $student);
-        return Storage::disk($file->disk)->download($file->path, $file->original_name);
+        return $this->storage->download($file);
     }
 
     public function versions(Student $student, File $file)
@@ -97,16 +96,12 @@ class FileController extends Controller
             'category' => 'nullable|in:proposal,reports,thesis,simulation,data,images,references,other',
         ]);
 
-        $parent = $request->parent_id ? Folder::find($request->parent_id) : null;
-        $path = $parent ? "{$parent->path}/{$request->name}" : "files/{$student->id}/{$request->name}";
-
-        Folder::create([
-            'student_id' => $student->id,
-            'parent_id' => $request->parent_id,
-            'name' => $request->name,
-            'path' => $path,
-            'category' => $request->category,
-        ]);
+        $this->storage->createFolder(
+            $student,
+            $request->name,
+            $request->parent_id,
+            $request->category
+        );
 
         return back()->with('success', 'Folder created.');
     }
@@ -114,7 +109,7 @@ class FileController extends Controller
     public function destroy(Student $student, File $file)
     {
         $this->authorize('view', $student);
-        $this->fileService->delete($file);
+        $this->storage->delete($file);
         return back()->with('success', 'File deleted.');
     }
 

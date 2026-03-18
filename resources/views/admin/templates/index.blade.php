@@ -27,7 +27,7 @@
     @else
         <div class="grid lg:grid-cols-2 gap-4">
             @foreach($templates as $template)
-                <x-card :padding="false" class="hover:shadow-sm transition-shadow">
+                <x-card :padding='false' class="hover:shadow-sm transition-shadow">
                     {{-- Template header --}}
                     <div class="px-5 py-4 border-b border-border">
                         <div class="flex items-start justify-between gap-3">

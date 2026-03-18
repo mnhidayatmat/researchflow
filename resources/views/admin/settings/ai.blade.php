@@ -14,7 +14,7 @@
             {{-- Providers list --}}
             <div class="space-y-4 mb-6">
                 <template x-for="(provider, index) in providers" :key="provider.id">
-                    <x-card :padding="false">
+                    <x-card :padding='false'>
                         {{-- Provider header --}}
                         <div class="flex items-center justify-between px-5 py-3 border-b border-border bg-surface/50">
                             <div class="flex items-center gap-3">

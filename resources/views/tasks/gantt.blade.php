@@ -11,78 +11,57 @@
             <a href="{{ route('tasks.index', $student) }}" class="px-3 py-1.5 text-xs font-medium rounded-md text-secondary hover:bg-gray-100">List</a>
             <a href="{{ route('tasks.kanban', $student) }}" class="px-3 py-1.5 text-xs font-medium rounded-md text-secondary hover:bg-gray-100">Kanban</a>
             <a href="{{ route('tasks.gantt', $student) }}" class="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-white">Timeline</a>
+            <a href="{{ route('tasks.timeline', $student) }}" class="px-3 py-1.5 text-xs font-medium rounded-md text-secondary hover:bg-gray-100">Timeline View</a>
         </div>
-        <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm">+ New Task</x-button>
+        <div class="flex items-center gap-2">
+            <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm">+ New Task</x-button>
+            <button @click="refresh()" class="px-3 py-1.5 text-xs font-medium rounded-md text-secondary hover:bg-gray-100 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Refresh
+            </button>
+        </div>
     </div>
 
-    @if($tasks->isEmpty())
-        <x-card>
-            <div class="text-center py-8">
-                <p class="text-sm text-secondary">No tasks with dates yet. Create tasks with start and due dates to see the timeline.</p>
+    <div x-data="initTaskFlowGantt({ studentId: {{ $student->id }} })" x-init="init()" class="space-y-4">
+        <!-- View Mode Selector -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <button @click="setView('Day')" :class="viewMode === 'Day' ? 'bg-white shadow-sm text-primary' : 'text-secondary hover:text-primary'" class="px-3 py-1 text-xs font-medium rounded-md transition-all">Day</button>
+                <button @click="setView('Week')" :class="viewMode === 'Week' ? 'bg-white shadow-sm text-primary' : 'text-secondary hover:text-primary'" class="px-3 py-1 text-xs font-medium rounded-md transition-all">Week</button>
+                <button @click="setView('Month')" :class="viewMode === 'Month' ? 'bg-white shadow-sm text-primary' : 'text-secondary hover:text-primary'" class="px-3 py-1 text-xs font-medium rounded-md transition-all">Month</button>
             </div>
+
+            <!-- Legend -->
+            <div class="flex items-center gap-3 text-xs">
+                <span class="text-secondary">Status:</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-400"></span> Backlog</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span> Planned</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span> In Progress</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-400"></span> Review</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Revision</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400"></span> Completed</span>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="loading" class="flex items-center justify-center py-16">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+        </div>
+
+        <!-- Gantt Container -->
+        <x-card :padding='false' x-show="!loading">
+            <div id="gantt-container" class="min-h-[400px]"></div>
         </x-card>
-    @else
-        <x-card :padding="false">
-            <div id="gantt-container" class="overflow-x-auto"></div>
-        </x-card>
-    @endif
+
+        <!-- Instructions -->
+        <div class="text-center text-xs text-secondary/60">
+            <p>Drag the ends of tasks to adjust dates. Click a task to view details.</p>
+        </div>
+    </div>
 
     @push('styles')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.css">
-    <style>
-        .gantt .bar { fill: #D97706; }
-        .gantt .bar-progress { fill: #B45309; }
-        .gantt .bar-label { fill: #fff; font-size: 11px; }
-        .gantt .grid-header { fill: #F7F7F5; stroke: #E5E7EB; }
-        .gantt .grid-row { fill: #fff; }
-        .gantt .grid-row:nth-child(even) { fill: #FAFAFA; }
-        .gantt .tick { stroke: #E5E7EB; }
-        .gantt .today-highlight { fill: rgba(217, 119, 6, 0.08); }
-        .gantt-completed .bar { fill: #34D399; }
-        .gantt-completed .bar-progress { fill: #059669; }
-        .gantt-in_progress .bar { fill: #FBBF24; }
-        .gantt-waiting_review .bar { fill: #F97316; }
-    </style>
-    @endpush
-
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tasks = @json($tasks->map(fn($t) => [
-                'id' => (string)$t->id,
-                'name' => $t->title,
-                'start' => $t->start_date->format('Y-m-d'),
-                'end' => $t->due_date->format('Y-m-d'),
-                'progress' => $t->progress,
-                'custom_class' => 'gantt-' . $t->status,
-            ]));
-
-            if (tasks.length === 0) return;
-
-            const gantt = new Gantt('#gantt-container', tasks, {
-                view_mode: 'Week',
-                date_format: 'YYYY-MM-DD',
-                bar_height: 24,
-                bar_corner_radius: 4,
-                padding: 16,
-                on_date_change: function(task, start, end) {
-                    axios.put(`/api/tasks/${task.id}/dates`, {
-                        start_date: start.toISOString().split('T')[0],
-                        due_date: end.toISOString().split('T')[0]
-                    }).catch(console.error);
-                },
-                on_click: function(task) {
-                    window.location.href = `/students/{{ $student->id }}/tasks/${task.id}`;
-                },
-                custom_popup_html: function(task) {
-                    return `<div class="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-xs">
-                        <p class="font-semibold text-sm mb-1">${task.name}</p>
-                        <p class="text-gray-500">Progress: ${task.progress}%</p>
-                    </div>`;
-                }
-            });
-        });
-    </script>
     @endpush
 </x-layouts.app>

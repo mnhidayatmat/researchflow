@@ -60,6 +60,20 @@ return [
             'report' => false,
         ],
 
+        // DigitalOcean Spaces - configured dynamically from SystemSetting
+        'do_spaces' => [
+            'driver' => 'do_spaces',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        // Google Drive - configured dynamically from SystemSetting
+        'google-drive' => [
+            'driver' => 'google-drive',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

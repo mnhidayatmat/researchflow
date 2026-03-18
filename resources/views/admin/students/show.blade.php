@@ -85,7 +85,7 @@
         {{-- Right column --}}
         <div class="lg:col-span-2 space-y-4">
             {{-- Research journey --}}
-            <x-card title="Research Journey" :padding="false">
+            <x-card title="Research Journey" :padding='false'>
                 @forelse($student->researchJourneys as $journey)
                     <div class="p-5">
                         <div class="flex items-center justify-between mb-4">
@@ -137,7 +137,7 @@
             </x-card>
 
             {{-- Recent tasks --}}
-            <x-card title="Recent Tasks" :padding="false">
+            <x-card title="Recent Tasks" :padding='false'>
                 <div class="divide-y divide-border">
                     @forelse($student->tasks->take(5) as $task)
                         <div class="flex items-center justify-between px-5 py-3">
@@ -161,7 +161,7 @@
             </x-card>
 
             {{-- Recent progress reports --}}
-            <x-card title="Recent Progress Reports" :padding="false">
+            <x-card title="Recent Progress Reports" :padding='false'>
                 <div class="divide-y divide-border">
                     @forelse($student->progressReports->take(5) as $report)
                         <div class="flex items-center justify-between px-5 py-3">

@@ -37,7 +37,7 @@
             </x-card>
 
             {{-- Dynamic stages builder --}}
-            <x-card title="Stages & Milestones" :padding="false" class="mb-6">
+            <x-card title="Stages & Milestones" :padding='false' class="mb-6">
                 <div class="p-5 border-b border-border bg-surface/50">
                     <p class="text-xs text-secondary">Define the research journey stages in order. Each stage can have multiple milestones.</p>
                 </div>

@@ -29,6 +29,7 @@
         [x-cloak] { display: none !important; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
     </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
 <body class="h-full bg-surface text-primary">

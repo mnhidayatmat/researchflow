@@ -25,7 +25,11 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 // Redirect root
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect(match (auth()->user()->role) {
+        $role = auth()->user()->role;
+        $effectiveRole = session()->get('admin_role_switch', $role);
+        $targetRole = $effectiveRole ?: $role;
+
+        return redirect(match ($targetRole) {
             'admin' => '/admin/dashboard',
             'supervisor', 'cosupervisor' => '/supervisor/dashboard',
             'student' => '/student/dashboard',
@@ -37,6 +41,8 @@ Route::get('/', function () {
 // Admin routes
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/dashboard', [Admin\DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/role-switch', [Admin\DashboardController::class, 'switchRole'])->name('switch-role');
+    Route::post('/role-switch-reset', [Admin\DashboardController::class, 'resetRole'])->name('switch-role-reset');
 
     Route::resource('students', Admin\StudentManagementController::class);
     Route::post('students/{student}/approve', [Admin\StudentManagementController::class, 'approve'])->name('students.approve');
@@ -48,6 +54,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('/settings/storage', [Admin\SettingsController::class, 'storage'])->name('settings.storage');
     Route::post('/settings/storage', [Admin\SettingsController::class, 'updateStorage'])->name('settings.storage.update');
     Route::post('/settings/storage/test', [Admin\SettingsController::class, 'testStorage'])->name('settings.storage.test');
+    Route::get('/settings/storage/stats', [Admin\SettingsController::class, 'getStorageStats'])->name('settings.storage.stats');
     Route::get('/settings/ai', [Admin\SettingsController::class, 'ai'])->name('settings.ai');
     Route::post('/settings/ai', [Admin\SettingsController::class, 'updateAi'])->name('settings.ai.update');
     Route::get('/settings/users', [Admin\SettingsController::class, 'users'])->name('settings.users');
@@ -73,6 +80,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/students/{student}/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::get('/students/{student}/tasks/gantt', [TaskController::class, 'gantt'])->name('tasks.gantt');
+    Route::get('/students/{student}/tasks/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
     Route::get('/students/{student}/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
     Route::post('/students/{student}/tasks', [TaskController::class, 'store'])->name('tasks.store');
     Route::get('/students/{student}/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');

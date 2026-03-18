@@ -15,7 +15,7 @@
         <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm">+ New Task</x-button>
     </div>
 
-    <x-card :padding="false">
+    <x-card :padding='false'>
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-xs font-medium text-secondary uppercase tracking-wider border-b border-border">

@@ -4,26 +4,54 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
-use App\Models\AiProvider;
+use App\Services\Ai\AiChatService;
+use App\Services\Ai\AiRagService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 
 class AiChatController extends Controller
 {
+    public function __construct(
+        private AiChatService $chat,
+        private AiRagService $rag
+    ) {}
+
     public function conversations()
     {
-        $conversations = Auth::user()->aiConversations()
-            ->latest()
-            ->take(20)
-            ->get();
+        $conversations = $this->chat->getUserConversations(Auth::id())
+            ->map(function ($conversation) {
+                return [
+                    'id' => $conversation->id,
+                    'title' => $conversation->title,
+                    'scope' => $conversation->scope,
+                    'student_id' => $conversation->student_id,
+                    'created_at' => $conversation->created_at,
+                    'updated_at' => $conversation->updated_at,
+                    'last_message' => $conversation->messages()
+                        ->latest()
+                        ->first(['content', 'created_at']),
+                ];
+            });
 
         return response()->json($conversations);
     }
 
+    public function show(AiConversation $conversation)
+    {
+        $this->authorize('view', $conversation);
+
+        return response()->json($this->chat->getConversation($conversation));
+    }
+
     public function messages(AiConversation $conversation)
     {
-        return response()->json($conversation->messages()->orderBy('created_at')->get());
+        $this->authorize('view', $conversation);
+
+        $messages = $conversation->messages()
+            ->orderBy('created_at')
+            ->get(['id', 'role', 'content', 'metadata', 'created_at']);
+
+        return response()->json($messages);
     }
 
     public function createConversation(Request $request)
@@ -32,127 +60,140 @@ class AiChatController extends Controller
             'title' => 'nullable|string|max:255',
             'student_id' => 'nullable|exists:students,id',
             'context_files' => 'nullable|array',
-            'scope' => 'nullable|string',
+            'context_files.*' => 'exists:files,id',
+            'scope' => 'nullable|in:general,student,planning,proposal,analysis,writing',
         ]);
 
-        $conversation = Auth::user()->aiConversations()->create([
+        $conversation = $this->chat->createConversation([
             'title' => $validated['title'] ?? 'New Conversation',
             'student_id' => $validated['student_id'] ?? null,
             'context_files' => $validated['context_files'] ?? null,
             'scope' => $validated['scope'] ?? 'general',
         ]);
 
-        return response()->json($conversation);
+        return response()->json($conversation->load('student'), 201);
     }
 
     public function sendMessage(Request $request, AiConversation $conversation)
     {
+        $this->authorize('update', $conversation);
+
         $validated = $request->validate([
             'content' => 'required|string|max:5000',
+            'use_rag' => 'nullable|boolean',
         ]);
 
-        // Save user message
-        $conversation->messages()->create([
-            'role' => 'user',
-            'content' => $validated['content'],
-        ]);
-
-        // Get AI response
-        $provider = AiProvider::where('is_default', true)->where('is_active', true)->first();
-
-        if (!$provider) {
-            $conversation->messages()->create([
-                'role' => 'assistant',
-                'content' => 'AI is not configured. Please ask your admin to set up an AI provider.',
-            ]);
-
-            return response()->json([
-                'message' => 'AI is not configured.',
-                'conversation' => $conversation->load('messages'),
-            ]);
-        }
-
-        $history = $conversation->messages()
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn($m) => ['role' => $m->role, 'content' => $m->content])
-            ->toArray();
+        // Check if RAG is enabled and context files exist
+        $useRag = $validated['use_rag'] ?? false;
+        $contextFiles = $useRag ? ($conversation->context_files ?? []) : null;
 
         try {
-            $response = $this->callAiProvider($provider, $history);
+            if ($useRag && !empty($contextFiles)) {
+                // Use RAG service
+                $history = $conversation->messages()
+                    ->orderBy('created_at')
+                    ->take(20)
+                    ->get()
+                    ->map(fn($m) => ['role' => $m->role, 'content' => $m->content])
+                    ->toArray();
 
-            $conversation->messages()->create([
-                'role' => 'assistant',
-                'content' => $response,
-                'metadata' => ['provider' => $provider->slug, 'model' => $provider->model],
+                $history[] = ['role' => 'user', 'content' => $validated['content']];
+
+                $response = $this->rag->chatWithRag($history, $contextFiles);
+
+                // Save messages
+                $conversation->messages()->create([
+                    'role' => 'user',
+                    'content' => $validated['content'],
+                ]);
+
+                $assistantMsg = $conversation->messages()->create([
+                    'role' => 'assistant',
+                    'content' => $response,
+                    'metadata' => ['rag_enabled' => true],
+                ]);
+            } else {
+                // Use standard chat
+                $result = $this->chat->chat($conversation, $validated['content']);
+                $assistantMsg = $result['assistant_message'];
+            }
+
+            return response()->json([
+                'conversation' => $conversation->load('messages'),
+                'response' => $assistantMsg,
             ]);
         } catch (\Exception $e) {
-            $conversation->messages()->create([
-                'role' => 'assistant',
-                'content' => 'Sorry, I encountered an error. Please try again.',
-                'metadata' => ['error' => $e->getMessage()],
-            ]);
+            return response()->json([
+                'error' => 'Failed to send message: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function regenerateMessage(Request $request, AiConversation $conversation)
+    {
+        $this->authorize('update', $conversation);
+
+        // Remove the last assistant message if exists
+        $lastMessage = $conversation->messages()
+            ->where('role', 'assistant')
+            ->latest()
+            ->first();
+
+        if ($lastMessage) {
+            $lastMessage->delete();
         }
 
-        return response()->json($conversation->load('messages'));
-    }
+        // Get the last user message
+        $lastUserMessage = $conversation->messages()
+            ->where('role', 'user')
+            ->latest()
+            ->first();
 
-    private function callAiProvider(AiProvider $provider, array $messages): string
-    {
-        $systemPrompt = 'You are ResearchFlow AI, an academic research assistant. Help with research planning, writing, methodology, and analysis. Be concise and academic.';
+        if (!$lastUserMessage) {
+            return response()->json(['error' => 'No user message to respond to'], 400);
+        }
 
-        return match ($provider->slug) {
-            'openai' => $this->callOpenAi($provider, $messages, $systemPrompt),
-            'gemini' => $this->callGemini($provider, $messages, $systemPrompt),
-            default => $this->callGenericOpenAiCompatible($provider, $messages, $systemPrompt),
-        };
-    }
+        try {
+            $result = $this->chat->chat($conversation, $lastUserMessage->content);
 
-    private function callOpenAi(AiProvider $provider, array $messages, string $systemPrompt): string
-    {
-        $response = Http::withToken($provider->api_key)
-            ->post($provider->base_url ?: 'https://api.openai.com/v1/chat/completions', [
-                'model' => $provider->model ?: 'gpt-4o-mini',
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ...$messages,
-                ],
-                'max_tokens' => 2000,
+            return response()->json([
+                'response' => $result['assistant_message'],
+                'conversation' => $conversation->load('messages'),
             ]);
-
-        return $response->json('choices.0.message.content', 'No response received.');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to regenerate: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
-    private function callGemini(AiProvider $provider, array $messages, string $systemPrompt): string
+    public function updateConversation(Request $request, AiConversation $conversation)
     {
-        $contents = collect($messages)->map(fn($m) => [
-            'role' => $m['role'] === 'assistant' ? 'model' : 'user',
-            'parts' => [['text' => $m['content']]],
-        ])->toArray();
+        $this->authorize('update', $conversation);
 
-        $response = Http::post(
-            ($provider->base_url ?: 'https://generativelanguage.googleapis.com/v1beta/models/' . ($provider->model ?: 'gemini-pro')) . ':generateContent?key=' . $provider->api_key,
-            [
-                'system_instruction' => ['parts' => [['text' => $systemPrompt]]],
-                'contents' => $contents,
-            ]
-        );
+        $validated = $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'scope' => 'sometimes|required|in:general,student,planning,proposal,analysis,writing',
+            'context_files' => 'sometimes|nullable|array',
+            'context_files.*' => 'exists:files,id',
+        ]);
 
-        return $response->json('candidates.0.content.parts.0.text', 'No response received.');
+        if (isset($validated['context_files'])) {
+            $this->chat->updateContextFiles($conversation, $validated['context_files']);
+            unset($validated['context_files']);
+        }
+
+        $conversation->update($validated);
+
+        return response()->json($conversation);
     }
 
-    private function callGenericOpenAiCompatible(AiProvider $provider, array $messages, string $systemPrompt): string
+    public function deleteConversation(AiConversation $conversation)
     {
-        $response = Http::withToken($provider->api_key)
-            ->post(rtrim($provider->base_url, '/') . '/chat/completions', [
-                'model' => $provider->model,
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ...$messages,
-                ],
-                'max_tokens' => 2000,
-            ]);
+        $this->authorize('delete', $conversation);
 
-        return $response->json('choices.0.message.content', 'No response received.');
+        $conversation->delete();
+
+        return response()->json(['message' => 'Conversation deleted.']);
     }
 }

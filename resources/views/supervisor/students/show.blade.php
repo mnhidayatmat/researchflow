@@ -112,7 +112,7 @@
             </x-card>
 
             {{-- Upcoming meetings --}}
-            <x-card title="Upcoming Meetings" :padding="false">
+            <x-card title="Upcoming Meetings" :padding='false'>
                 <div class="divide-y divide-border">
                     @forelse($student->meetings->where('scheduled_at', '>', now())->sortBy('scheduled_at')->take(3) as $meeting)
                         <a href="{{ route('meetings.show', [$student, $meeting]) }}" class="block px-5 py-3 hover:bg-surface/60 transition-colors">
@@ -132,7 +132,7 @@
         {{-- Right column --}}
         <div class="lg:col-span-2 space-y-4">
             {{-- Research journey --}}
-            <x-card title="Research Journey" :padding="false">
+            <x-card title="Research Journey" :padding='false'>
                 @forelse($student->researchJourneys as $journey)
                     <div class="p-5">
                         <div class="flex items-center justify-between mb-4">
@@ -183,7 +183,7 @@
             </x-card>
 
             {{-- Tasks needing attention --}}
-            <x-card title="Tasks Awaiting Review" :padding="false">
+            <x-card title="Tasks Awaiting Review" :padding='false'>
                 <div class="divide-y divide-border">
                     @forelse($student->tasks->whereIn('status', ['waiting_review', 'submitted'])->take(5) as $task)
                         <div class="flex items-center justify-between px-5 py-3">
@@ -208,7 +208,7 @@
             </x-card>
 
             {{-- Recent progress reports --}}
-            <x-card title="Recent Progress Reports" :padding="false">
+            <x-card title="Recent Progress Reports" :padding='false'>
                 <div class="divide-y divide-border">
                     @forelse($student->progressReports->sortByDesc('submitted_at')->take(5) as $report)
                         <div class="flex items-center justify-between px-5 py-3">

@@ -35,6 +35,17 @@ class TaskApiController extends Controller
         return response()->json(['success' => true, 'task' => $task->fresh()]);
     }
 
+    public function updateProgress(Request $request, Task $task)
+    {
+        $validated = $request->validate([
+            'progress' => 'required|integer|min:0|max:100',
+        ]);
+
+        $task->update(['progress' => $validated['progress']]);
+
+        return response()->json(['success' => true, 'task' => $task->fresh()]);
+    }
+
     public function updateOrder(Request $request)
     {
         $validated = $request->validate([

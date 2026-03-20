@@ -9,6 +9,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+// Make sure AiConversation is available
+use App\Models\AiConversation;
+use App\Models\AiMessage;
+use App\Models\AuditLog;
+use App\Models\Meeting;
+use App\Models\Student;
+
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, SoftDeletes;

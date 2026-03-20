@@ -277,15 +277,25 @@
 
                     try {
                         const res = await axios.post(`/api/ai/conversations/${this.currentConversation}/messages`, {
-                            content: content,
+                            message: content,
                             use_rag: this.useRag
                         });
                         this.messages = res.data.conversation.messages;
                     } catch(e) {
+                        console.error('Chat error:', e);
+                        let errorMsg = 'Sorry, something went wrong. Please try again.';
+                        if (e.response && e.response.data) {
+                            if (e.response.data.error) {
+                                errorMsg = 'Error: ' + e.response.data.error;
+                            }
+                            if (e.response.data.message) {
+                                errorMsg = 'Error: ' + e.response.data.message;
+                            }
+                        }
                         this.messages.push({
                             id: Date.now() + 1,
                             role: 'assistant',
-                            content: 'Sorry, something went wrong. Please try again.',
+                            content: errorMsg,
                             created_at: new Date().toISOString()
                         });
                     }

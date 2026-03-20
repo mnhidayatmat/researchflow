@@ -22,7 +22,7 @@ return new class extends Migration
 
             $table->index(['user_id', 'status']);
             $table->index(['status', 'remind_at']);
-            $table->index(['remindable_type', 'remindable_id']);
+            // Note: remindable_type/remindable_id index already exists from morphs()
         });
     }
 

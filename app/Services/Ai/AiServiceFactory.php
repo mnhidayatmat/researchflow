@@ -11,6 +11,7 @@ class AiServiceFactory
         'openai' => OpenAiProvider::class,
         'gemini' => GeminiProvider::class,
         'anthropic' => AnthropicProvider::class,
+        'zai' => ZAiProvider::class,
         'custom' => OpenAiProvider::class, // Custom uses OpenAI-compatible API
     ];
 
@@ -19,11 +20,10 @@ class AiServiceFactory
      */
     public static function getProvider(): ?AiProviderInterface
     {
-        $provider = Cache::remember('ai.default_provider', 3600, function () {
-            return AiProviderModel::where('is_active', true)
-                ->where('is_default', true)
-                ->first();
-        });
+        // Don't cache the provider model to avoid serialization issues
+        $provider = AiProviderModel::where('is_active', true)
+            ->where('is_default', true)
+            ->first();
 
         if (!$provider) {
             return null;

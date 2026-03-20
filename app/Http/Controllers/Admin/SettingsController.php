@@ -92,7 +92,32 @@ class SettingsController extends Controller
 
     public function ai()
     {
-        $providers = AiProvider::all();
+        $providers = AiProvider::all()->map(function ($provider) {
+            $hasKey = false;
+            try {
+                // Try to access the encrypted api_key
+                $hasKey = !empty($provider->api_key);
+            } catch (\Exception $e) {
+                // If decryption fails, check if the raw field has a value
+                $hasKey = !empty($provider->getAttributes()['api_key'] ?? null);
+            }
+
+            return [
+                'id' => $provider->id,
+                'name' => $provider->name,
+                'slug' => $provider->slug,
+                'model' => $provider->model,
+                'base_url' => $provider->base_url,
+                'is_active' => (bool) $provider->is_active,
+                'is_default' => (bool) $provider->is_default,
+                'temperature' => $provider->temperature ?? 0.7,
+                'max_tokens' => $provider->max_tokens ?? 4096,
+                'settings' => $provider->settings ?? [],
+                'has_key' => $hasKey,
+                'expanded' => false,
+            ];
+        })->toArray();
+
         return view('admin.settings.ai', compact('providers'));
     }
 
@@ -100,21 +125,73 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'providers' => 'required|array',
-            'providers.*.name' => 'required|string',
-            'providers.*.slug' => 'required|string',
+            'providers.*.id' => 'nullable|integer',
+            'providers.*.slug' => 'required|string|in:openai,gemini,anthropic,zai,custom',
+            'providers.*.name' => 'nullable|string',
             'providers.*.api_key' => 'nullable|string',
             'providers.*.model' => 'nullable|string',
             'providers.*.base_url' => 'nullable|string',
+            'providers.*.endpoint' => 'nullable|string',
+            'providers.*.temperature' => 'nullable|numeric|min:0|max:1',
+            'providers.*.max_tokens' => 'nullable|integer|min:100|max:128000',
             'providers.*.is_active' => 'boolean',
             'providers.*.is_default' => 'boolean',
+            'providers.*.features' => 'nullable|array',
         ]);
 
-        foreach ($validated['providers'] as $data) {
-            AiProvider::updateOrCreate(
-                ['slug' => $data['slug']],
-                $data
-            );
+        foreach ($validated['providers'] as $providerData) {
+            // Build settings array
+            $settings = [
+                'features' => $providerData['features'] ?? [],
+                'temperature' => floatval($providerData['temperature'] ?? 0.7),
+                'max_tokens' => intval($providerData['max_tokens'] ?? 4096),
+            ];
+
+            // Add embedding_model if needed (for RAG)
+            if (in_array('rag', $settings['features'] ?? [])) {
+                $settings['embedding_model'] = match($providerData['slug']) {
+                    'openai' => 'text-embedding-3-small',
+                    'gemini' => 'text-embedding-004',
+                    'anthropic' => null, // Claude doesn't have embeddings
+                    'zai' => 'embedding-2',
+                    'custom' => null,
+                    default => null,
+                };
+            }
+
+            // Use endpoint as base_url for custom providers
+            $baseUrl = $providerData['slug'] === 'custom'
+                ? ($providerData['endpoint'] ?? null)
+                : $providerData['base_url'];
+
+            // Prepare model data
+            $modelData = [
+                'name' => $providerData['name'] ?: $this->getDefaultProviderName($providerData['slug']),
+                'slug' => $providerData['slug'],
+                'api_key' => $providerData['api_key'] ?: null,
+                'model' => $providerData['model'] ?: $this->getDefaultModel($providerData['slug']),
+                'base_url' => $baseUrl,
+                'is_active' => $providerData['is_active'] ?? false,
+                'is_default' => $providerData['is_default'] ?? false,
+                'settings' => $settings,
+            ];
+
+            // If ID is provided (existing provider), update it
+            if (!empty($providerData['id'])) {
+                // Preserve existing API key if not provided
+                if (empty($providerData['api_key'])) {
+                    // Don't update the api_key field at all - keep the existing encrypted value
+                    unset($modelData['api_key']);
+                }
+                AiProvider::where('id', $providerData['id'])->update($modelData);
+            } else {
+                // Create new provider
+                AiProvider::create($modelData);
+            }
         }
+
+        // Clear the AI provider cache
+        \App\Services\Ai\AiServiceFactory::clearCache();
 
         return back()->with('success', 'AI providers updated.');
     }
@@ -174,5 +251,29 @@ class SettingsController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    protected function getDefaultProviderName(string $slug): string
+    {
+        return match($slug) {
+            'openai' => 'OpenAI',
+            'gemini' => 'Google Gemini',
+            'anthropic' => 'Anthropic Claude',
+            'zai' => 'Z.Ai',
+            'custom' => 'Custom Provider',
+            default => 'AI Provider',
+        };
+    }
+
+    protected function getDefaultModel(string $slug): string
+    {
+        return match($slug) {
+            'openai' => 'gpt-4o-mini',
+            'gemini' => 'gemini-1.5-pro',
+            'anthropic' => 'claude-3-5-sonnet-20241022',
+            'zai' => 'glm-4.6',
+            'custom' => '',
+            default => '',
+        };
     }
 }

@@ -4,211 +4,206 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProgressReport;
-use App\Models\Student;
-use App\Models\File;
-use App\Services\Ai\Features\ReportSummarizer;
+use App\Models\Task;
+use App\Services\Ai\AiServiceFactory;
 use App\Services\Ai\Features\DeadlineRiskDetector;
+use App\Services\Ai\Features\ReportSummarizer;
 use App\Services\Ai\Features\TaskSuggester;
-use App\Services\Ai\Features\DocumentComparator;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 
 class AiFeatureController extends Controller
 {
-    /**
-     * Summarize a progress report.
-     */
-    public function summarizeReport(ProgressReport $report): JsonResponse
+    public function __construct()
     {
-        $this->authorize('view', $report->student);
-
-        try {
-            $summarizer = new ReportSummarizer();
-            $summary = $summarizer->execute($report);
-
-            return response()->json([
-                'summary' => $summary,
-                'report_id' => $report->id,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to generate summary: ' . $e->getMessage(),
-            ], 500);
-        }
+        $this->middleware('auth');
     }
 
-    /**
-     * Summarize multiple reports for a student.
-     */
-    public function summarizeReports(Student $student, Request $request): JsonResponse
+    public function summarizeReport(Request $request, ProgressReport $report)
     {
+        $this->authorize('view', $report);
+
+        $provider = AiServiceFactory::getProvider();
+
+        if (!$provider) {
+            return response()->json([
+                'error' => 'No AI provider configured.',
+            ], 400);
+        }
+
+        $summarizer = new ReportSummarizer($provider);
+        $summary = $summarizer->execute($report);
+
+        return response()->json([
+            'summary' => $summary,
+            'report_id' => $report->id,
+        ]);
+    }
+
+    public function summarizeReports(Request $request, $studentId)
+    {
+        $student = \App\Models\Student::findOrFail($studentId);
         $this->authorize('view', $student);
 
-        $request->validate([
-            'report_ids' => 'required|array',
-            'report_ids.*' => 'exists:progress_reports,id',
-        ]);
+        $provider = AiServiceFactory::getProvider();
 
-        $reports = ProgressReport::whereIn('id', $request->report_ids)
-            ->where('student_id', $student->id)
+        if (!$provider) {
+            return response()->json([
+                'error' => 'No AI provider configured.',
+            ], 400);
+        }
+
+        $reports = ProgressReport::where('student_id', $studentId)
+            ->where('status', '!=', 'draft')
+            ->latest()
+            ->take(5)
             ->get();
 
-        try {
-            $summarizer = new ReportSummarizer();
-            $summary = $summarizer->summarizeMultiple($reports->toArray());
-
+        if ($reports->isEmpty()) {
             return response()->json([
-                'summary' => $summary,
-                'reports_count' => $reports->count(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to generate summary: ' . $e->getMessage(),
-            ], 500);
+                'error' => 'No reports found to summarize.',
+            ], 400);
         }
+
+        $summaries = $reports->map(function ($report) use ($provider) {
+            $summarizer = new ReportSummarizer($provider);
+            return [
+                'report_id' => $report->id,
+                'title' => $report->title,
+                'summary' => $summarizer->execute($report),
+            ];
+        });
+
+        return response()->json([
+            'summaries' => $summaries,
+        ]);
     }
 
-    /**
-     * Analyze deadline risks for a student.
-     */
-    public function analyzeDeadlineRisks(Student $student): JsonResponse
+    public function analyzeDeadlineRisks(Request $request, $studentId)
     {
+        $student = \App\Models\Student::findOrFail($studentId);
         $this->authorize('view', $student);
 
-        try {
-            $detector = new DeadlineRiskDetector();
-            $analysis = $detector->execute($student);
+        $provider = AiServiceFactory::getProvider();
 
-            return response()->json($analysis);
-        } catch (\Exception $e) {
+        if (!$provider) {
             return response()->json([
-                'error' => 'Failed to analyze risks: ' . $e->getMessage(),
-            ], 500);
+                'error' => 'No AI provider configured.',
+            ], 400);
         }
+
+        $detector = new DeadlineRiskDetector($provider);
+        $analysis = $detector->execute($student);
+
+        return response()->json($analysis);
     }
 
-    /**
-     * Suggest next tasks for a student.
-     */
-    public function suggestTasks(Student $student, Request $request): JsonResponse
+    public function suggestTasks(Request $request, $studentId)
     {
+        $student = \App\Models\Student::findOrFail($studentId);
         $this->authorize('view', $student);
 
-        $count = $request->get('count', 5);
+        $provider = AiServiceFactory::getProvider();
 
-        try {
-            $suggester = new TaskSuggester();
-            $suggestions = $suggester->execute($student, (int) $count);
-
-            return response()->json($suggestions);
-        } catch (\Exception $e) {
+        if (!$provider) {
             return response()->json([
-                'error' => 'Failed to generate suggestions: ' . $e->getMessage(),
-            ], 500);
+                'error' => 'No AI provider configured.',
+            ], 400);
         }
+
+        $suggester = new TaskSuggester($provider);
+        $suggestions = $suggester->execute($student);
+
+        return response()->json([
+            'suggestions' => $suggestions,
+        ]);
     }
 
-    /**
-     * Suggest subtasks for a task.
-     */
-    public function suggestSubtasks(Student $student, int $taskId): JsonResponse
+    public function suggestSubtasks(Request $request, $studentId, Task $task)
     {
+        $student = \App\Models\Student::findOrFail($studentId);
         $this->authorize('view', $student);
 
-        $task = $student->tasks()->findOrFail($taskId);
-
-        try {
-            $suggester = new TaskSuggester();
-            $subtasks = $suggester->suggestSubtasks($task);
-
+        if ($task->student_id !== $student->id) {
             return response()->json([
-                'task_id' => $task->id,
-                'task_title' => $task->title,
-                'subtasks' => $subtasks,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to generate subtasks: ' . $e->getMessage(),
-            ], 500);
+                'error' => 'Task does not belong to this student.',
+            ], 403);
         }
+
+        $provider = AiServiceFactory::getProvider();
+
+        if (!$provider) {
+            return response()->json([
+                'error' => 'No AI provider configured.',
+            ], 400);
+        }
+
+        $suggester = new TaskSuggester($provider);
+        $subtasks = $suggester->breakDownTask($task, $student);
+
+        return response()->json([
+            'subtasks' => $subtasks,
+        ]);
     }
 
-    /**
-     * Compare two documents.
-     */
-    public function compareDocuments(Request $request): JsonResponse
+    public function compareDocuments(Request $request)
     {
         $validated = $request->validate([
             'file1_id' => 'required|exists:files,id',
             'file2_id' => 'required|exists:files,id',
         ]);
 
-        $file1 = File::findOrFail($validated['file1_id']);
-        $file2 = File::findOrFail($validated['file2_id']);
+        $provider = AiServiceFactory::getProvider();
 
-        $this->authorize('view', $file1->student);
-        $this->authorize('view', $file2->student);
-
-        try {
-            $comparator = new DocumentComparator();
-            $comparison = $comparator->execute($file1, $file2);
-
-            return response()->json($comparison);
-        } catch (\Exception $e) {
+        if (!$provider) {
             return response()->json([
-                'error' => 'Failed to compare documents: ' . $e->getMessage(),
-            ], 500);
+                'error' => 'No AI provider configured.',
+            ], 400);
         }
+
+        $file1 = \App\Models\File::findOrFail($validated['file1_id']);
+        $file2 = \App\Models\File::findOrFail($validated['file2_id']);
+
+        $comparator = new \App\Services\Ai\Features\DocumentComparator($provider);
+        $comparison = $comparator->execute($file1, $file2);
+
+        return response()->json($comparison);
     }
 
-    /**
-     * Compare file with its versions.
-     */
-    public function compareVersions(Student $student, File $file): JsonResponse
+    public function compareVersions(Request $request, $studentId, $fileId)
     {
-        $this->authorize('view', $student);
+        $file = \App\Models\File::findOrFail($fileId);
 
-        if ($file->student_id !== $student->id) {
-            return response()->json(['error' => 'File does not belong to this student.'], 403);
-        }
+        $provider = AiServiceFactory::getProvider();
 
-        try {
-            $comparator = new DocumentComparator();
-            $comparison = $comparator->compareWithVersions($file);
-
-            return response()->json($comparison);
-        } catch (\Exception $e) {
+        if (!$provider) {
             return response()->json([
-                'error' => 'Failed to compare versions: ' . $e->getMessage(),
-            ], 500);
+                'error' => 'No AI provider configured.',
+            ], 400);
         }
+
+        $comparator = new \App\Services\Ai\Features\DocumentComparator($provider);
+        $comparison = $comparator->compareAllVersions($file);
+
+        return response()->json($comparison);
     }
 
-    /**
-     * Summarize changes between document versions.
-     */
-    public function summarizeFileChanges(Student $student, File $file): JsonResponse
+    public function summarizeFileChanges(Request $request, $studentId, $fileId)
     {
-        $this->authorize('view', $student);
+        $file = \App\Models\File::findOrFail($fileId);
 
-        if ($file->student_id !== $student->id) {
-            return response()->json(['error' => 'File does not belong to this student.'], 403);
+        $provider = AiServiceFactory::getProvider();
+
+        if (!$provider) {
+            return response()->json([
+                'error' => 'No AI provider configured.',
+            ], 400);
         }
 
-        try {
-            $comparator = new DocumentComparator();
-            $summary = $comparator->summarizeChanges($file);
+        $comparator = new \App\Services\Ai\Features\DocumentComparator($provider);
+        $summary = $comparator->summarizeChanges($file);
 
-            return response()->json([
-                'file_id' => $file->id,
-                'file_name' => $file->original_name,
-                'version' => $file->version,
-                'changes_summary' => $summary,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to summarize changes: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'summary' => $summary,
+        ]);
     }
 }

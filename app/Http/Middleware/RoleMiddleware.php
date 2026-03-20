@@ -19,6 +19,11 @@ class RoleMiddleware
 
         if ($effectiveRole && $request->user()->role === 'admin') {
             // Admin is viewing as another role
+            // Allow admins to always access admin routes regardless of role switch
+            if (in_array('admin', $roles)) {
+                return $next($request);
+            }
+            // For non-admin routes, check the switched role
             if (!in_array($effectiveRole, $roles)) {
                 abort(403, 'Unauthorized access.');
             }

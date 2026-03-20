@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\ProgressReportApiController;
 use App\Http\Controllers\Api\TaskApiController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth')->group(function () {
     // Tasks API (Kanban + Gantt)
     Route::get('/students/{student}/tasks', [TaskApiController::class, 'index']);
     Route::put('/tasks/{task}/status', [TaskApiController::class, 'updateStatus']);

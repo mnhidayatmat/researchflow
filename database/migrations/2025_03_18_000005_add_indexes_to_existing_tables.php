@@ -91,7 +91,7 @@ return new class extends Migration
         // Audit logs - add composite index
         Schema::table('audit_logs', function (Blueprint $table) {
             $table->index(['user_id', 'action']);
-            $table->index(['auditable_type', 'auditable_id']);
+            // Note: auditable_type/auditable_id index already exists from nullableMorphs()
             $table->index(['action', 'created_at']);
         });
 
@@ -213,7 +213,7 @@ return new class extends Migration
 
         Schema::table('audit_logs', function (Blueprint $table) {
             $table->dropIndex(['user_id', 'action']);
-            $table->dropIndex(['auditable_type', 'auditable_id']);
+            // Note: auditable_type/auditable_id index dropped with table, not here
             $table->dropIndex(['action', 'created_at']);
         });
 

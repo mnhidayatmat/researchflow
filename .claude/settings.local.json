@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(composer install:*)",
+      "Bash(php:*)",
+      "Bash(powershell:*)",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(echo File not found:*)",
+      "Bash(ls:*)",
+      "Bash(where php:*)",
+      "Bash(cd D:\\\\App\\\\Laravel\\\\supervision:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(cat:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}

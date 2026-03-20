@@ -29,9 +29,9 @@ interface AiProviderInterface extends Arrayable
      * Generate embeddings for text.
      *
      * @param string|array $texts
-     * @return array<float>|array<array<float>>
+     * @return array
      */
-    public function embed(string|array $texts): array|array;
+    public function embed(string|array $texts): array;
 
     /**
      * Get the dimension count of embeddings.

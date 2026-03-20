@@ -225,25 +225,322 @@ resources/views/
 
 See the comprehensive Blade UI documentation below for component usage examples and design principles.
 
-### Tailwind CSS Configuration
+### Design System & Color Palette
 
-The app uses Tailwind CSS 4 via CDN with a custom color palette defined in `layouts/app.blade.php`:
-- `surface: #F7F7F5` - Main background
-- `card: #FFFFFF` - Card backgrounds
-- `border: #E5E5E4` - Borders
-- `border-light: #F5F5F4` - Lighter borders
-- `primary: #1C1917` - Main text
-- `secondary: #78716C` - Muted text
-- `tertiary: #A8A29E` - Placeholder text
-- `accent: #D97706` - Amber for actions
-- `success: #059669` - Success states
-- `warning: #F59E0B` - Warning states
-- `danger: #DC2626` - Error states
-- `info: #2563EB` - Info states
+The app uses Tailwind CSS via CDN with a custom color palette defined in `layouts/app.blade.php`. The design is inspired by Claude/Notion with a clean, minimal aesthetic.
+
+#### Core Colors (Claude-inspired)
+```
+Surface & Background:
+- surface: #FAFAF9 - Very light gray background
+- card: #FFFFFF - White card backgrounds
+- border: #E5E5E4 - Subtle borders
+- border-light: #F5F5F4 - Lighter borders for dividers
+
+Text Colors:
+- primary: #1C1917 - Main text (near black)
+- secondary: #78716C - Muted text (gray)
+- tertiary: #A8A29E - Placeholder text (light gray)
+
+Accent & Actions:
+- accent: #D97706 - Amber/Orange for CTAs (similar to Claude's accent)
+- accent-light: #FEF3C7 - Light amber for backgrounds
+- accent/20: 20% opacity accent for gradients
+- accent/10: 10% opacity accent for subtle backgrounds
+
+Status Colors:
+- success: #059669 - Green for success states
+- success-light: #D1FAE5 - Light green for backgrounds
+- success/10: 10% opacity success for subtle backgrounds
+- success/20: 20% opacity success for gradients
+- warning: #F59E0B - Amber for warnings
+- warning-light: #FEF3C7 - Light amber for backgrounds
+- warning/10: 10% opacity warning for subtle backgrounds
+- warning/20: 20% opacity warning for gradients
+- danger: #DC2626 - Red for errors
+- danger-light: #FEE2E2 - Light red for backgrounds
+- info: #2563EB - Blue for information
+- info-light: #DBEAFE - Light blue for backgrounds
+- info/10: 10% opacity info for subtle backgrounds
+- info/20: 20% opacity info for gradients
+```
+
+#### Border Colors (Hover States)
+```
+- border-accent/30: 30% opacity accent for hover borders
+- border-success/30: 30% opacity success for hover borders
+- border-warning/30: 30% opacity warning for hover borders
+- border-info/30: 30% opacity info for hover borders
+```
+
+#### Design Principles (Premium Dashboard Style)
+- **Minimal borders**: Use `border border-border` for cards, `border-light` for subtle dividers
+- **Soft shadows**: Use `shadow-soft` for hover effects, avoid heavy shadows
+- **Hover states**: Use `hover:bg-surface` for interactive elements, add color transitions
+- **Rounded corners**: `rounded-2xl` for cards, `rounded-xl` for buttons/containers, `rounded-lg` for small elements
+- **Spacing**: Use `gap-4` for tight spacing, `gap-6` for comfortable spacing, `p-6` for card padding
+- **Typography**: Clear hierarchy with font weights (regular, medium, semibold, bold)
+- **Animations**: Subtle scale transforms, color transitions, duration-300 for smooth effects
+
+#### Premium Dashboard Patterns
+
+**KPI/Stat Cards (with hover effects):**
+```blade
+<div class="group relative bg-card rounded-2xl p-6 border border-border
+            hover:border-accent/30 hover:shadow-soft transition-all duration-300">
+    <div class="flex items-start justify-between">
+        <!-- Icon with gradient background -->
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/10
+                    flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+            </svg>
+        </div>
+        <!-- Optional trend indicator -->
+        <div class="flex items-center gap-1 px-2 py-1 rounded-full bg-success/10 text-success text-xs font-semibold">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+            </svg>
+            <span>+12%</span>
+        </div>
+    </div>
+    <div class="mt-4">
+        <div class="flex items-baseline gap-2">
+            <p class="text-lg font-bold text-primary">{{ $value }}</p>
+            <p class="text-xs text-secondary">label</p>
+        </div>
+        <p class="text-xs text-secondary mt-1">Description</p>
+    </div>
+</div>
+```
+
+**Card with Header Section:**
+```blade
+<div class="bg-card rounded-2xl border border-border overflow-hidden">
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-border flex items-center justify-between">
+        <div>
+            <h2 class="text-lg font-semibold text-primary">Title</h2>
+            <p class="text-sm text-secondary mt-0.5">Subtitle</p>
+        </div>
+        <!-- Optional action link -->
+        <a href="#" class="text-sm text-accent hover:text-amber-700 font-medium inline-flex items-center gap-1">
+            View all
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+            </svg>
+        </a>
+    </div>
+    <!-- Content -->
+    <div class="p-6">
+        <!-- Content here -->
+    </div>
+</div>
+```
+
+**List Items with Hover (Students, Tasks):**
+```blade
+<div class="divide-y divide-border">
+    @foreach($items as $item)
+    <a href="#" class="flex items-center gap-4 p-5 hover:bg-surface transition-colors group">
+        <!-- Avatar with status indicator -->
+        <div class="relative">
+            <x-avatar :name="$item->name" size="md" />
+            <span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card
+                         {{ $item->status === 'active' ? 'bg-success' : 'bg-tertiary' }}"></span>
+        </div>
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-primary group-hover:text-accent transition-colors truncate">
+                {{ $item->title }}
+            </p>
+            <p class="text-sm text-secondary">{{ $item->subtitle }}</p>
+        </div>
+        <!-- Right side actions/stats -->
+        <div class="flex items-center gap-4">
+            <!-- Progress bar -->
+            <div class="w-20 h-2 bg-border-light rounded-full overflow-hidden">
+                <div class="h-full bg-accent rounded-full" style="width: {{ $progress }}%"></div>
+            </div>
+            <!-- Arrow icon -->
+            <svg class="w-5 h-5 text-tertiary group-hover:text-accent transition-colors"
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </div>
+    </a>
+    @endforeach
+</div>
+```
+
+**Activity Feed Items:**
+```blade
+<div class="space-y-4">
+    @foreach($activities as $activity)
+    <div class="flex items-start gap-3 group">
+        <!-- Icon with gradient background -->
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10
+                    flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+            </svg>
+        </div>
+        <!-- Content -->
+        <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-primary truncate">{{ $activity->title }}</p>
+            <p class="text-xs text-secondary">{{ $activity->subtitle }}</p>
+            <p class="text-[10px] text-tertiary mt-1">{{ $activity->time }}</p>
+        </div>
+    </div>
+    @endforeach
+</div>
+```
+
+**Quick Action Buttons (with icon boxes):**
+```blade
+<a href="#" class="flex items-center gap-3 p-3 rounded-xl text-secondary
+             hover:bg-surface hover:text-primary transition-all group">
+    <!-- Icon box with hover effect -->
+    <div class="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center
+                group-hover:bg-accent/20 transition-colors">
+        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+        </svg>
+    </div>
+    <!-- Text content -->
+    <div class="flex-1">
+        <p class="text-sm font-medium">Action Title</p>
+        <p class="text-xs text-tertiary">Brief description</p>
+    </div>
+    <!-- Arrow icon -->
+    <svg class="w-5 h-5 text-tertiary group-hover:text-primary transition-colors"
+         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+</a>
+```
+
+**Empty States (Premium Style):**
+```blade
+<div class="flex flex-col items-center justify-center text-center py-12 px-6">
+    <!-- Large icon with gradient -->
+    <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-accent/15 to-accent/5
+                flex items-center justify-center mb-6">
+        <svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+        </svg>
+    </div>
+    <!-- Title -->
+    <h3 class="text-xl font-semibold text-primary mb-2">Empty State Title</h3>
+    <!-- Description -->
+    <p class="text-secondary max-w-sm mb-8">Detailed description of the empty state and what to do next.</p>
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+        <a href="#" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                      bg-accent text-white hover:bg-amber-700 transition-all shadow-sm hover:shadow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Primary Action
+        </a>
+        <a href="#" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
+                      text-secondary hover:text-primary border border-border hover:bg-surface transition-all">
+            Secondary Action
+        </a>
+    </div>
+</div>
+```
+
+**Alert/Status Badge (Pill style):**
+```blade
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 text-warning text-sm font-medium">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="..."/>
+    </svg>
+    <span>{{ $count }} items</span>
+</div>
+```
+
+#### Animation & Transitions
+- **Scale transforms**: `group-hover:scale-110` for icons
+- **Color transitions**: `transition-colors duration-300` for text/icons
+- **Background transitions**: `transition-all duration-300` for cards
+- **Pulse animation**: `animate-pulse` for notification dots
+- **Hover lifts**: `hover:-translate-y-0.5` for button lift effect
+
+#### Responsive Grid Patterns
+```blade
+<!-- 4-column KPI grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+<!-- Main content grid (2:1 split) -->
+<div class="grid lg:grid-cols-3 gap-6">
+    <!-- 2 columns for main content -->
+    <div class="lg:col-span-2">
+        <!-- Main content -->
+    </div>
+    <!-- 1 column for sidebar -->
+    <div>
+        <!-- Sidebar content -->
+    </div>
+</div>
+```
+
+#### Icon Sizing Reference
+- **Large icons (feature cards)**: `w-7 h-7` (28px) in 14x14 container
+- **Medium icons (list items)**: `w-5 h-5` (20px) in 10x10 container
+- **Small icons (buttons)**: `w-4 h-4` (16px) in small containers
+- **Stroke width**: `1.5` for premium feel (vs 2 for standard)
+
+#### Spacing Standards
+- **Card padding**: `p-6` (24px all around)
+- **Section gaps**: `gap-4` (16px) for tight, `gap-6` (24px) for comfortable
+- **Page spacing**: `space-y-8` for major sections
+- **Header padding**: `py-5` (20px) for card headers
+- **List item padding**: `p-5` (20px) for clickable rows
+
+#### Common Patterns
+
+**KPI Cards:**
+```blade
+<div class="bg-card rounded-lg p-5 border border-border hover:shadow-soft transition-all">
+    <div class="w-10 h-10 rounded-lg bg-accent-light flex items-center justify-center">
+        <!-- Icon with text-accent -->
+    </div>
+    <div class="mt-3">
+        <p class="text-lg font-semibold text-primary">{{ $value }}</p>
+        <p class="text-xs text-secondary">{{ $label }}</p>
+    </div>
+</div>
+```
+
+**Empty States:**
+```blade
+<div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div class="w-16 h-16 rounded-xl bg-accent-light flex items-center justify-center mb-6">
+        <!-- Icon -->
+    </div>
+    <h3 class="text-lg font-semibold text-primary mb-2">Title</h3>
+    <p class="text-secondary max-w-sm mb-6">Description</p>
+    <!-- Actions -->
+</div>
+```
+
+**Activity Feed Items:**
+```blade
+<div class="flex items-start gap-3 p-3 rounded-lg bg-surface">
+    <div class="w-8 h-8 rounded-lg bg-accent-light flex items-center justify-center">
+        <!-- Icon -->
+    </div>
+    <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-primary truncate">Title</p>
+        <p class="text-xs text-secondary">Subtitle</p>
+        <p class="text-[10px] text-tertiary mt-1">Time</p>
+    </div>
+</div>
+```
 
 ### Blade UI System
-
-This application uses a custom Blade UI system with a clean, minimal design similar to Notion/Claude. All components are mobile-responsive and built with Tailwind CSS.
 
 This application uses a custom Blade UI system with a clean, minimal design similar to Notion/Claude. All components are mobile-responsive and built with Tailwind CSS.
 
@@ -387,10 +684,12 @@ This application uses a custom Blade UI system with a clean, minimal design simi
 
 1. Use existing components before creating new ones
 2. Maintain consistent spacing, colors, and typography
-3. Mobile-first - all components are responsive
-4. Minimal design - avoid excessive borders/shadows
-5. Use Alpine's `x-transition` for smooth animations
-6. Include proper labels, focus states, and ARIA attributes
+3. **Typography Reference**: `resources/views/admin/students/index.blade.php` is the standard for admin page typography
+4. Mobile-first - all components are responsive
+5. Minimal design - avoid excessive borders/shadows
+6. Use Alpine's `x-transition` for smooth animations
+7. Include proper labels, focus states, and ARIA attributes
+8. Use modest, compact font sizes for admin interfaces (not text-2xl/text-3xl)
 
 ## Common Patterns
 
@@ -398,8 +697,8 @@ This application uses a custom Blade UI system with a clean, minimal design simi
 ```blade
 <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
     <div>
-        <h1 class="text-xl font-semibold text-primary">Page Title</h1>
-        <p class="text-sm text-secondary mt-1">Subtitle</p>
+        <h2 class="text-base font-semibold text-primary">Page Title</h2>
+        <p class="text-xs text-secondary mt-0.5">Subtitle or description</p>
     </div>
     <div class="flex items-center gap-2">
         <x-button>Primary</x-button>
@@ -512,7 +811,7 @@ Admin settings are stored in the database via `SystemSetting` model:
 
 ### Storage Architecture
 
-The application supports multiple storage backends through Laravel's filesystem abstraction:
+The application supports multiple storage backends through Laravel's filesystem abstraction. The admin storage settings page at `/admin/settings/storage` (`resources/views/admin/settings/storage.blade.php`) has been redesigned to match the compact typography standards found in `resources/views/admin/students/index.blade.php`.
 
 **Available Storage Disks:**
 - `local` - Server's local filesystem at `storage/app/private`
@@ -764,4 +1063,286 @@ protected static array $providers = [
     'openai' => OpenAiProvider::class,
     'myprovider' => MyProvider::class,
 ];
+
+---
+
+# Admin Dashboard Design System
+
+The admin dashboard at `resources/views/admin/dashboard.blade.php` implements a premium, Claude-inspired design system. Follow these patterns when creating or modifying admin interfaces.
+
+## Dashboard Layout Structure
+
+```
+Welcome Header (flex row with date + notifications)
+├── KPI Stats Grid (4 columns, responsive)
+├── Main Content Grid (3 columns: 2 + 1 split)
+│   ├── Left: Student Overview (2 cols)
+│   └── Right: Quick Stats, Activity, Actions (1 col)
+└── Tasks Due Soon (conditional, full width)
+```
+
+## Key Design Patterns
+
+### 1. Welcome Header
+```blade
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-semibold text-primary">Welcome back, {{ $name }}</h1>
+        <p class="text-sm text-secondary mt-1">Subtitle text</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <span class="text-xs text-tertiary">{{ $date }}</span>
+        <button class="relative p-2.5 text-secondary hover:text-primary hover:bg-surface rounded-xl transition-all">
+            <!-- Notification icon with badge if needed -->
+        </button>
+    </div>
+</div>
+```
+
+**Note**: `text-2xl` is only appropriate for dashboard welcome headers. For standard page headers, use `text-base`.
+
+### 2. Premium KPI Cards
+- **Container**: `bg-card rounded-2xl p-6 border border-border`
+- **Hover**: `hover:border-accent/30 hover:shadow-soft transition-all duration-300`
+- **Icon**: `w-12 h-12 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/10`
+- **Icon hover**: `group-hover:scale-110 transition-transform duration-300`
+- **Value**: `text-lg font-bold text-primary`
+- **Label**: `text-xs text-secondary`
+
+### 3. Card with Header Section
+```blade
+<div class="bg-card rounded-2xl border border-border overflow-hidden">
+    <!-- Header -->
+    <div class="px-8 py-5 border-b border-border flex items-center justify-between">
+        <div>
+            <h3 class="text-base font-semibold text-primary">Title</h3>
+            <p class="text-xs text-secondary mt-0.5">Subtitle</p>
+        </div>
+        <a href="#" class="text-xs text-accent hover:text-amber-700 font-medium inline-flex items-center gap-1">
+            View all
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+            </svg>
+        </a>
+    </div>
+    <!-- Content -->
+    <div class="p-8">
+        <!-- Card content -->
+    </div>
+</div>
+```
+
+### 4. List Items with Avatars (Student/Task Rows)
+```blade
+<div class="divide-y divide-border">
+    <a href="#" class="flex items-center gap-4 p-5 hover:bg-surface transition-colors group">
+        <!-- Avatar with status indicator -->
+        <div class="relative">
+            <x-avatar :name="$name" size="md" />
+            <span class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-card
+                         {{ $active ? 'bg-success' : 'bg-tertiary' }}"></span>
+        </div>
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-primary group-hover:text-accent transition-colors truncate">
+                {{ $title }}
+            </p>
+            <p class="text-xs text-secondary">{{ $subtitle }}</p>
+        </div>
+        <!-- Right side -->
+        <div class="flex items-center gap-4">
+            <!-- Progress bar or stats -->
+            <svg class="w-5 h-5 text-tertiary group-hover:text-accent transition-colors">
+                <!-- Arrow icon -->
+            </svg>
+        </div>
+    </a>
+</div>
+```
+
+### 5. Activity Feed Items
+```blade
+<div class="space-y-4">
+    <div class="flex items-start gap-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10
+                    flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+            </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-primary truncate">{{ $title }}</p>
+            <p class="text-xs text-secondary">{{ $subtitle }}</p>
+            <p class="text-[10px] text-tertiary mt-1">{{ $time }}</p>
+        </div>
+    </div>
+</div>
+```
+
+### 6. Quick Action Buttons (with Descriptions)
+```blade
+<a href="#" class="flex items-center gap-3 p-3 rounded-xl text-secondary
+             hover:bg-surface hover:text-primary transition-all group">
+    <div class="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center
+                group-hover:bg-accent/20 transition-colors">
+        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+        </svg>
+    </div>
+    <div class="flex-1">
+        <p class="text-sm font-medium">Action Title</p>
+        <p class="text-xs text-tertiary">Brief description</p>
+    </div>
+    <svg class="w-5 h-5 text-tertiary group-hover:text-primary transition-colors"
+         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+</a>
+```
+
+### 7. Premium Empty States
+```blade
+<div class="flex flex-col items-center justify-center text-center py-12 px-6">
+    <!-- Large gradient icon -->
+    <div class="w-20 h-20 rounded-3xl bg-gradient-to-br from-accent/15 to-accent/5
+                flex items-center justify-center mb-6">
+        <svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="..."/>
+        </svg>
+    </div>
+    <h3 class="text-xl font-semibold text-primary mb-2">Title</h3>
+    <p class="text-secondary max-w-sm mb-8">Description</p>
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+        <!-- Primary action button -->
+        <!-- Secondary action button -->
+    </div>
+</div>
+```
+
+### 8. Status/Alert Pills
+```blade
+<!-- Warning pill with icon -->
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 text-warning text-sm font-medium">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="..."/>
+    </svg>
+    <span>{{ $count }} items</span>
+</div>
+
+<!-- Pulsing indicator for active states -->
+<div class="w-3 h-3 rounded-full bg-warning animate-pulse"></div>
+```
+
+## Typography Hierarchy
+
+**Reference Standard**: Use `resources/views/admin/students/index.blade.php` as the typography reference for all admin pages.
+
+| Element | Classes | Usage |
+|---------|---------|------|
+| Page Header | `text-base font-semibold text-primary` | Main page headings |
+| Page Description | `text-xs text-secondary mt-0.5` | Subtitles below page headers |
+| Section Header | `text-base font-semibold text-primary` | Section titles |
+| Card Title | `text-base font-semibold text-primary` | Card headers |
+| Form Labels | `text-xs font-medium text-secondary` | Input field labels |
+| Form Inputs | `text-sm text-primary` | Input text content |
+| Body Text | `text-sm text-secondary` | General content, descriptions |
+| Labels/Metadata | `text-xs text-secondary` | Secondary info, hints |
+| KPI Values | `text-lg font-bold text-primary` | Stat card values |
+| KPI Labels | `text-xs text-secondary` | Stat card descriptions |
+| Table Headers | `text-xs font-medium text-secondary uppercase tracking-wider` | Column headers |
+| Table Data | `text-sm text-primary` | Table cell content |
+| Button Text | `text-sm font-medium` | Button labels |
+
+**Important**: Admin pages should use modest, compact font sizes similar to the students index page. Avoid large headings (text-2xl, text-3xl) except in rare cases like dashboard welcome headers.
+
+## Spacing Standards
+
+| Context | Spacing | Example |
+|---------|---------|---------|
+| Page sections | `mb-4`, `mb-6` | Section spacing (compact) |
+| Card padding | `p-6` | Standard card interior |
+| Card header | `px-8 py-5` | Card header section |
+| Form card padding | `p-8` | Configuration forms |
+| List items | `p-5` | Clickable rows |
+| Grid gaps | `gap-4` (tight), `gap-5` (comfortable) | Between cards |
+| Content gaps | `gap-3` | Between related items |
+| Text spacing | `mt-0.5`, `mt-1`, `mt-1.5` | Between text elements |
+| Label spacing | `mb-1.5` | Below form labels |
+| Button padding | `px-5 py-3` | Standard buttons |
+
+**Reference**: Follow `resources/views/admin/students/index.blade.php` for spacing patterns.
+
+## Border & Radius Standards
+
+| Element | Border | Radius |
+|---------|--------|--------|
+| Cards | `border border-border` | `rounded-2xl` |
+| Buttons | `border border-border` | `rounded-xl` |
+| Icons | N/A | `rounded-2xl` (large), `rounded-xl` (medium), `rounded-lg` (small) |
+| Pills/Badges | N/A | `rounded-full` |
+| Inputs | `border border-border` | `rounded-lg` |
+
+## Animation Guidelines
+
+1. **Hover Scale**: Use `group-hover:scale-110 transition-transform duration-300` for icons
+2. **Color Transitions**: Use `transition-colors duration-300` for text/icons
+3. **All Transitions**: Use `transition-all duration-300` for multi-property changes
+4. **Background Hover**: Use `hover:bg-surface` for interactive elements
+5. **Border Hover**: Use `hover:border-accent/30` for card borders
+6. **Pulse**: Use `animate-pulse` for notification dots
+
+## Responsive Patterns
+
+```blade
+<!-- 4-column KPI (responsive) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+<!-- Main grid with 2:1 split -->
+<div class="grid lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <!-- Main content (2 columns) -->
+    </div>
+    <div>
+        <!-- Sidebar (1 column) -->
+    </div>
+</div>
+
+<!-- Header responsive -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+```
+
+## Color Usage Guidelines
+
+1. **Primary Actions**: Use `bg-accent text-white` with `hover:bg-amber-700`
+2. **Secondary Actions**: Use `text-secondary hover:text-primary border border-border hover:bg-surface`
+3. **Icon Backgrounds**: Use `bg-{color}/10` or `bg-gradient-to-br from-{color}/20 to-{color}/10`
+4. **Status Indicators**: Use `bg-{color}` with appropriate color
+5. **Subtle Backgrounds**: Use `bg-surface` for alternating content
+6. **Text Hierarchy**: `primary` → `secondary` → `tertiary`
+
+## Common Icon Patterns
+
+```blade
+<!-- Arrow right (navigation) -->
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+</svg>
+
+<!-- Arrow up (trend) -->
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+</svg>
+
+<!-- Notification bell -->
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+</svg>
+```
+
+## File Reference
+
+- **Admin Dashboard**: `resources/views/admin/dashboard.blade.php`
+- **Admin Controller**: `app/Http/Controllers/Admin/DashboardController.php`
+- **Layout Component**: `resources/views/layouts/app.blade.php`
 ```

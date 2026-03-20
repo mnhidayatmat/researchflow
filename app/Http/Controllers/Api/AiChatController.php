@@ -4,54 +4,38 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
+use App\Models\AiMessage;
 use App\Services\Ai\AiChatService;
-use App\Services\Ai\AiRagService;
+use App\Services\Ai\AiServiceFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AiChatController extends Controller
 {
-    public function __construct(
-        private AiChatService $chat,
-        private AiRagService $rag
-    ) {}
-
-    public function conversations()
+    public function __construct()
     {
-        $conversations = $this->chat->getUserConversations(Auth::id())
+        $this->middleware('auth');
+    }
+
+    public function conversations(Request $request)
+    {
+        $conversations = AiConversation::where('user_id', Auth::id())
+            ->withCount('messages')
+            ->latest()
+            ->get()
             ->map(function ($conversation) {
                 return [
                     'id' => $conversation->id,
-                    'title' => $conversation->title,
+                    'title' => $conversation->title ?? 'New Chat',
                     'scope' => $conversation->scope,
                     'student_id' => $conversation->student_id,
-                    'created_at' => $conversation->created_at,
-                    'updated_at' => $conversation->updated_at,
-                    'last_message' => $conversation->messages()
-                        ->latest()
-                        ->first(['content', 'created_at']),
+                    'created_at' => $conversation->created_at->toISOString(),
+                    'updated_at' => $conversation->updated_at->toISOString(),
+                    'messages_count' => $conversation->messages_count ?? 0,
                 ];
             });
 
         return response()->json($conversations);
-    }
-
-    public function show(AiConversation $conversation)
-    {
-        $this->authorize('view', $conversation);
-
-        return response()->json($this->chat->getConversation($conversation));
-    }
-
-    public function messages(AiConversation $conversation)
-    {
-        $this->authorize('view', $conversation);
-
-        $messages = $conversation->messages()
-            ->orderBy('created_at')
-            ->get(['id', 'role', 'content', 'metadata', 'created_at']);
-
-        return response()->json($messages);
     }
 
     public function createConversation(Request $request)
@@ -59,141 +43,154 @@ class AiChatController extends Controller
         $validated = $request->validate([
             'title' => 'nullable|string|max:255',
             'student_id' => 'nullable|exists:students,id',
-            'context_files' => 'nullable|array',
-            'context_files.*' => 'exists:files,id',
             'scope' => 'nullable|in:general,student,planning,proposal,analysis,writing',
+            'context_files' => 'nullable|array',
         ]);
 
-        $conversation = $this->chat->createConversation([
-            'title' => $validated['title'] ?? 'New Conversation',
+        $conversation = AiConversation::create([
+            'user_id' => Auth::id(),
+            'title' => $validated['title'] ?? 'New Chat',
             'student_id' => $validated['student_id'] ?? null,
-            'context_files' => $validated['context_files'] ?? null,
             'scope' => $validated['scope'] ?? 'general',
+            'context_files' => $validated['context_files'] ?? [],
         ]);
 
-        return response()->json($conversation->load('student'), 201);
+        return response()->json($conversation, 201);
+    }
+
+    public function messages(Request $request, AiConversation $conversation)
+    {
+        if ($conversation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $messages = $conversation->messages()
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($message) {
+                return [
+                    'id' => $message->id,
+                    'role' => $message->role,
+                    'content' => $message->content,
+                    'created_at' => $message->created_at->toISOString(),
+                ];
+            });
+
+        return response()->json($messages);
     }
 
     public function sendMessage(Request $request, AiConversation $conversation)
     {
-        $this->authorize('update', $conversation);
+        if ($conversation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
         $validated = $request->validate([
-            'content' => 'required|string|max:5000',
+            'message' => 'required|string',
             'use_rag' => 'nullable|boolean',
         ]);
 
-        // Check if RAG is enabled and context files exist
-        $useRag = $validated['use_rag'] ?? false;
-        $contextFiles = $useRag ? ($conversation->context_files ?? []) : null;
+        $provider = AiServiceFactory::getProvider();
 
-        try {
-            if ($useRag && !empty($contextFiles)) {
-                // Use RAG service
-                $history = $conversation->messages()
-                    ->orderBy('created_at')
-                    ->take(20)
-                    ->get()
-                    ->map(fn($m) => ['role' => $m->role, 'content' => $m->content])
-                    ->toArray();
-
-                $history[] = ['role' => 'user', 'content' => $validated['content']];
-
-                $response = $this->rag->chatWithRag($history, $contextFiles);
-
-                // Save messages
-                $conversation->messages()->create([
-                    'role' => 'user',
-                    'content' => $validated['content'],
-                ]);
-
-                $assistantMsg = $conversation->messages()->create([
-                    'role' => 'assistant',
-                    'content' => $response,
-                    'metadata' => ['rag_enabled' => true],
-                ]);
-            } else {
-                // Use standard chat
-                $result = $this->chat->chat($conversation, $validated['content']);
-                $assistantMsg = $result['assistant_message'];
-            }
-
+        if (!$provider) {
             return response()->json([
-                'conversation' => $conversation->load('messages'),
-                'response' => $assistantMsg,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to send message: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function regenerateMessage(Request $request, AiConversation $conversation)
-    {
-        $this->authorize('update', $conversation);
-
-        // Remove the last assistant message if exists
-        $lastMessage = $conversation->messages()
-            ->where('role', 'assistant')
-            ->latest()
-            ->first();
-
-        if ($lastMessage) {
-            $lastMessage->delete();
+                'error' => 'No AI provider configured. Please configure an AI provider in settings.',
+            ], 400);
         }
 
-        // Get the last user message
-        $lastUserMessage = $conversation->messages()
-            ->where('role', 'user')
-            ->latest()
-            ->first();
-
-        if (!$lastUserMessage) {
-            return response()->json(['error' => 'No user message to respond to'], 400);
-        }
-
-        try {
-            $result = $this->chat->chat($conversation, $lastUserMessage->content);
-
-            return response()->json([
-                'response' => $result['assistant_message'],
-                'conversation' => $conversation->load('messages'),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to regenerate: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function updateConversation(Request $request, AiConversation $conversation)
-    {
-        $this->authorize('update', $conversation);
-
-        $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'scope' => 'sometimes|required|in:general,student,planning,proposal,analysis,writing',
-            'context_files' => 'sometimes|nullable|array',
-            'context_files.*' => 'exists:files,id',
+        AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'user',
+            'content' => $validated['message'],
         ]);
 
-        if (isset($validated['context_files'])) {
-            $this->chat->updateContextFiles($conversation, $validated['context_files']);
-            unset($validated['context_files']);
+        $messages = $conversation->messages()
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($msg) {
+                return [
+                    'role' => $msg->role,
+                    'content' => $msg->content,
+                ];
+            })
+            ->toArray();
+
+        $systemPrompt = $this->getSystemPrompt($conversation->scope, $conversation->student_id);
+
+        $chatService = new AiChatService($provider);
+        $response = $chatService->chat($messages, $systemPrompt, $validated['use_rag'] ?? false, $conversation);
+
+        AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => $response,
+            'metadata' => ['provider' => class_basename(get_class($provider))],
+        ]);
+
+        if (!$conversation->title || $conversation->title === 'New Chat') {
+            $firstUserMessage = $conversation->messages()->where('role', 'user')->first();
+            if ($firstUserMessage) {
+                $title = substr($firstUserMessage->content, 0, 50);
+                if (strlen($firstUserMessage->content) > 50) {
+                    $title .= '...';
+                }
+                $conversation->update(['title' => $title]);
+            }
         }
 
-        $conversation->update($validated);
+        // Fetch all messages for the conversation
+        $allMessages = $conversation->messages()
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($message) {
+                return [
+                    'id' => $message->id,
+                    'role' => $message->role,
+                    'content' => $message->content,
+                    'created_at' => $message->created_at->toISOString(),
+                    'metadata' => $message->metadata,
+                ];
+            });
 
-        return response()->json($conversation);
+        return response()->json([
+            'conversation' => [
+                'id' => $conversation->id,
+                'messages' => $allMessages,
+            ],
+        ]);
     }
 
-    public function deleteConversation(AiConversation $conversation)
+    protected function getSystemPrompt(?string $scope, ?int $studentId): string
     {
-        $this->authorize('delete', $conversation);
+        $basePrompt = "You are a helpful AI assistant for a research supervision management system. You assist students, supervisors, and administrators with research-related tasks.";
 
-        $conversation->delete();
+        if (!$scope || $scope === 'general') {
+            return $basePrompt;
+        }
 
-        return response()->json(['message' => 'Conversation deleted.']);
+        $scopePrompts = [
+            'student' => "You are assisting a research student with their progress. Be encouraging and provide practical advice on research methodology, time management, and academic writing.",
+            'planning' => "You are helping plan a research project. Provide guidance on research design, methodology selection, and creating realistic timelines.",
+            'proposal' => "You are helping with a thesis proposal. Advise on structure, literature review, problem formulation, and research questions.",
+            'analysis' => "You are assisting with data analysis. Provide guidance on statistical methods, data interpretation, and presenting findings.",
+            'writing' => "You are helping with academic writing. Provide advice on structure, clarity, citations, and maintaining scholarly tone.",
+        ];
+
+        $prompt = $scopePrompts[$scope] ?? $basePrompt;
+
+        if ($studentId) {
+            $student = \App\Models\Student::with(['user', 'programme'])->find($studentId);
+            if ($student) {
+                $prompt .= "\n\nStudent Context:\n";
+                $prompt .= "- Name: {$student->user->name}\n";
+                $prompt .= "- Programme: {$student->programme->name}\n";
+                $prompt .= "- Status: {$student->status}\n";
+                if ($student->research_title) {
+                    $prompt .= "- Research Title: {$student->research_title}\n";
+                }
+            }
+        }
+
+        return $prompt;
     }
 }

@@ -137,6 +137,44 @@ class AiChatService
     }
 
     /**
+     * Simple chat method that accepts messages array and returns response text.
+     */
+    public function chatWithMessages(array $messages, string $systemPrompt = '', bool $useRag = false, ?AiConversation $conversation = null): string
+    {
+        if (!$this->provider) {
+            throw new \RuntimeException('AI provider not configured.');
+        }
+
+        // Prepare messages for the provider
+        $providerMessages = $messages;
+
+        // Add system prompt at the beginning if provided
+        if ($systemPrompt) {
+            array_unshift($providerMessages, ['role' => 'system', 'content' => $systemPrompt]);
+        }
+
+        // If RAG is enabled and conversation has context files, retrieve relevant content
+        if ($useRag && $conversation && !empty($conversation->context_files)) {
+            $ragService = new \App\Services\Ai\AiRagService($this->provider);
+            $context = $ragService->retrieveContext($conversation->context_files, end($messages)['content'] ?? '');
+
+            if ($context) {
+                // Inject context into the last user message
+                $lastIndex = count($providerMessages) - 1;
+                if ($providerMessages[$lastIndex]['role'] === 'user') {
+                    $providerMessages[$lastIndex]['content'] = "Context:\n{$context}\n\nQuestion: {$providerMessages[$lastIndex]['content']}";
+                }
+            }
+        }
+
+        // Get AI response
+        return $this->provider->chat($providerMessages, [
+            'temperature' => 0.7,
+            'max_tokens' => 2000,
+        ]);
+    }
+
+    /**
      * Create a new conversation.
      */
     public function createConversation(array $data): AiConversation

@@ -16,6 +16,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/tasks/reorder', [TaskApiController::class, 'updateOrder']);
     Route::get('/students/{student}/tasks/gantt', [TaskApiController::class, 'ganttData']);
     Route::put('/tasks/{task}/dates', [TaskApiController::class, 'updateDates']);
+    Route::post('/students/{student}/tasks/activity', [TaskApiController::class, 'storeActivity']);
+    Route::get('/students/{student}/milestones', [TaskApiController::class, 'milestones']);
 
     // Progress Reports API
     Route::get('/students/{student}/reports', [ProgressReportApiController::class, 'index']);

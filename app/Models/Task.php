@@ -22,6 +22,7 @@ class Task extends Model
         'student_id', 'milestone_id', 'assigned_by', 'parent_id', 'title',
         'description', 'status', 'priority', 'start_date', 'due_date',
         'completed_at', 'progress', 'sort_order', 'estimated_hours',
+        'duration_days', 'is_milestone',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class Task extends Model
             'start_date' => 'date',
             'due_date' => 'date',
             'completed_at' => 'date',
+            'is_milestone' => 'boolean',
         ];
     }
 
@@ -48,5 +50,69 @@ class Task extends Model
     public function dependents(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'depends_on_id', 'task_id');
+    }
+
+    /**
+     * Get the end date for Gantt chart (due_date or calculated)
+     */
+    public function getEndDate(): ?\Carbon\Carbon
+    {
+        if ($this->due_date) {
+            return $this->due_date;
+        }
+
+        if ($this->start_date && $this->duration_days) {
+            return $this->start_date->copy()->addDays($this->duration_days);
+        }
+
+        return $this->start_date?->copy()->addDays(7);
+    }
+
+    /**
+     * Calculate duration in days from start and end dates
+     */
+    public function calculateDuration(): ?int
+    {
+        if ($this->start_date && $this->due_date) {
+            return $this->start_date->diffInDays($this->due_date);
+        }
+        return $this->duration_days;
+    }
+
+    /**
+     * Scope to get only milestone tasks
+     */
+    public function scopeMilestones($query)
+    {
+        return $query->where('is_milestone', true);
+    }
+
+    /**
+     * Scope to get regular (non-milestone) tasks
+     */
+    public function scopeRegular($query)
+    {
+        return $query->where('is_milestone', false);
+    }
+
+    /**
+     * Get Gantt chart data array
+     */
+    public function toGanttData(): array
+    {
+        $startDate = $this->start_date ?? now()->startOfDay();
+        $endDate = $this->getEndDate() ?? $startDate->copy()->addDays(7);
+
+        return [
+            'id' => 'task-' . $this->id,
+            'name' => $this->title,
+            'start' => $startDate->format('Y-m-d'),
+            'end' => $endDate->format('Y-m-d'),
+            'progress' => $this->progress ?? 0,
+            'dependencies' => $this->dependencies->pluck('id')->map(fn($id) => 'task-' . $id)->implode(','),
+            'custom_class' => $this->is_milestone ? 'gantt-milestone' : 'gantt-task-' . $this->status,
+            'task_id' => $this->id,
+            'is_milestone' => $this->is_milestone,
+        ];
     }
 }

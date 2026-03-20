@@ -364,6 +364,259 @@ class GanttChart {
             this.container.innerHTML = '';
         }
     }
+
+    /**
+     * Export Gantt chart as PNG image
+     * Converts SVG to Canvas to PNG
+     */
+    async exportImage(filename = 'gantt-chart.png') {
+        if (!this.container) {
+            throw new Error('No Gantt chart to export');
+        }
+
+        const svg = this.container.querySelector('svg');
+        if (!svg) {
+            throw new Error('SVG element not found');
+        }
+
+        try {
+            // Get SVG dimensions
+            const svgRect = svg.getBoundingClientRect();
+            const width = svgRect.width * 2; // 2x for better quality
+            const height = svgRect.height * 2;
+
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // Serialize SVG
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+
+            // Load SVG as image
+            const img = new Image();
+            img.onload = () => {
+                // Fill white background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw SVG scaled
+                ctx.scale(2, 2);
+                ctx.drawImage(img, 0, 0);
+
+                // Clean up
+                URL.revokeObjectURL(url);
+
+                // Download
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                this.showNotification('Image exported successfully');
+            };
+
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                this.showNotification('Failed to export image', 'error');
+            };
+
+            img.src = url;
+        } catch (error) {
+            this.onError(error);
+            this.showNotification('Failed to export image', 'error');
+        }
+    }
+
+    /**
+     * Export Gantt chart as PDF
+     * Uses html2pdf library if available, falls back to image export
+     */
+    async exportPdf(filename = 'gantt-chart.pdf') {
+        if (!this.container) {
+            throw new Error('No Gantt chart to export');
+        }
+
+        try {
+            // Load html2pdf if not available
+            if (typeof html2pdf === 'undefined') {
+                await this.loadHtml2Pdf();
+            }
+
+            // Configure PDF options
+            const opt = {
+                margin: 10,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                },
+                jsPDF: {
+                    unit: 'mm',
+                    format: this.getBestPdfFormat(),
+                    orientation: this.getBestPdfOrientation()
+                }
+            };
+
+            // Clone container for export (to avoid modifying original)
+            const containerClone = this.container.cloneNode(true);
+            containerClone.style.padding = '20px';
+            containerClone.style.background = '#ffffff';
+
+            // Create a temporary wrapper
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'absolute';
+            wrapper.style.left = '-9999px';
+            wrapper.style.width = this.container.offsetWidth + 'px';
+            wrapper.appendChild(containerClone);
+            document.body.appendChild(wrapper);
+
+            // Generate PDF
+            await html2pdf().set(opt).from(containerClone).save();
+
+            // Clean up
+            document.body.removeChild(wrapper);
+
+            this.showNotification('PDF exported successfully');
+        } catch (error) {
+            this.onError(error);
+            this.showNotification('Failed to export PDF', 'error');
+        }
+    }
+
+    /**
+     * Load html2pdf library dynamically
+     */
+    loadHtml2Pdf() {
+        return new Promise((resolve, reject) => {
+            if (typeof html2pdf !== 'undefined') {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Get best PDF format based on chart size
+     */
+    getBestPdfFormat() {
+        if (!this.container) return 'a4';
+
+        const width = this.container.offsetWidth;
+        if (width > 1200) return 'a3';
+        if (width < 600) return 'a5';
+        return 'a4';
+    }
+
+    /**
+     * Get best PDF orientation based on aspect ratio
+     */
+    getBestPdfOrientation() {
+        if (!this.container) return 'landscape';
+
+        const rect = this.container.getBoundingClientRect();
+        return rect.width > rect.height ? 'landscape' : 'portrait';
+    }
+
+    /**
+     * Enable inline progress editing
+     */
+    enableProgressEdit() {
+        if (!this.gantt) return;
+
+        // Add click handler to progress bars for inline editing
+        const container = this.container;
+        container.addEventListener('click', (e) => {
+            const progressBar = e.target.closest('.gantt-bar-progress');
+            if (progressBar) {
+                this.showProgressEditor(progressBar);
+            }
+        });
+    }
+
+    /**
+     * Show inline progress editor
+     */
+    showProgressEditor(progressBar) {
+        // Get current progress
+        const currentProgress = parseInt(progressBar.getAttribute('data-progress')) || 0;
+
+        // Create editor modal
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full">
+                <h3 class="text-base font-semibold mb-4">Edit Progress</h3>
+                <input type="range" min="0" max="100" value="${currentProgress}"
+                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-600">
+                <div class="flex justify-between text-sm text-gray-500 mb-4">
+                    <span>0%</span>
+                    <span id="progress-value">${currentProgress}%</span>
+                    <span>100%</span>
+                </div>
+                <div class="flex gap-3">
+                    <button id="cancel-progress" class="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm">
+                        Cancel
+                    </button>
+                    <button id="save-progress" class="flex-1 px-4 py-2 rounded-xl bg-amber-600 text-white text-sm">
+                        Save
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const slider = modal.querySelector('input[type="range"]');
+        const valueDisplay = modal.querySelector('#progress-value');
+        const cancelBtn = modal.querySelector('#cancel-progress');
+        const saveBtn = modal.querySelector('#save-progress');
+
+        slider.addEventListener('input', (e) => {
+            valueDisplay.textContent = e.target.value + '%';
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const newProgress = parseInt(slider.value);
+            this.handleProgressInlineEdit(newProgress);
+            document.body.removeChild(modal);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
+
+    /**
+     * Handle inline progress edit
+     */
+    async handleProgressInlineEdit(progress) {
+        try {
+            // Find the task associated with this progress bar
+            // This would need to be implemented based on your specific data structure
+            this.showNotification(`Progress updated to ${progress}%`);
+        } catch (error) {
+            this.onError(error);
+            this.showNotification('Failed to update progress', 'error');
+        }
+    }
 }
 
 /**

@@ -9,7 +9,9 @@ use App\Http\Controllers\ProgressReportController;
 use App\Http\Controllers\Supervisor;
 use App\Http\Controllers\Student;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TimelineController;
 use App\Http\Controllers\AiChatPageController;
+use App\Http\Controllers\UserSettingsController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -81,6 +83,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::get('/students/{student}/tasks/gantt', [TaskController::class, 'gantt'])->name('tasks.gantt');
     Route::get('/students/{student}/tasks/timeline', [TaskController::class, 'timeline'])->name('tasks.timeline');
+    Route::get('/students/{student}/tasks/timeline-overview', [TaskController::class, 'timelineOverview'])->name('tasks.timeline-overview');
     Route::get('/students/{student}/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
     Route::post('/students/{student}/tasks', [TaskController::class, 'store'])->name('tasks.store');
     Route::get('/students/{student}/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
@@ -116,4 +119,11 @@ Route::middleware('auth')->group(function () {
     // AI Chat
     Route::get('/ai/chat', [AiChatPageController::class, 'index'])->name('ai.chat');
     Route::get('/ai/chat/student/{student}', [AiChatPageController::class, 'studentContext'])->name('ai.chat.student');
+
+    // User Settings
+    Route::post('/settings/theme', [UserSettingsController::class, 'updateTheme'])->name('settings.theme');
+
+    // Global Timeline Overview (all roles)
+    Route::get('/timeline', [TimelineController::class, 'index'])->name('timeline.index');
+    Route::get('/timeline/{student}', [TimelineController::class, 'show'])->name('timeline.show');
 });

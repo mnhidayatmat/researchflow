@@ -1,4 +1,4 @@
-<x-layouts.app title="Timeline Overview" :header="'Gantt Timeline Overview'">
+<x-layouts.app title="Gantt Chart" :header="'Gantt Chart Overview'">
     <div class="max-w-7xl mx-auto" x-data="timelineIndex()">
         {{-- Toast Notifications --}}
         <div class="fixed top-4 right-4 z-[100] space-y-2">
@@ -24,7 +24,7 @@
         {{-- Page Header --}}
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div>
-                <h1 class="text-2xl font-semibold text-primary">Timeline Overview</h1>
+                <h1 class="text-2xl font-semibold text-primary">Gantt Chart</h1>
                 <p class="text-sm text-secondary mt-1">Select a student to view and manage their project timeline</p>
             </div>
             <div class="flex items-center gap-2">

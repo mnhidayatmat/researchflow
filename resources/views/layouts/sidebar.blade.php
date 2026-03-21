@@ -12,8 +12,7 @@
                 ['route' => 'admin.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
                 ['route' => 'admin.students.index', 'icon' => 'users', 'label' => 'Students'],
                 ['route' => 'admin.programmes.index', 'icon' => 'folder', 'label' => 'Programmes'],
-                ['route' => 'admin.templates.index', 'icon' => 'map', 'label' => 'Journey Templates'],
-                ['route' => 'timeline.index', 'icon' => 'timeline-overview', 'label' => 'Timeline Overview'],
+                ['route' => 'timeline.index', 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
             ],
             'settings' => [
                 ['route' => 'admin.settings.storage', 'icon' => 'hard-drive', 'label' => 'Storage'],
@@ -25,14 +24,14 @@
             'main' => [
                 ['route' => 'supervisor.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
                 ['route' => 'supervisor.students.index', 'icon' => 'users', 'label' => 'My Students'],
-                ['route' => 'timeline.index', 'icon' => 'timeline-overview', 'label' => 'Timeline Overview'],
+                ['route' => 'timeline.index', 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
             ],
         ],
         'cosupervisor' => [
             'main' => [
                 ['route' => 'supervisor.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
                 ['route' => 'supervisor.students.index', 'icon' => 'users', 'label' => 'My Students'],
-                ['route' => 'timeline.index', 'icon' => 'timeline-overview', 'label' => 'Timeline Overview'],
+                ['route' => 'timeline.index', 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
             ],
         ],
         'student' => [
@@ -54,7 +53,6 @@
     // Add research section for admin when switched to student-like view
     if ($studentId && $isRoleSwitched) {
         $navGroups[$displayRole]['supervision'] = [
-            ['route' => ['journey.index', $studentId], 'icon' => 'journey', 'label' => 'Research Journey'],
             ['route' => ['tasks.index', $studentId], 'icon' => 'check-square', 'label' => 'Tasks'],
             ['route' => ['tasks.kanban', $studentId], 'icon' => 'columns', 'label' => 'Kanban'],
             ['route' => ['tasks.gantt', $studentId], 'icon' => 'bar-chart', 'label' => 'Gantt'],
@@ -65,10 +63,9 @@
 
     if ($studentId && in_array($displayRole, ['supervisor', 'cosupervisor'])) {
         $navGroups[$displayRole]['supervision'] = [
-            ['route' => ['journey.index', $studentId], 'icon' => 'journey', 'label' => 'Research Journey'],
             ['route' => ['tasks.index', $studentId], 'icon' => 'check-square', 'label' => 'Tasks'],
             ['route' => ['tasks.kanban', $studentId], 'icon' => 'columns', 'label' => 'Kanban'],
-            ['route' => ['tasks.timeline-overview', $studentId], 'icon' => 'timeline-overview', 'label' => 'Timeline Overview'],
+            ['route' => ['tasks.timeline-overview', $studentId], 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
             ['route' => ['reports.index', $studentId], 'icon' => 'file-text', 'label' => 'Reports'],
             ['route' => ['meetings.index', $studentId], 'icon' => 'calendar', 'label' => 'Meetings'],
         ];
@@ -76,7 +73,6 @@
 
     if ($studentId && $displayRole === 'student') {
         $navGroups[$displayRole]['research'] = [
-            ['route' => ['journey.index', $studentId], 'icon' => 'journey', 'label' => 'Research Journey'],
             ['route' => ['tasks.index', $studentId], 'icon' => 'check-square', 'label' => 'Tasks'],
             ['route' => ['tasks.kanban', $studentId], 'icon' => 'columns', 'label' => 'Kanban'],
             ['route' => ['tasks.gantt', $studentId], 'icon' => 'bar-chart', 'label' => 'Gantt'],
@@ -101,8 +97,7 @@
         'bar-chart' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
         'archive' => 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
         'message-circle' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
-        'timeline-overview' => 'M13 10V3L4 14h7v7l9-11h-7z',
-        'journey' => 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
+        'gantt-chart' => 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2',
     ];
 @endphp
 

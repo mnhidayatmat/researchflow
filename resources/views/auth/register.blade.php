@@ -41,11 +41,14 @@
 
             <x-input name="name" label="Full Name" required />
             <x-input name="email" type="email" label="Email" required />
+            <x-input name="university_name" label="University Name" required />
 
             <!-- Student Fields -->
             <div id="studentFields" class="space-y-4">
                 <x-input name="matric_number" label="Matric Number" />
                 <x-select name="programme_id" label="Programme" :options="$programmes->pluck('name', 'id')->toArray()" />
+                <x-input name="supervisor_email" type="email" label="Supervisor Email" />
+                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email" />
             </div>
 
             <!-- Supervisor Fields -->

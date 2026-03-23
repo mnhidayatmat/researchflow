@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use App\Models\AiProvider as AiProviderModel;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
 
 class AiServiceFactory
@@ -70,7 +71,7 @@ class AiServiceFactory
         }
 
         return $providerClass::fromConfig([
-            'api_key' => $model->api_key,
+            'api_key' => self::resolveApiKey($model),
             'model' => $model->model,
             'base_url' => $model->base_url,
             'features' => array_keys($model->settings['features'] ?? []),
@@ -92,5 +93,14 @@ class AiServiceFactory
     public static function clearCache(): void
     {
         Cache::forget('ai.default_provider');
+    }
+
+    protected static function resolveApiKey(AiProviderModel $model): ?string
+    {
+        try {
+            return $model->api_key;
+        } catch (DecryptException) {
+            return $model->getRawOriginal('api_key');
+        }
     }
 }

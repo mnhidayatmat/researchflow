@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Student;
+use App\Models\User;
+use Google\Service\Drive\DriveFile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -15,10 +17,10 @@ class StorageService
     private array $allowedMimeTypes;
     private int $maxFileSize;
 
-    public function __construct()
+    public function __construct(private UserStorageService $userStorageService)
     {
         $this->disk = config('filesystems.default', 'local');
-        $this->allowedMimeTypes = config('storage.allowed_mime_types', [
+        $this->allowedMimeTypes = config('settings.storage.allowed_mime_types', [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -35,7 +37,7 @@ class StorageService
             'application/zip',
             'application/x-rar-compressed',
         ]);
-        $this->maxFileSize = config('storage.max_file_size', 51200); // 50MB in KB
+        $this->maxFileSize = config('settings.storage.max_file_size', 51200);
     }
 
     public function setDisk(string $disk): self
@@ -60,35 +62,13 @@ class StorageService
         $this->validateFile($uploadedFile);
 
         $folder = $folderId ? Folder::find($folderId) : null;
-        $path = $this->generateStoragePath($student, $folder, $uploadedFile);
+        $storageOwner = $this->resolveStorageOwner($student);
 
-        $storedPath = $uploadedFile->storeAs(
-            dirname($path),
-            basename($path),
-            $this->disk
-        );
-
-        $file = File::create([
-            'student_id' => $student->id,
-            'folder_id' => $folderId,
-            'uploaded_by' => $userId,
-            'name' => basename($path),
-            'original_name' => $uploadedFile->getClientOriginalName(),
-            'mime_type' => $uploadedFile->getMimeType(),
-            'size' => $uploadedFile->getSize(),
-            'disk' => $this->disk,
-            'path' => $storedPath,
-            'description' => $description,
-            'category' => $category ?? $this->detectCategory($uploadedFile),
-            'is_latest' => true,
-        ]);
-
-        // Update folder size if applicable
-        if ($folder) {
-            $folder->increment('size', $uploadedFile->getSize());
+        if ($storageOwner && $this->userStorageService->canUseGoogleDrive($storageOwner)) {
+            return $this->uploadToGoogleDrive($uploadedFile, $student, $userId, $folder, $description, $category, $storageOwner);
         }
 
-        return $file;
+        return $this->uploadToLocal($uploadedFile, $student, $userId, $folder, $description, $category);
     }
 
     public function uploadNewVersion(
@@ -99,25 +79,23 @@ class StorageService
     ): File {
         $this->validateFile($uploadedFile);
 
-        // Mark parent and all previous versions as not latest
         File::where('id', $parentFile->id)
             ->orWhere('parent_file_id', $parentFile->parent_file_id ?? $parentFile->id)
             ->update(['is_latest' => false]);
 
+        if ($parentFile->disk === 'google_drive' && $parentFile->storageOwner) {
+            return $this->uploadGoogleDriveVersion($uploadedFile, $parentFile, $userId, $description, $parentFile->storageOwner);
+        }
+
         $basePath = dirname($parentFile->path);
         $filename = $this->generateUniqueFilename($uploadedFile);
-        $path = $basePath . '/' . $filename;
-
-        $storedPath = $uploadedFile->storeAs(
-            $basePath,
-            $filename,
-            $parentFile->disk
-        );
+        $storedPath = $uploadedFile->storeAs($basePath, $filename, $parentFile->disk);
 
         $newVersion = File::create([
             'student_id' => $parentFile->student_id,
             'folder_id' => $parentFile->folder_id,
             'uploaded_by' => $userId,
+            'storage_owner_id' => $parentFile->storage_owner_id,
             'name' => $filename,
             'original_name' => $uploadedFile->getClientOriginalName(),
             'mime_type' => $uploadedFile->getMimeType(),
@@ -131,7 +109,6 @@ class StorageService
             'is_latest' => true,
         ]);
 
-        // Update folder size
         if ($parentFile->folder) {
             $parentFile->folder->increment('size', $uploadedFile->getSize());
         }
@@ -142,26 +119,22 @@ class StorageService
     public function delete(File $file, bool $permanent = false): bool
     {
         if ($permanent) {
-            // Delete all versions
             $allVersions = File::where('id', $file->id)
                 ->orWhere('parent_file_id', $file->id)
                 ->orWhere('parent_file_id', $file->parent_file_id)
                 ->get();
 
             foreach ($allVersions as $version) {
-                Storage::disk($version->disk)->delete($version->path);
+                $this->deleteStoredFile($version);
             }
 
-            // Update folder size
             if ($file->folder) {
-                $totalSize = $allVersions->sum('size');
-                $file->folder->decrement('size', $totalSize);
+                $file->folder->decrement('size', $allVersions->sum('size'));
             }
 
             return $file->forceDelete();
         }
 
-        // Soft delete
         $file->delete();
         return true;
     }
@@ -174,7 +147,25 @@ class StorageService
 
     public function download(File $file): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        return Storage::disk($file->disk)->download($file->path, $file->original_name);
+        if ($file->disk !== 'google_drive') {
+            return Storage::disk($file->disk)->download($file->path, $file->original_name);
+        }
+
+        abort_unless($file->storageOwner, 422, 'Google Drive storage owner not found.');
+
+        $service = $this->userStorageService->googleDriveServiceFor($file->storageOwner);
+        abort_unless($service, 422, 'Google Drive is not configured for the assigned supervisor.');
+
+        $response = $service->files->get($file->path, ['alt' => 'media']);
+        $stream = $response->getBody();
+
+        return response()->streamDownload(function () use ($stream) {
+            while (!$stream->eof()) {
+                echo $stream->read(1024 * 8);
+            }
+        }, $file->original_name, [
+            'Content-Type' => $file->mime_type ?: 'application/octet-stream',
+        ]);
     }
 
     public function getStream(File $file)
@@ -194,16 +185,28 @@ class StorageService
 
     public function exists(File $file): bool
     {
+        if ($file->disk === 'google_drive') {
+            return true;
+        }
+
         return Storage::disk($file->disk)->exists($file->path);
     }
 
     public function getFileSize(File $file): int
     {
+        if ($file->disk === 'google_drive') {
+            return $file->size;
+        }
+
         return Storage::disk($file->disk)->size($file->path);
     }
 
     public function getLastModified(File $file): \Illuminate\Support\Carbon
     {
+        if ($file->disk === 'google_drive') {
+            return $file->updated_at;
+        }
+
         return \Illuminate\Support\Carbon::createFromTimestamp(
             Storage::disk($file->disk)->lastModified($file->path)
         );
@@ -216,12 +219,8 @@ class StorageService
         ?string $category = null
     ): Folder {
         $parent = $parentId ? Folder::find($parentId) : null;
+        $path = $parent ? $parent->path . '/' . $name : "files/{$student->id}/{$name}";
 
-        $path = $parent
-            ? $parent->path . '/' . $name
-            : "files/{$student->id}/{$name}";
-
-        // Create physical directory
         Storage::disk($this->disk)->makeDirectory($path);
 
         return Folder::create([
@@ -237,18 +236,15 @@ class StorageService
     public function deleteFolder(Folder $folder, bool $recursive = true): bool
     {
         if ($recursive) {
-            // Delete all files in folder
             foreach ($folder->files as $file) {
                 $this->delete($file, true);
             }
 
-            // Delete all subfolders
             foreach ($folder->children as $child) {
                 $this->deleteFolder($child, true);
             }
         }
 
-        // Delete physical directory
         Storage::disk($this->disk)->deleteDirectory($folder->path);
 
         return $folder->delete();
@@ -270,7 +266,6 @@ class StorageService
             'path' => $newPath,
         ]);
 
-        // Update folder sizes
         if ($oldFolder) {
             $oldFolder->decrement('size', $file->size);
         }
@@ -294,6 +289,7 @@ class StorageService
             'student_id' => $file->student_id,
             'folder_id' => $targetFolder?->id,
             'uploaded_by' => $userId,
+            'storage_owner_id' => $file->storage_owner_id,
             'name' => $newFilename,
             'original_name' => $file->original_name,
             'mime_type' => $file->mime_type,
@@ -348,37 +344,217 @@ class StorageService
         ];
 
         foreach ($categories as $category) {
-            $this->createFolder(
-                $student,
-                $category['name'],
-                null,
-                $category['slug']
-            );
+            $this->createFolder($student, $category['name'], null, $category['slug']);
         }
+    }
+
+    private function uploadToLocal(
+        UploadedFile $uploadedFile,
+        Student $student,
+        int $userId,
+        ?Folder $folder,
+        ?string $description,
+        ?string $category
+    ): File {
+        $path = $this->generateStoragePath($student, $folder, $uploadedFile);
+
+        $storedPath = $uploadedFile->storeAs(dirname($path), basename($path), $this->disk);
+
+        $file = File::create([
+            'student_id' => $student->id,
+            'folder_id' => $folder?->id,
+            'uploaded_by' => $userId,
+            'storage_owner_id' => null,
+            'name' => basename($path),
+            'original_name' => $uploadedFile->getClientOriginalName(),
+            'mime_type' => $uploadedFile->getMimeType(),
+            'size' => $uploadedFile->getSize(),
+            'disk' => $this->disk,
+            'path' => $storedPath,
+            'description' => $description,
+            'category' => $category ?? $this->detectCategory($uploadedFile),
+            'is_latest' => true,
+        ]);
+
+        if ($folder) {
+            $folder->increment('size', $uploadedFile->getSize());
+        }
+
+        return $file;
+    }
+
+    private function uploadToGoogleDrive(
+        UploadedFile $uploadedFile,
+        Student $student,
+        int $userId,
+        ?Folder $folder,
+        ?string $description,
+        ?string $category,
+        User $storageOwner
+    ): File {
+        $service = $this->userStorageService->googleDriveServiceFor($storageOwner);
+        if (!$service) {
+            throw new \RuntimeException('Assigned supervisor has not configured Google Drive yet.');
+        }
+
+        $profile = $this->userStorageService->profileFor($storageOwner);
+        $folderId = $this->userStorageService->ensureDriveFolder(
+            $service,
+            $this->googleDriveFolderSegments($student, $storageOwner, $folder),
+            $profile->google_drive_folder_id ?: 'root'
+        );
+
+        $driveFile = new DriveFile([
+            'name' => $uploadedFile->getClientOriginalName(),
+            'parents' => [$folderId],
+        ]);
+
+        $createdFile = $service->files->create($driveFile, [
+            'data' => file_get_contents($uploadedFile->getRealPath()),
+            'mimeType' => $uploadedFile->getMimeType(),
+            'uploadType' => 'multipart',
+            'fields' => 'id',
+        ]);
+
+        $file = File::create([
+            'student_id' => $student->id,
+            'folder_id' => $folder?->id,
+            'uploaded_by' => $userId,
+            'storage_owner_id' => $storageOwner->id,
+            'name' => $uploadedFile->getClientOriginalName(),
+            'original_name' => $uploadedFile->getClientOriginalName(),
+            'mime_type' => $uploadedFile->getMimeType(),
+            'size' => $uploadedFile->getSize(),
+            'disk' => 'google_drive',
+            'path' => $createdFile->id,
+            'description' => $description,
+            'category' => $category ?? $this->detectCategory($uploadedFile),
+            'is_latest' => true,
+        ]);
+
+        if ($folder) {
+            $folder->increment('size', $uploadedFile->getSize());
+        }
+
+        return $file;
+    }
+
+    private function uploadGoogleDriveVersion(
+        UploadedFile $uploadedFile,
+        File $parentFile,
+        int $userId,
+        ?string $description,
+        User $storageOwner
+    ): File {
+        $service = $this->userStorageService->googleDriveServiceFor($storageOwner);
+        if (!$service) {
+            throw new \RuntimeException('Assigned supervisor has not configured Google Drive yet.');
+        }
+
+        $folder = $parentFile->folder;
+        $student = $parentFile->student;
+        $profile = $this->userStorageService->profileFor($storageOwner);
+        $folderId = $this->userStorageService->ensureDriveFolder(
+            $service,
+            $this->googleDriveFolderSegments($student, $storageOwner, $folder),
+            $profile->google_drive_folder_id ?: 'root'
+        );
+
+        $driveFile = new DriveFile([
+            'name' => $uploadedFile->getClientOriginalName(),
+            'parents' => [$folderId],
+        ]);
+
+        $createdFile = $service->files->create($driveFile, [
+            'data' => file_get_contents($uploadedFile->getRealPath()),
+            'mimeType' => $uploadedFile->getMimeType(),
+            'uploadType' => 'multipart',
+            'fields' => 'id',
+        ]);
+
+        $newVersion = File::create([
+            'student_id' => $parentFile->student_id,
+            'folder_id' => $parentFile->folder_id,
+            'uploaded_by' => $userId,
+            'storage_owner_id' => $storageOwner->id,
+            'name' => $uploadedFile->getClientOriginalName(),
+            'original_name' => $uploadedFile->getClientOriginalName(),
+            'mime_type' => $uploadedFile->getMimeType(),
+            'size' => $uploadedFile->getSize(),
+            'disk' => 'google_drive',
+            'path' => $createdFile->id,
+            'version' => $parentFile->version + 1,
+            'parent_file_id' => $parentFile->parent_file_id ?? $parentFile->id,
+            'description' => $description ?? $parentFile->description,
+            'category' => $parentFile->category,
+            'is_latest' => true,
+        ]);
+
+        if ($folder) {
+            $folder->increment('size', $uploadedFile->getSize());
+        }
+
+        return $newVersion;
+    }
+
+    private function deleteStoredFile(File $file): void
+    {
+        if ($file->disk === 'google_drive') {
+            if (!$file->storageOwner) {
+                return;
+            }
+
+            $service = $this->userStorageService->googleDriveServiceFor($file->storageOwner);
+            if ($service) {
+                $service->files->delete($file->path);
+            }
+
+            return;
+        }
+
+        Storage::disk($file->disk)->delete($file->path);
+    }
+
+    private function googleDriveFolderSegments(Student $student, User $storageOwner, ?Folder $folder): array
+    {
+        $segments = [
+            'ResearchFlow',
+            'supervisor-' . $storageOwner->id,
+            'student-' . $student->id,
+            'files',
+        ];
+
+        if (!$folder) {
+            return $segments;
+        }
+
+        $relativeSegments = array_values(array_filter(explode('/', $folder->path)));
+
+        if (count($relativeSegments) >= 2) {
+            $relativeSegments = array_slice($relativeSegments, 2);
+        }
+
+        return [...$segments, ...$relativeSegments];
+    }
+
+    private function resolveStorageOwner(Student $student): ?User
+    {
+        return $student->supervisor ?: $student->cosupervisor;
     }
 
     private function validateFile(UploadedFile $file): void
     {
-        // Check file size
         if ($file->getSize() > $this->maxFileSize * 1024) {
-            throw new \InvalidArgumentException(
-                "File size exceeds maximum allowed of {$this->maxFileSize} KB"
-            );
+            throw new \InvalidArgumentException("File size exceeds maximum allowed of {$this->maxFileSize} KB");
         }
 
-        // Check MIME type
         if (!in_array($file->getMimeType(), $this->allowedMimeTypes)) {
-            throw new \InvalidArgumentException(
-                "File type {$file->getMimeType()} is not allowed"
-            );
+            throw new \InvalidArgumentException("File type {$file->getMimeType()} is not allowed");
         }
     }
 
-    private function generateStoragePath(
-        Student $student,
-        ?Folder $folder,
-        UploadedFile $file
-    ): string {
+    private function generateStoragePath(Student $student, ?Folder $folder, UploadedFile $file): string
+    {
         $basePath = $folder ? $folder->path : "files/{$student->id}";
         $filename = $this->generateUniqueFilename($file);
 
@@ -414,7 +590,6 @@ class StorageService
 
     public function sanitizeFilename(string $filename): string
     {
-        // Remove any characters that aren't alphanumeric, hyphens, underscores, or periods
         return preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
     }
 
@@ -423,7 +598,7 @@ class StorageService
         return [
             'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
             'txt', 'csv', 'jpg', 'jpeg', 'png', 'gif', 'webp',
-            'zip', 'rar', '7z', 'tar', 'gz'
+            'zip', 'rar', '7z', 'tar', 'gz',
         ];
     }
 }

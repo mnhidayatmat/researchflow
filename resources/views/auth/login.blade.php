@@ -22,7 +22,7 @@
                 <p class="text-sm text-red-500">{{ $errors->first() }}</p>
             @endif
 
-            <x-button type="submit" variant="primary" class="w-full">Sign in</x-button>
+            <x-button type="submit" variant="accent" class="w-full">Sign in</x-button>
         </form>
     </div>
 

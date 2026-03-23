@@ -301,7 +301,7 @@ class AiService
         array $options
     ): string {
         $baseUrl = $provider->base_url ?? $config['default_base_url'];
-        $model = $provider->model ?? $config['default_model'] ?? 'gemini-pro';
+        $model = $provider->model ?? $config['default_model'] ?? 'gemini-2.5-flash';
 
         $contents = collect($messages)->map(fn($m) => [
             'role' => $m['role'] === 'assistant' ? 'model' : 'user',

@@ -51,7 +51,7 @@ class OpenAiProvider extends BaseAiProvider
         return rtrim($this->baseUrl ?: 'https://api.openai.com/v1', '/') . '/embeddings';
     }
 
-    public function embed(string|array $texts): array|array
+    public function embed(string|array $texts): array
     {
         $isBatch = is_array($texts);
         $texts = $isBatch ? $texts : [$texts];

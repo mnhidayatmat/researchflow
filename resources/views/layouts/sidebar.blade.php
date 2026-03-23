@@ -2,9 +2,11 @@
     $role = auth()->user()->role;
     $effectiveRole = session()->get('admin_role_switch', $role);
     $isRoleSwitched = $role === 'admin' && $effectiveRole !== $role;
+    $selectedStudentId = session()->get('admin_view_as_student_id');
 
     // Use effective role for navigation when switched
     $displayRole = $isRoleSwitched ? $effectiveRole : $role;
+    $useDirectStudentLinks = $isRoleSwitched && in_array($displayRole, ['supervisor', 'cosupervisor'], true) && $selectedStudentId;
 
     $navGroups = [
         'admin' => [
@@ -12,6 +14,7 @@
                 ['route' => 'admin.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
                 ['route' => 'admin.students.index', 'icon' => 'users', 'label' => 'Students'],
                 ['route' => 'admin.programmes.index', 'icon' => 'folder', 'label' => 'Programmes'],
+                ['route' => 'ai.chat', 'icon' => 'message-circle', 'label' => 'AI Assistant'],
                 ['route' => 'timeline.index', 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
             ],
             'settings' => [
@@ -24,19 +27,26 @@
             'main' => [
                 ['route' => 'supervisor.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
                 ['route' => 'supervisor.students.index', 'icon' => 'users', 'label' => 'My Students'],
-                ['route' => 'timeline.index', 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
+                ['route' => 'supervisor.grants.index', 'icon' => 'briefcase', 'label' => 'Grant'],
+                ['route' => 'supervisor.collaborators.index', 'icon' => 'user-plus', 'label' => 'Collaborators'],
+                ['route' => 'ai.chat', 'icon' => 'message-circle', 'label' => 'AI Assistant'],
+                ['route' => 'supervisor.storage.edit', 'icon' => 'hard-drive', 'label' => 'Storage'],
             ],
         ],
         'cosupervisor' => [
             'main' => [
                 ['route' => 'supervisor.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
                 ['route' => 'supervisor.students.index', 'icon' => 'users', 'label' => 'My Students'],
-                ['route' => 'timeline.index', 'icon' => 'gantt-chart', 'label' => 'Gantt Chart'],
+                ['route' => 'supervisor.grants.index', 'icon' => 'briefcase', 'label' => 'Grant'],
+                ['route' => 'supervisor.collaborators.index', 'icon' => 'user-plus', 'label' => 'Collaborators'],
+                ['route' => 'ai.chat', 'icon' => 'message-circle', 'label' => 'AI Assistant'],
+                ['route' => 'supervisor.storage.edit', 'icon' => 'hard-drive', 'label' => 'Storage'],
             ],
         ],
         'student' => [
             'main' => [
                 ['route' => 'student.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
+                ['route' => 'ai.chat', 'icon' => 'message-circle', 'label' => 'AI Assistant'],
             ],
         ],
     ];
@@ -45,31 +55,46 @@
         'student' => session()->has('admin_view_as_student_id')
             ? session()->get('admin_view_as_student_id')
             : auth()->user()->student?->id,
+        'supervisor', 'cosupervisor' => $isRoleSwitched && $selectedStudentId
+            ? $selectedStudentId
+            : \App\Models\Student::where('supervisor_id', auth()->id())
+                ->orWhere('cosupervisor_id', auth()->id())
+                ->where('status', 'active')
+                ->first()?->id,
         'admin' => \App\Models\Student::where('status', 'active')->first()?->id,
-        default => \App\Models\Student::where('supervisor_id', auth()->id())
-            ->orWhere('cosupervisor_id', auth()->id())
-            ->where('status', 'active')
-            ->first()?->id,
+        default => null,
     };
 
+    if ($displayRole === 'student' && $isRoleSwitched && !$selectedStudentId) {
+        $navGroups['student']['main'][0]['route'] = 'admin.role-switch-select-student';
+        $navGroups['student']['main'][0]['query'] = ['role' => 'student'];
+    }
+
+    if (in_array($displayRole, ['supervisor', 'cosupervisor'], true)) {
+        array_splice($navGroups[$displayRole]['main'], 2, 0, [[
+            'route' => $studentId ? ['publications.index', $studentId] : 'supervisor.students.index',
+            'query' => $studentId ? [] : ['target' => 'publications'],
+            'icon' => 'journal',
+            'label' => 'Publications',
+        ]]);
+    }
+
     // Supervisor and co-supervisor navigation
-    if ($studentId && in_array($displayRole, ['supervisor', 'cosupervisor'])) {
+    if (in_array($displayRole, ['supervisor', 'cosupervisor'])) {
         $navGroups[$displayRole]['supervision'] = [
-            ['route' => ['tasks.index', $studentId], 'icon' => 'check-square', 'label' => 'Tasks'],
-            ['route' => ['tasks.kanban', $studentId], 'icon' => 'columns', 'label' => 'Kanban'],
-            ['route' => ['tasks.gantt', $studentId], 'icon' => 'bar-chart', 'label' => 'Gantt'],
-            ['route' => ['reports.index', $studentId], 'icon' => 'file-text', 'label' => 'Reports'],
-            ['route' => ['meetings.index', $studentId], 'icon' => 'calendar', 'label' => 'Meetings'],
+            ['route' => $useDirectStudentLinks ? ['tasks.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'tasks'], 'icon' => 'check-square', 'label' => 'Tasks'],
+            ['route' => $useDirectStudentLinks ? ['reports.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'reports'], 'icon' => 'file-text', 'label' => 'Reports'],
+            ['route' => $useDirectStudentLinks ? ['meetings.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'meetings'], 'icon' => 'calendar', 'label' => 'Meetings'],
+            ['route' => $useDirectStudentLinks ? ['publications.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'publications'], 'icon' => 'journal', 'label' => 'Publications'],
         ];
     }
 
     if ($studentId && $displayRole === 'student') {
         $navGroups[$displayRole]['research'] = [
             ['route' => ['tasks.index', $studentId], 'icon' => 'check-square', 'label' => 'Tasks'],
-            ['route' => ['tasks.kanban', $studentId], 'icon' => 'columns', 'label' => 'Kanban'],
-            ['route' => ['tasks.gantt', $studentId], 'icon' => 'bar-chart', 'label' => 'Gantt'],
             ['route' => ['reports.index', $studentId], 'icon' => 'file-text', 'label' => 'Reports'],
             ['route' => ['meetings.index', $studentId], 'icon' => 'calendar', 'label' => 'Meetings'],
+            ['route' => ['publications.index', $studentId], 'icon' => 'journal', 'label' => 'Publications'],
             ['route' => ['files.index', $studentId], 'icon' => 'archive', 'label' => 'Vault'],
         ];
     }
@@ -90,6 +115,9 @@
         'archive' => 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
         'message-circle' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
         'gantt-chart' => 'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2',
+        'briefcase' => 'M9 6V4a3 3 0 013-3h0a3 3 0 013 3v2m-9 0h10a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h0z',
+        'journal' => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+        'user-plus' => 'M18 9a3 3 0 100-6 3 3 0 000 6zm-8 11a4 4 0 014-4h4a4 4 0 014 4v1H10v-1zm-6-7h4m-2-2v4',
     ];
 @endphp
 
@@ -120,10 +148,25 @@
                 <div class="space-y-0.5 px-2">
                     @foreach($items as $item)
                         @php
-                            $itemRoute = is_array($item['route']) ? route($item['route'][0], $item['route'][1] ?? []) : route($item['route']);
-                            $isActive = is_array($item['route'])
-                                ? request()->routeIs($item['route'][0] . '*')
-                                : request()->routeIs($item['route'] . '*');
+                            $itemRoute = is_array($item['route'])
+                                ? route($item['route'][0], $item['route'][1] ?? [])
+                                : route($item['route'], $item['query'] ?? []);
+                            $routeName = is_array($item['route']) ? $item['route'][0] : $item['route'];
+                            $targetQuery = $item['query']['target'] ?? null;
+                            $isStudentsRoute = $routeName === 'supervisor.students.index';
+                            $currentTarget = request('target');
+
+                            if ($isStudentsRoute && $targetQuery !== null) {
+                                $isActive = request()->routeIs('supervisor.students.index') && $currentTarget === $targetQuery;
+                            } elseif ($isStudentsRoute) {
+                                $isActive = request()->routeIs('supervisor.students.index', 'supervisor.students.show') && $currentTarget === null;
+                            } elseif ($routeName === 'supervisor.grants.index') {
+                                $isActive = request()->routeIs('supervisor.grants.*');
+                            } elseif ($routeName === 'supervisor.collaborators.index') {
+                                $isActive = request()->routeIs('supervisor.collaborators.*');
+                            } else {
+                                $isActive = request()->routeIs($routeName . '*');
+                            }
                         @endphp
 
                         <a href="{{ $itemRoute }}"

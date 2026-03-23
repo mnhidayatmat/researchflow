@@ -120,6 +120,10 @@ class Task extends Model
             $endDate = $startDate->copy()->addDays($defaultDays);
         }
 
+        // Build custom class name for Frappe Gantt styling
+        // Format: 'gantt-{status}' for proper CSS matching (with underscores converted to hyphens)
+        $customClass = $this->is_milestone ? 'gantt-milestone' : 'gantt-' . str_replace('_', '-', $this->status);
+
         return [
             'id' => 'task-' . $this->id,
             'name' => $this->title,
@@ -127,10 +131,11 @@ class Task extends Model
             'end' => $endDate->format('Y-m-d'),
             'progress' => $this->progress ?? 0,
             'dependencies' => $this->dependencies->pluck('id')->map(fn($id) => 'task-' . $id)->implode(','),
-            'custom_class' => $this->is_milestone ? 'gantt-milestone' : 'gantt-task-' . $this->status,
+            'custom_class' => $customClass,
             'task_id' => $this->id,
             'is_milestone' => $this->is_milestone,
             'has_dates' => !empty($this->start_date) || !empty($this->due_date), // Track if dates were explicitly set
+            'status' => $this->status, // Include status for frontend color mapping
         ];
     }
 }

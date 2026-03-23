@@ -65,6 +65,15 @@
                 <p class="text-[10px] text-secondary">View all files</p>
             </div>
         </a>
+        <a href="{{ route('publications.index', $student) }}" class="group flex flex-col items-center gap-2 p-4 bg-white border border-border rounded-lg hover:border-accent/40 hover:shadow-sm transition-all text-center">
+            <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            </div>
+            <div>
+                <p class="text-xs font-semibold text-primary">Publications</p>
+                <p class="text-[10px] text-secondary">{{ $student->publicationTracks->count() }} tracked</p>
+            </div>
+        </a>
     </div>
 
     <div class="grid lg:grid-cols-3 gap-5">
@@ -178,6 +187,25 @@
                 </div>
                 <div class="px-5 py-2.5 border-t border-border">
                     <a href="{{ route('reports.index', $student) }}" class="text-xs text-accent hover:underline">View all reports</a>
+                </div>
+            </x-card>
+
+            <x-card title="Publication Track" :padding='false'>
+                <div class="divide-y divide-border">
+                    @forelse($student->publicationTracks->take(5) as $publication)
+                        <div class="flex items-start justify-between px-5 py-3 gap-4">
+                            <div>
+                                <a href="{{ route('publications.index', $student) }}" class="text-sm font-medium text-primary hover:text-accent transition-colors">{{ $publication->title }}</a>
+                                <p class="text-xs text-secondary mt-0.5">{{ $publication->journal }}</p>
+                            </div>
+                            <span class="inline-flex rounded-full bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent">{{ $publication->stage_label }}</span>
+                        </div>
+                    @empty
+                        <div class="px-5 py-6 text-center text-sm text-secondary">No publication records yet</div>
+                    @endforelse
+                </div>
+                <div class="px-5 py-2.5 border-t border-border">
+                    <a href="{{ route('publications.index', $student) }}" class="text-xs text-accent hover:underline">View publication tracker</a>
                 </div>
             </x-card>
         </div>

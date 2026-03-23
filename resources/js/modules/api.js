@@ -8,6 +8,7 @@ import axios from 'axios';
 // Base configuration
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.withCredentials = true; // Important for Laravel session authentication
 
 // Get CSRF token from meta tag
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

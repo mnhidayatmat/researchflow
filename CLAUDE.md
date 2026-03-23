@@ -745,7 +745,7 @@ The application uses modular JavaScript with dynamic imports for task management
 <div x-data="initTaskFlowKanban({ studentId: {{ $student->id }} })" x-init="init()">
 
 <!-- Gantt Chart -->
-<div x-data="initTaskFlowGantt({ studentId: {{ $student->id }} })" x-init="init()">
+<div x-data="ganttChartApp({{ $student->id }})">
 
 <!-- Timeline View -->
 <div x-data="initTaskFlowTimeline({ studentId: {{ $student->id }} })" x-init="init()">

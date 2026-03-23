@@ -178,12 +178,18 @@ class SettingsController extends Controller
 
             // If ID is provided (existing provider), update it
             if (!empty($providerData['id'])) {
+                $provider = AiProvider::find($providerData['id']);
+                if (!$provider) {
+                    continue;
+                }
+
                 // Preserve existing API key if not provided
                 if (empty($providerData['api_key'])) {
-                    // Don't update the api_key field at all - keep the existing encrypted value
                     unset($modelData['api_key']);
                 }
-                AiProvider::where('id', $providerData['id'])->update($modelData);
+
+                $provider->fill($modelData);
+                $provider->save();
             } else {
                 // Create new provider
                 AiProvider::create($modelData);
@@ -269,9 +275,9 @@ class SettingsController extends Controller
     {
         return match($slug) {
             'openai' => 'gpt-4o-mini',
-            'gemini' => 'gemini-1.5-pro',
+            'gemini' => 'gemini-2.5-flash',
             'anthropic' => 'claude-3-5-sonnet-20241022',
-            'zai' => 'glm-4.6',
+            'zai' => 'glm-5-turbo',
             'custom' => '',
             default => '',
         };

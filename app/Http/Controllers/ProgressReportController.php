@@ -4,11 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\ProgressReport;
 use App\Models\Student;
+use App\Services\UserStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProgressReportController extends Controller
 {
+    public function __construct(protected UserStorageService $storageService)
+    {
+    }
+
     public function index(Student $student)
     {
         $this->authorize('view', $student);
@@ -18,27 +25,63 @@ class ProgressReportController extends Controller
 
     public function create(Student $student)
     {
-        return view('reports.create', compact('student'));
+        $this->authorize('view', $student);
+
+        $storageOwner = $this->resolveStorageOwner($student);
+        $storageProfile = $storageOwner ? $this->storageService->profileFor($storageOwner) : null;
+        $reportTypeOptions = ProgressReport::typeOptions();
+
+        return view('reports.create', compact('student', 'storageOwner', 'storageProfile', 'reportTypeOptions'));
     }
 
     public function store(Request $request, Student $student)
     {
+        $this->authorize('view', $student);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'achievements' => 'nullable|string',
             'challenges' => 'nullable|string',
             'next_steps' => 'nullable|string',
-            'type' => 'required|in:weekly,monthly,milestone,custom',
+            'type' => ['required', Rule::in(array_keys(ProgressReport::typeOptions()))],
+            'custom_type' => 'nullable|string|max:255|required_if:type,other',
             'period_start' => 'nullable|date',
             'period_end' => 'nullable|date',
+            'attachment' => 'nullable|file|max:51200|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,jpg,jpeg,png',
         ]);
 
-        $student->progressReports()->create([
+        $reportData = [
             ...$validated,
             'status' => $request->has('submit') ? 'submitted' : 'draft',
             'submitted_at' => $request->has('submit') ? now() : null,
-        ]);
+        ];
+        unset($reportData['attachment']);
+        $reportData['custom_type'] = $validated['type'] === 'other'
+            ? ($validated['custom_type'] ?? null)
+            : null;
+
+        if ($request->hasFile('attachment')) {
+            $storageOwner = $this->resolveStorageOwner($student);
+            if (!$storageOwner) {
+                throw ValidationException::withMessages([
+                    'attachment' => 'No supervisor storage owner is assigned for this student.',
+                ]);
+            }
+
+            try {
+                $reportData = [
+                    ...$reportData,
+                    ...$this->storageService->uploadReportAttachment($request->file('attachment'), $student, $storageOwner),
+                ];
+            } catch (\Throwable $e) {
+                throw ValidationException::withMessages([
+                    'attachment' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $student->progressReports()->create($reportData);
 
         return redirect()->route('reports.index', $student)->with('success', 'Report saved.');
     }
@@ -46,14 +89,19 @@ class ProgressReportController extends Controller
     public function show(Student $student, ProgressReport $report)
     {
         $this->authorize('view', $report);
-        $report->load('revisions.comments.user');
+        $report->load('revisions.comments.user', 'attachmentStorageOwner');
         return view('reports.show', compact('student', 'report'));
     }
 
     public function edit(Student $student, ProgressReport $report)
     {
         $this->authorize('update', $report);
-        return view('reports.edit', compact('student', 'report'));
+
+        $storageOwner = $this->resolveStorageOwner($student);
+        $storageProfile = $storageOwner ? $this->storageService->profileFor($storageOwner) : null;
+        $reportTypeOptions = ProgressReport::typeOptions();
+
+        return view('reports.edit', compact('student', 'report', 'storageOwner', 'storageProfile', 'reportTypeOptions'));
     }
 
     public function update(Request $request, Student $student, ProgressReport $report)
@@ -66,16 +114,56 @@ class ProgressReportController extends Controller
             'achievements' => 'nullable|string',
             'challenges' => 'nullable|string',
             'next_steps' => 'nullable|string',
-            'type' => 'required|in:weekly,monthly,milestone,custom',
+            'type' => ['required', Rule::in(array_keys(ProgressReport::typeOptions()))],
+            'custom_type' => 'nullable|string|max:255|required_if:type,other',
+            'attachment' => 'nullable|file|max:51200|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,jpg,jpeg,png',
         ]);
 
-        $report->update([
+        $reportData = [
             ...$validated,
             'status' => $request->has('submit') ? 'submitted' : 'draft',
             'submitted_at' => $request->has('submit') ? now() : $report->submitted_at,
-        ]);
+        ];
+        unset($reportData['attachment']);
+        $reportData['custom_type'] = $validated['type'] === 'other'
+            ? ($validated['custom_type'] ?? null)
+            : null;
+
+        if ($request->hasFile('attachment')) {
+            if ($report->attachment_path) {
+                $this->storageService->deleteReportAttachment($report);
+            }
+
+            $storageOwner = $this->resolveStorageOwner($student);
+            if (!$storageOwner) {
+                throw ValidationException::withMessages([
+                    'attachment' => 'No supervisor storage owner is assigned for this student.',
+                ]);
+            }
+
+            try {
+                $reportData = [
+                    ...$reportData,
+                    ...$this->storageService->uploadReportAttachment($request->file('attachment'), $student, $storageOwner),
+                ];
+            } catch (\Throwable $e) {
+                throw ValidationException::withMessages([
+                    'attachment' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $report->update($reportData);
 
         return redirect()->route('reports.show', [$student, $report])->with('success', 'Report updated.');
+    }
+
+    public function downloadAttachment(Student $student, ProgressReport $report)
+    {
+        $this->authorize('view', $report);
+        abort_unless($report->attachment_path, 404, 'No attachment found for this report.');
+
+        return $this->storageService->downloadReportAttachment($report);
     }
 
     public function review(Request $request, Student $student, ProgressReport $report)
@@ -103,5 +191,10 @@ class ProgressReportController extends Controller
         }
 
         return back()->with('success', 'Report reviewed.');
+    }
+
+    protected function resolveStorageOwner(Student $student)
+    {
+        return $student->supervisor ?: $student->cosupervisor;
     }
 }

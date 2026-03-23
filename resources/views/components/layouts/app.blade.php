@@ -23,7 +23,6 @@
             }
         }
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
@@ -31,6 +30,8 @@
     </style>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
+    <!-- Alpine.js loaded after Vite to ensure globals are available -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="h-full bg-surface text-primary">
     <div class="min-h-full" x-data="{ sidebarOpen: false }">
@@ -238,6 +239,7 @@
     <script>
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
         axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+        axios.defaults.withCredentials = true;
 
         function notifications() {
             return {

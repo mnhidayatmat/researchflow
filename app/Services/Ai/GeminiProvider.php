@@ -29,7 +29,7 @@ class GeminiProvider extends BaseAiProvider
 
             $contents[] = [
                 'role' => $msg['role'] === 'assistant' ? 'model' : 'user',
-                'parts' => [['text' => $msg['content']]],
+                'parts' => $msg['parts'] ?? [['text' => $msg['content']]],
             ];
         }
 
@@ -88,7 +88,7 @@ class GeminiProvider extends BaseAiProvider
     protected function getChatEndpoint(): string
     {
         $baseUrl = $this->baseUrl ?: 'https://generativelanguage.googleapis.com/v1beta';
-        $model = $this->model ?? 'gemini-pro';
+        $model = $this->model ?? 'gemini-2.5-flash';
         return rtrim($baseUrl, '/') . "/models/{$model}:generateContent";
     }
 
@@ -99,7 +99,7 @@ class GeminiProvider extends BaseAiProvider
         return rtrim($baseUrl, '/') . "/models/{$model}:batchEmbedContents";
     }
 
-    public function embed(string|array $texts): array|array
+    public function embed(string|array $texts): array
     {
         $isBatch = is_array($texts);
         $texts = $isBatch ? $texts : [$texts];
@@ -140,7 +140,7 @@ class GeminiProvider extends BaseAiProvider
     {
         return new self(
             apiKey: $config['api_key'],
-            model: $config['model'] ?? 'gemini-1.5-pro',
+            model: $config['model'] ?? 'gemini-2.5-flash',
             baseUrl: $config['base_url'] ?? null,
             capabilities: [
                 'name' => 'gemini',

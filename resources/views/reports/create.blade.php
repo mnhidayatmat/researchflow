@@ -3,20 +3,45 @@
 
     <div class="max-w-2xl">
         <x-card>
-            <form method="POST" action="{{ route('reports.store', $student) }}" class="space-y-4">
+            <form method="POST" action="{{ route('reports.store', $student) }}" enctype="multipart/form-data" class="space-y-4" x-data="{ reportType: '{{ old('type', 'progress_report') }}' }">
+                @php
+                    $usesGoogleDrive = ($storageProfile->storage_disk ?? 'local') === 'google_drive';
+                @endphp
                 @csrf
                 <x-input name="title" label="Title" required placeholder="e.g. Week 12 Progress Report" />
-                <x-select name="type" label="Report Type" required :options="['weekly' => 'Weekly', 'monthly' => 'Monthly', 'milestone' => 'Milestone', 'custom' => 'Custom']" />
-
-                <div class="grid sm:grid-cols-2 gap-4">
-                    <x-input name="period_start" type="date" label="Period Start" />
-                    <x-input name="period_end" type="date" label="Period End" />
+                <x-select name="type" label="Report Type" required :options="$reportTypeOptions" :value="old('type', 'progress_report')" x-model="reportType" />
+                <div x-show="reportType === 'other'" x-cloak>
+                    <x-input name="custom_type" label="Other Type" required placeholder="e.g. Conference Abstract" :value="old('custom_type')" />
                 </div>
 
                 <x-textarea name="content" label="Report Content" required rows="6" placeholder="Describe your progress during this period..." />
                 <x-textarea name="achievements" label="Key Achievements" rows="3" placeholder="What did you accomplish?" />
                 <x-textarea name="challenges" label="Challenges" rows="3" placeholder="What challenges did you face?" />
                 <x-textarea name="next_steps" label="Next Steps" rows="3" placeholder="What are your plans for the next period?" />
+
+                <div class="rounded-xl border border-border bg-surface p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-primary">Report Attachment</p>
+                            <p class="text-xs text-secondary mt-1">
+                                @if($storageOwner)
+                                    Files will be stored in {{ $storageOwner->name }}'s {{ $usesGoogleDrive ? 'Google Drive' : 'local storage' }}.
+                                @else
+                                    No supervisor storage owner is assigned yet.
+                                @endif
+                            </p>
+                        </div>
+                        <span class="text-[10px] px-2 py-1 rounded-full {{ $usesGoogleDrive ? 'bg-info/10 text-info' : 'bg-secondary/10 text-secondary' }}">
+                            {{ $usesGoogleDrive ? 'Google Drive' : 'Local' }}
+                        </span>
+                    </div>
+                    <div class="mt-3">
+                        <input type="file" name="attachment" class="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-primary">
+                        @error('attachment')
+                            <p class="text-xs text-danger mt-2">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
 
                 <div class="flex items-center gap-3 pt-2">
                     <x-button type="submit" name="save" variant="secondary">Save Draft</x-button>

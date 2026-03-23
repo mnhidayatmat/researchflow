@@ -1,19 +1,26 @@
 /**
- * Gantt Chart Module - Frappe Gantt Integration
- * Provides interactive Gantt chart visualization for task timelines
+ * Gantt Chart Module - Split Layout with Frappe Gantt
+ * Provides MS Project / ClickUp / Notion Timeline style interface
  */
 
 import { taskApi } from './api.js';
-import { taskStore } from './store.js';
 
 /**
- * Gantt Chart class
+ * Status color mapping for UI
+ */
+const STATUS_COLORS = {
+    'planned': { bg: '#3B82F6', label: 'Planned' },
+    'in_progress': { bg: '#F59E0B', label: 'In Progress' },
+    'waiting_review': { bg: '#F97316', label: 'Review' },
+    'revision': { bg: '#8B5CF6', label: 'Revision' },
+    'completed': { bg: '#10B981', label: 'Done' }
+};
+
+/**
+ * Gantt Chart class with split layout support
  */
 class GanttChart {
     constructor(options = {}) {
-        this.container = typeof options.container === 'string'
-            ? document.querySelector(options.container)
-            : options.container;
         this.studentId = options.studentId;
         this.onTaskClick = options.onTaskClick || (() => {});
         this.onDateChange = options.onDateChange || (() => {});
@@ -22,6 +29,7 @@ class GanttChart {
         this.onError = options.onError || console.error;
         this.gantt = null;
         this.tasks = [];
+        this.rowHeight = 56;
     }
 
     /**
@@ -29,11 +37,18 @@ class GanttChart {
      */
     async init() {
         try {
+            console.log('Gantt: Starting initialization');
             await this.loadGanttLibrary();
             await this.loadTasks();
-            this.render();
+            // Don't call render() here - let Alpine trigger it after DOM is ready
+            // this.render() is now called explicitly from Alpine
+            this.initScrollSync();
+            console.log('Gantt: Initialization complete');
+            return this;
         } catch (error) {
+            console.error('Gantt: Initialization failed', error);
             this.onError(error);
+            return this;
         }
     }
 
@@ -66,73 +81,242 @@ class GanttChart {
      * Load tasks from API
      */
     async loadTasks() {
-        const data = await taskApi.getGanttData(this.studentId);
-        this.tasks = data;
-        this.onTasksLoaded(data);
+        try {
+            const data = await taskApi.getGanttData(this.studentId);
+            console.log('Gantt: Loaded tasks from API:', data.length, 'tasks');
+            console.log('Gantt: Sample task:', data[0]);
+            this.tasks = data.sort((a, b) => {
+                if (a.start !== b.start) return new Date(a.start) - new Date(b.start);
+                return a.name.localeCompare(b.name);
+            });
+            this.onTasksLoaded(this.tasks);
+        } catch (error) {
+            console.error('Gantt: Failed to load tasks', error);
+            throw error;
+        }
     }
 
     /**
-     * Render the Gantt chart
+     * Render the Gantt chart with split layout
+     * Uses retry logic to wait for Alpine to reveal the DOM
      */
-    render() {
-        if (!this.container || this.tasks.length === 0) {
-            this.renderEmptyState();
+    render(attempt = 0) {
+        console.log('Gantt: Starting render with', this.tasks.length, 'tasks', 'attempt:', attempt + 1);
+
+        // Find containers
+        const container = document.querySelector('#gantt-container');
+        const taskListContainer = document.querySelector('#gantt-task-list');
+        const headerContainer = document.querySelector('#gantt-header-container');
+
+        console.log('Gantt: Containers found:', {
+            container: !!container,
+            taskListContainer: !!taskListContainer,
+            headerContainer: !!headerContainer
+        });
+
+        // If containers not found, retry after a short delay (Alpine needs time to update DOM)
+        if (!container || !taskListContainer) {
+            if (attempt < 10) {
+                console.log('Gantt: Containers not ready, retrying...');
+                setTimeout(() => this.render(attempt + 1), 50);
+                return;
+            }
+            console.error('Gantt: Containers not found after 10 attempts!');
+            if (!container) console.error('Gantt: #gantt-container not found!');
+            if (!taskListContainer) console.error('Gantt: #gantt-task-list not found!');
             return;
         }
 
-        // Clear container
-        this.container.innerHTML = '';
+        // Clear containers
+        container.innerHTML = '';
+        taskListContainer.innerHTML = '';
+        if (headerContainer) headerContainer.innerHTML = '';
 
-        // Create Gantt chart
-        this.gantt = new Gantt(this.container, this.tasks, {
-            view_mode: this.getViewMode(),
-            date_format: 'YYYY-MM-DD',
-            bar_height: 28,
-            bar_corner_radius: 4,
-            padding: 18,
-            arrow_curve: 8,
-            language: 'en',
+        if (this.tasks.length === 0) {
+            this.renderEmptyState(container);
+            return;
+        }
 
-            // Event handlers
-            on_date_change: (task, start, end) => this.handleDateChange(task, start, end),
-            on_progress_change: (task, progress) => this.handleProgressChange(task, progress),
-            on_click: (task) => this.handleTaskClick(task),
-            on_view_change: (mode) => this.handleViewChange(mode),
+        try {
+            // Render task list (left panel) first
+            this.renderTaskList(taskListContainer);
 
-            // Custom popup
-            custom_popup_html: (task) => this.createPopup(task)
+            // Create Gantt chart (right panel)
+            this.gantt = new Gantt(container, this.tasks, {
+                view_mode: 'Month',
+                date_format: 'YYYY-MM-DD',
+                header_height: 48,
+                bar_height: 28,
+                bar_corner_radius: 4,
+                padding: 14,
+                arrow_curve: 8,
+                language: 'en',
+                show_dates: true,
+
+                on_date_change: (task, start, end) => this.handleDateChange(task, start, end),
+                on_progress_change: (task, progress) => this.handleProgressChange(task, progress),
+                on_click: (task) => this.handleTaskClick(task),
+                on_view_change: (mode) => this.handleViewChange(mode),
+                custom_popup_html: (task) => this.createPopup(task)
+            });
+
+            console.log('Gantt: Chart created successfully');
+            this.applyCustomStyles();
+
+            setTimeout(() => this.cloneHeader(headerContainer, container), 50);
+        } catch (error) {
+            console.error('Gantt: Failed to create chart', error);
+            this.onError(error);
+        }
+    }
+
+    /**
+     * Render task list in left panel
+     */
+    renderTaskList(container) {
+        console.log('Gantt: renderTaskList called, container:', container, 'tasks:', this.tasks.length);
+
+        if (!container) {
+            console.error('Gantt: renderTaskList - container is null/undefined');
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        this.tasks.forEach((task, index) => {
+            const statusInfo = STATUS_COLORS[task.status] || STATUS_COLORS['planned'];
+            const row = document.createElement('div');
+            row.className = 'gantt-task-row';
+            row.dataset.taskId = task.id;
+            row.dataset.taskIndex = index;
+            row.style.height = `${this.rowHeight}px`;
+
+            // Build HTML
+            row.innerHTML = `
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusInfo.bg}; flex-shrink: 0;" title="${statusInfo.label}"></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-primary truncate" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(task.name)}</p>
+                        <p class="text-xs text-secondary">${this.formatDateRange(task.start, task.end)}</p>
+                    </div>
+                    <span class="text-xs text-tertiary">${task.progress || 0}%</span>
+                </div>
+            `;
+
+            // Click handler
+            row.addEventListener('click', () => {
+                const taskId = this.extractTaskId(task.id);
+                window.location.href = `/students/${this.studentId}/tasks/${taskId}`;
+            });
+
+            // Hover handlers
+            row.addEventListener('mouseenter', () => this.highlightGanttBar(index, true));
+            row.addEventListener('mouseleave', () => this.highlightGanttBar(index, false));
+
+            fragment.appendChild(row);
         });
 
-        this.applyCustomStyles();
+        container.innerHTML = '';
+        container.appendChild(fragment);
+        console.log('Gantt: Task list rendered, child count:', container.children.length);
     }
 
     /**
-     * Get appropriate view mode based on screen size
+     * Clone Gantt header
      */
-    getViewMode() {
-        const width = window.innerWidth;
-        if (width < 768) return 'Day';
-        if (width < 1024) return 'Week';
-        return 'Month';
+    cloneHeader(headerContainer, ganttContainer) {
+        if (!headerContainer || !ganttContainer) return;
+
+        const ganttSvg = ganttContainer.querySelector('svg');
+        if (!ganttSvg) return;
+
+        const headerClone = ganttSvg.cloneNode(true);
+        const headerHeight = 48;
+        headerClone.setAttribute('viewBox', `0 0 ${ganttSvg.getAttribute('width')} ${headerHeight}`);
+        headerClone.style.height = `${headerHeight}px`;
+
+        headerContainer.innerHTML = '';
+        headerContainer.appendChild(headerClone);
     }
 
     /**
-     * Handle date change from drag
+     * Highlight Gantt bar
+     */
+    highlightGanttBar(taskIndex, highlight) {
+        const container = document.querySelector('#gantt-container');
+        if (!container) return;
+
+        const barWrappers = container.querySelectorAll('.bar-wrapper');
+        if (barWrappers[taskIndex]) {
+            const bar = barWrappers[taskIndex].querySelector('.bar');
+            if (bar) {
+                if (highlight) {
+                    bar.style.filter = 'brightness(1.15)';
+                    bar.style.stroke = 'rgba(0,0,0,0.3)';
+                    bar.style.strokeWidth = '2px';
+                } else {
+                    bar.style.filter = '';
+                    bar.style.stroke = '';
+                    bar.style.strokeWidth = '';
+                }
+            }
+        }
+
+        const taskRow = document.querySelector(`[data-task-index="${taskIndex}"]`);
+        if (taskRow) {
+            if (highlight) {
+                taskRow.classList.add('active');
+            } else {
+                taskRow.classList.remove('active');
+            }
+        }
+    }
+
+    /**
+     * Initialize scroll sync
+     */
+    initScrollSync() {
+        const taskList = document.querySelector('.gantt-task-list');
+        const timeline = document.querySelector('.gantt-timeline');
+
+        if (!taskList || !timeline) return;
+
+        let isScrolling = false;
+
+        taskList.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                isScrolling = true;
+                timeline.scrollTop = taskList.scrollTop;
+                setTimeout(() => isScrolling = false, 50);
+            }
+        });
+
+        timeline.addEventListener('scroll', () => {
+            if (!isScrolling) {
+                isScrolling = true;
+                taskList.scrollTop = timeline.scrollTop;
+                setTimeout(() => isScrolling = false, 50);
+            }
+        });
+    }
+
+    /**
+     * Handle date change
      */
     async handleDateChange(task, start, end) {
         const startDate = start.toISOString().split('T')[0];
         const dueDate = end.toISOString().split('T')[0];
+        const taskId = this.extractTaskId(task.id);
 
         try {
-            await taskApi.updateDates(task.id, startDate, dueDate);
-            this.onDateChange(task.id, startDate, dueDate);
-
-            // Show success indicator
+            await taskApi.updateDates(taskId, startDate, dueDate);
+            this.onDateChange(taskId, startDate, dueDate);
             this.showNotification('Dates updated successfully');
+            await this.loadTasks();
+            this.render();
         } catch (error) {
             this.onError(error);
             this.showNotification('Failed to update dates', 'error');
-            // Refresh to revert
             this.refresh();
         }
     }
@@ -141,10 +325,18 @@ class GanttChart {
      * Handle progress change
      */
     async handleProgressChange(task, progress) {
+        const taskId = this.extractTaskId(task.id);
+
         try {
-            await taskApi.updateProgress(task.id, progress);
-            this.onProgressChange(task.id, progress);
+            await taskApi.updateProgress(taskId, progress);
+            this.onProgressChange(taskId, progress);
             this.showNotification(`Progress updated to ${progress}%`);
+
+            const taskRow = document.querySelector(`[data-task-id="${task.id}"]`);
+            if (taskRow) {
+                const progressEl = taskRow.querySelector('.text-xs.text-tertiary');
+                if (progressEl) progressEl.textContent = `${progress}%`;
+            }
         } catch (error) {
             this.onError(error);
             this.showNotification('Failed to update progress', 'error');
@@ -156,69 +348,96 @@ class GanttChart {
      * Handle task click
      */
     handleTaskClick(task) {
-        this.onTaskClick(task);
+        const taskId = this.extractTaskId(task.id);
+        this.onTaskClick({ ...task, taskId });
     }
 
     /**
-     * Handle view mode change
+     * Handle view change
      */
     handleViewChange(mode) {
         console.log('View mode changed to:', mode);
+        setTimeout(() => {
+            const headerContainer = document.querySelector('#gantt-header-container');
+            const ganttContainer = document.querySelector('#gantt-container');
+            this.cloneHeader(headerContainer, ganttContainer);
+        }, 100);
     }
 
     /**
-     * Create custom popup HTML
+     * Extract task ID
+     */
+    extractTaskId(ganttTaskId) {
+        if (typeof ganttTaskId === 'string' && ganttTaskId.startsWith('task-')) {
+            return parseInt(ganttTaskId.replace('task-', ''), 10);
+        }
+        return parseInt(ganttTaskId, 10);
+    }
+
+    /**
+     * Format date range
+     */
+    formatDateRange(start, end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const options = { month: 'short', day: 'numeric' };
+
+        if (startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear()) {
+            return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.getDate()}`;
+        }
+        return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', options)}`;
+    }
+
+    /**
+     * Escape HTML
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Create popup
      */
     createPopup(task) {
-        const statusLabels = {
-            backlog: 'Backlog',
-            planned: 'Planned',
-            in_progress: 'In Progress',
-            waiting_review: 'Waiting Review',
-            revision: 'Revision',
-            completed: 'Completed'
-        };
-
-        const statusColors = {
-            backlog: 'bg-gray-100 text-gray-700',
-            planned: 'bg-blue-100 text-blue-700',
-            in_progress: 'bg-yellow-100 text-yellow-700',
-            waiting_review: 'bg-orange-100 text-orange-700',
-            revision: 'bg-purple-100 text-purple-700',
-            completed: 'bg-green-100 text-green-700'
-        };
-
-        const statusClass = task.custom_class?.replace('gantt-', '') || 'backlog';
+        const statusInfo = STATUS_COLORS[task.status] || STATUS_COLORS['planned'];
+        const taskId = this.extractTaskId(task.id);
 
         return `
-            <div class="gantt-popup bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[200px]">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-semibold text-sm">${task.name}</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full ${statusColors[statusClass]}">
-                        ${statusLabels[statusClass] || statusClass}
+            <div class="gantt-popup bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[220px]">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-sm">${this.escapeHtml(task.name)}</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full" style="background-color: ${statusInfo.bg}20; color: ${statusInfo.bg}">
+                        ${statusInfo.label}
                     </span>
                 </div>
-                <div class="text-xs text-gray-500 space-y-1">
-                    <p>Start: ${task.start}</p>
-                    <p>End: ${task.end}</p>
-                    <p>Progress: ${task.progress}%</p>
-                    ${task.dependencies ? `<p class="text-gray-400">Dependencies: ${task.dependencies}</p>` : ''}
+                <div class="text-xs text-gray-500 space-y-1.5 mb-3">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span>${task.start} → ${task.end}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span>Progress: ${task.progress}%</span>
+                    </div>
                 </div>
-                <a href="/students/${this.studentId}/tasks/${task.id}"
-                   class="mt-3 block text-center text-xs font-medium text-accent hover:underline">
-                    View Details
+                <a href="/students/${this.studentId}/tasks/${taskId}"
+                   class="block w-full text-center text-xs font-medium text-accent hover:text-amber-700 py-2 rounded-lg bg-accent/10 hover:bg-accent/20 transition-colors">
+                    View Details →
                 </a>
             </div>
         `;
     }
 
     /**
-     * Apply custom styles to Gantt chart
+     * Apply custom styles
      */
     applyCustomStyles() {
-        if (!this.container) return;
-
-        // Inject custom styles
         const styleId = 'gantt-custom-styles';
         let styleEl = document.getElementById(styleId);
 
@@ -229,92 +448,43 @@ class GanttChart {
         }
 
         styleEl.textContent = `
-            /* Base Gantt styles */
-            .gantt .bar {
-                fill: #D97706;
-                cursor: pointer;
-                transition: fill 0.2s, filter 0.2s;
-            }
-            .gantt .bar:hover {
-                filter: brightness(1.1);
-            }
-            .gantt .bar-progress {
-                fill: #B45309;
-            }
-
-            /* Status-based colors */
+            .gantt .bar { fill: #D97706; cursor: pointer; transition: fill 0.2s, filter 0.2s; }
+            .gantt .bar:hover { filter: brightness(1.1); }
+            .gantt .bar-progress { fill: #B45309; }
             .gantt-completed .bar { fill: #10B981; }
             .gantt-completed .bar-progress { fill: #059669; }
-            .gantt-in_progress .bar { fill: #F59E0B; }
-            .gantt-in_progress .bar-progress { fill: #D97706; }
-            .gantt-waiting_review .bar { fill: #F97316; }
-            .gantt-waiting_review .bar-progress { fill: #EA580C; }
+            .gantt-in-progress .bar { fill: #F59E0B; }
+            .gantt-in-progress .bar-progress { fill: #D97706; }
+            .gantt-waiting-review .bar { fill: #F97316; }
+            .gantt-waiting-review .bar-progress { fill: #EA580C; }
             .gantt-revision .bar { fill: #8B5CF6; }
             .gantt-revision .bar-progress { fill: #7C3AED; }
             .gantt-planned .bar { fill: #3B82F6; }
             .gantt-planned .bar-progress { fill: #2563EB; }
-            .gantt-backlog .bar { fill: #9CA3AF; }
-            .gantt-backlog .bar-progress { fill: #6B7280; }
-
-            /* Grid styles */
-            .gantt .grid-header {
-                fill: #F7F7F5;
-                stroke: #E5E7EB;
-            }
-            .gantt .grid-row {
-                fill: #ffffff;
-            }
-            .gantt .grid-row:nth-child(even) {
-                fill: #FAFAFA;
-            }
-            .gantt .tick {
-                stroke: #E5E7EB;
-            }
-            .gantt .today-highlight {
-                fill: rgba(217, 119, 6, 0.08);
-            }
-
-            /* Text styles */
-            .gantt .bar-label {
-                fill: #ffffff;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            .gantt .grid-text {
-                fill: #6B7280;
-                font-size: 11px;
-            }
-
-            /* Popup styles */
-            .gantt-popup {
-                font-family: system-ui, -apple-system, sans-serif;
-                z-index: 1000;
-            }
-
-            /* Dependency arrows */
-            .gantt .arrow {
-                stroke: #9CA3AF;
-                stroke-width: 1.5;
-                fill: none;
-            }
-            .gantt .arrow-head {
-                fill: #9CA3AF;
-            }
+            .gantt .grid-header { fill: #FAFAF9; stroke: #E5E5E4; }
+            .gantt .grid-row { fill: transparent; }
+            .gantt .tick { stroke: #E5E5E4; }
+            .gantt .today-highlight { fill: rgba(217, 119, 6, 0.08); }
+            .gantt .bar-label { display: none; }
+            .gantt .grid-text { fill: #78716C; font-size: 11px; font-weight: 500; }
+            .gantt-popup { font-family: system-ui, -apple-system, sans-serif; z-index: 1000; }
+            .gantt .arrow { stroke: #A8A29E; stroke-width: 1.5; fill: none; }
+            .gantt .arrow-head { fill: #A8A29E; }
         `;
     }
 
     /**
      * Render empty state
      */
-    renderEmptyState() {
-        this.container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-16 text-center">
-                <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    renderEmptyState(container) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+                <svg class="w-16 h-16 text-tertiary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
                 </svg>
-                <h3 class="text-sm font-medium text-gray-600 mb-1">No tasks to display</h3>
-                <p class="text-xs text-gray-400 max-w-xs">
+                <h3 class="text-sm font-medium text-primary mb-1">No tasks to display</h3>
+                <p class="text-xs text-secondary max-w-xs">
                     Create tasks with start and due dates to see them on the timeline.
                 </p>
             </div>
@@ -322,24 +492,33 @@ class GanttChart {
     }
 
     /**
-     * Show notification message
+     * Show notification
      */
     showNotification(message, type = 'success') {
-        // Create notification element
         const notification = document.createElement('div');
-        notification.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50
-            ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
-        notification.textContent = message;
+        notification.className = `fixed bottom-4 right-4 px-4 py-3 rounded-xl shadow-lg text-sm font-medium z-50 flex items-center gap-2
+            ${type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'}`;
+        notification.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${type === 'success'
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>'
+                }
+            </svg>
+            ${message}
+        `;
         document.body.appendChild(notification);
 
-        // Remove after delay
         setTimeout(() => {
-            notification.remove();
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateY(10px)';
+            notification.style.transition = 'all 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
 
     /**
-     * Refresh the chart with latest data
+     * Refresh
      */
     async refresh() {
         await this.loadTasks();
@@ -347,304 +526,47 @@ class GanttChart {
     }
 
     /**
-     * Change view mode
+     * Set view mode
      */
     setViewMode(mode) {
         if (this.gantt) {
             this.gantt.change_view_mode(mode);
+            setTimeout(() => {
+                const headerContainer = document.querySelector('#gantt-header-container');
+                const ganttContainer = document.querySelector('#gantt-container');
+                this.cloneHeader(headerContainer, ganttContainer);
+            }, 100);
         }
     }
 
     /**
-     * Destroy the Gantt chart
+     * Destroy
      */
     destroy() {
         if (this.gantt) {
             this.gantt = null;
-        }
-        if (this.container) {
-            this.container.innerHTML = '';
-        }
-    }
-
-    /**
-     * Export Gantt chart as PNG image
-     * Converts SVG to Canvas to PNG
-     */
-    async exportImage(filename = 'gantt-chart.png') {
-        if (!this.container) {
-            throw new Error('No Gantt chart to export');
-        }
-
-        const svg = this.container.querySelector('svg');
-        if (!svg) {
-            throw new Error('SVG element not found');
-        }
-
-        try {
-            // Get SVG dimensions
-            const svgRect = svg.getBoundingClientRect();
-            const width = svgRect.width * 2; // 2x for better quality
-            const height = svgRect.height * 2;
-
-            // Create canvas
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-
-            // Serialize SVG
-            const svgData = new XMLSerializer().serializeToString(svg);
-            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
-
-            // Load SVG as image
-            const img = new Image();
-            img.onload = () => {
-                // Fill white background
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, width, height);
-
-                // Draw SVG scaled
-                ctx.scale(2, 2);
-                ctx.drawImage(img, 0, 0);
-
-                // Clean up
-                URL.revokeObjectURL(url);
-
-                // Download
-                const link = document.createElement('a');
-                link.download = filename;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-
-                this.showNotification('Image exported successfully');
-            };
-
-            img.onerror = () => {
-                URL.revokeObjectURL(url);
-                this.showNotification('Failed to export image', 'error');
-            };
-
-            img.src = url;
-        } catch (error) {
-            this.onError(error);
-            this.showNotification('Failed to export image', 'error');
-        }
-    }
-
-    /**
-     * Export Gantt chart as PDF
-     * Uses html2pdf library if available, falls back to image export
-     */
-    async exportPdf(filename = 'gantt-chart.pdf') {
-        if (!this.container) {
-            throw new Error('No Gantt chart to export');
-        }
-
-        try {
-            // Load html2pdf if not available
-            if (typeof html2pdf === 'undefined') {
-                await this.loadHtml2Pdf();
-            }
-
-            // Configure PDF options
-            const opt = {
-                margin: 10,
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false
-                },
-                jsPDF: {
-                    unit: 'mm',
-                    format: this.getBestPdfFormat(),
-                    orientation: this.getBestPdfOrientation()
-                }
-            };
-
-            // Clone container for export (to avoid modifying original)
-            const containerClone = this.container.cloneNode(true);
-            containerClone.style.padding = '20px';
-            containerClone.style.background = '#ffffff';
-
-            // Create a temporary wrapper
-            const wrapper = document.createElement('div');
-            wrapper.style.position = 'absolute';
-            wrapper.style.left = '-9999px';
-            wrapper.style.width = this.container.offsetWidth + 'px';
-            wrapper.appendChild(containerClone);
-            document.body.appendChild(wrapper);
-
-            // Generate PDF
-            await html2pdf().set(opt).from(containerClone).save();
-
-            // Clean up
-            document.body.removeChild(wrapper);
-
-            this.showNotification('PDF exported successfully');
-        } catch (error) {
-            this.onError(error);
-            this.showNotification('Failed to export PDF', 'error');
-        }
-    }
-
-    /**
-     * Load html2pdf library dynamically
-     */
-    loadHtml2Pdf() {
-        return new Promise((resolve, reject) => {
-            if (typeof html2pdf !== 'undefined') {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-
-    /**
-     * Get best PDF format based on chart size
-     */
-    getBestPdfFormat() {
-        if (!this.container) return 'a4';
-
-        const width = this.container.offsetWidth;
-        if (width > 1200) return 'a3';
-        if (width < 600) return 'a5';
-        return 'a4';
-    }
-
-    /**
-     * Get best PDF orientation based on aspect ratio
-     */
-    getBestPdfOrientation() {
-        if (!this.container) return 'landscape';
-
-        const rect = this.container.getBoundingClientRect();
-        return rect.width > rect.height ? 'landscape' : 'portrait';
-    }
-
-    /**
-     * Enable inline progress editing
-     */
-    enableProgressEdit() {
-        if (!this.gantt) return;
-
-        // Add click handler to progress bars for inline editing
-        const container = this.container;
-        container.addEventListener('click', (e) => {
-            const progressBar = e.target.closest('.gantt-bar-progress');
-            if (progressBar) {
-                this.showProgressEditor(progressBar);
-            }
-        });
-    }
-
-    /**
-     * Show inline progress editor
-     */
-    showProgressEditor(progressBar) {
-        // Get current progress
-        const currentProgress = parseInt(progressBar.getAttribute('data-progress')) || 0;
-
-        // Create editor modal
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
-        modal.innerHTML = `
-            <div class="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full">
-                <h3 class="text-base font-semibold mb-4">Edit Progress</h3>
-                <input type="range" min="0" max="100" value="${currentProgress}"
-                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-600">
-                <div class="flex justify-between text-sm text-gray-500 mb-4">
-                    <span>0%</span>
-                    <span id="progress-value">${currentProgress}%</span>
-                    <span>100%</span>
-                </div>
-                <div class="flex gap-3">
-                    <button id="cancel-progress" class="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 text-sm">
-                        Cancel
-                    </button>
-                    <button id="save-progress" class="flex-1 px-4 py-2 rounded-xl bg-amber-600 text-white text-sm">
-                        Save
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        const slider = modal.querySelector('input[type="range"]');
-        const valueDisplay = modal.querySelector('#progress-value');
-        const cancelBtn = modal.querySelector('#cancel-progress');
-        const saveBtn = modal.querySelector('#save-progress');
-
-        slider.addEventListener('input', (e) => {
-            valueDisplay.textContent = e.target.value + '%';
-        });
-
-        cancelBtn.addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-
-        saveBtn.addEventListener('click', () => {
-            const newProgress = parseInt(slider.value);
-            this.handleProgressInlineEdit(newProgress);
-            document.body.removeChild(modal);
-        });
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
-        });
-    }
-
-    /**
-     * Handle inline progress edit
-     */
-    async handleProgressInlineEdit(progress) {
-        try {
-            // Find the task associated with this progress bar
-            // This would need to be implemented based on your specific data structure
-            this.showNotification(`Progress updated to ${progress}%`);
-        } catch (error) {
-            this.onError(error);
-            this.showNotification('Failed to update progress', 'error');
         }
     }
 }
 
 /**
  * Initialize Gantt chart
- * @param {Object} options - Configuration options
- * @returns {GanttChart} Gantt chart instance
  */
 export function initGantt(options = {}) {
     const chart = new GanttChart(options);
-    chart.init();
-    return chart;
+    // Return the promise
+    return chart.init().then(() => chart);
 }
 
 /**
- * Alpine.js component for Gantt chart
- * Usage: x-data="ganttChart({ studentId: {{ $student->id }} })"
+ * Alpine.js component
  */
 export function ganttChart(options = {}) {
     return {
         loading: true,
         chart: null,
+        tasks: [],
         viewMode: 'Month',
-        showDependencies: true,
-        showProgress: true,
-        criticalPath: false,
-        currentDate: new Date(),
         taskStats: {
             total: 0,
             completed: 0,
@@ -652,27 +574,49 @@ export function ganttChart(options = {}) {
             overdue: 0
         },
 
-        async init() {
-            this.chart = initGantt({
-                container: '#gantt-container',
+        init() {
+            console.log('Alpine: Gantt init starting');
+
+            initGantt({
                 studentId: options.studentId,
                 onTaskClick: (task) => {
-                    window.location.href = `/students/${options.studentId}/tasks/${task.id}`;
-                },
-                onDateChange: (taskId, start, end) => {
-                    this.showNotification('Dates updated successfully');
-                },
-                onProgressChange: (taskId, progress) => {
-                    this.showNotification(`Progress updated to ${progress}%`);
+                    const taskId = typeof task === 'object' && task.taskId ? task.taskId : task;
+                    if (taskId) {
+                        window.location.href = `/students/${options.studentId}/tasks/${taskId}`;
+                    }
                 },
                 onTasksLoaded: (tasks) => {
-                    this.calculateStats(tasks);
+                    console.log('Alpine: Tasks loaded:', tasks.length);
+                    this.tasks = tasks;
+                    this.taskStats = {
+                        total: tasks.length,
+                        completed: tasks.filter(t => t.progress === 100).length,
+                        inProgress: tasks.filter(t => t.progress > 0 && t.progress < 100).length,
+                        overdue: tasks.filter(t => new Date(t.end) < new Date() && t.progress < 100).length
+                    };
                 },
                 onError: (error) => {
-                    console.error('Gantt error:', error);
+                    console.error('Alpine: Gantt error', error);
+                    this.loading = false;
                 }
+            }).then((chart) => {
+                this.chart = chart;
+                console.log('Alpine: Chart initialized');
+
+                // Set loading to false to reveal the DOM
+                this.loading = false;
+
+                // Wait for DOM to be ready, then render
+                setTimeout(() => {
+                    console.log('Alpine: Triggering render after timeout');
+                    if (this.chart) {
+                        this.chart.render();
+                    }
+                }, 100);
+            }).catch((error) => {
+                console.error('Alpine: Init failed', error);
+                this.loading = false;
             });
-            this.loading = false;
         },
 
         setView(mode) {
@@ -685,82 +629,40 @@ export function ganttChart(options = {}) {
         },
 
         navigate(direction) {
-            if (!this.chart) return;
+            if (!this.chart?.gantt) return;
 
-            const ganttInstance = this.chart.gantt;
-            if (!ganttInstance) return;
-
-            // Calculate date shift based on view mode
-            const shifts = {
-                'Day': 1,
-                'Week': 7,
-                'Month': 30
-            };
+            const gantt = this.chart.gantt;
+            const shifts = { 'Day': 1, 'Week': 7, 'Month': 30 };
             const days = shifts[this.viewMode] || 7;
 
             if (direction === 'prev') {
-                ganttInstance.gantt_start.setDate(ganttInstance.gantt_start.getDate() - days);
-                ganttInstance.gantt_end.setDate(ganttInstance.gantt_end.getDate() - days);
+                gantt.gantt_start.setDate(gantt.gantt_start.getDate() - days);
+                gantt.gantt_end.setDate(gantt.gantt_end.getDate() - days);
             } else if (direction === 'next') {
-                ganttInstance.gantt_start.setDate(ganttInstance.gantt_start.getDate() + days);
-                ganttInstance.gantt_end.setDate(ganttInstance.gantt_end.getDate() + days);
+                gantt.gantt_start.setDate(gantt.gantt_start.getDate() + days);
+                gantt.gantt_end.setDate(gantt.gantt_end.getDate() + days);
             } else if (direction === 'today') {
                 const today = new Date();
-                ganttInstance.gantt_start = new Date(today);
-                ganttInstance.gantt_start.setDate(today.getDate() - days);
-                ganttInstance.gantt_end = new Date(today);
-                ganttInstance.gantt_end.setDate(today.getDate() + days * 2);
+                gantt.gantt_start = new Date(today);
+                gantt.gantt_start.setDate(today.getDate() - days);
+                gantt.gantt_end = new Date(today);
+                gantt.gantt_end.setDate(today.getDate() + days * 2);
             }
 
             this.chart.refresh();
         },
 
         zoom(level) {
-            // View mode cycling for zoom
             const modes = ['Day', 'Week', 'Month'];
             const currentIndex = modes.indexOf(this.viewMode);
 
             if (level === 'in') {
-                const newIndex = Math.max(0, currentIndex - 1);
-                this.setView(modes[newIndex]);
+                this.setView(modes[Math.max(0, currentIndex - 1)]);
             } else if (level === 'out') {
-                const newIndex = Math.min(modes.length - 1, currentIndex + 1);
-                this.setView(modes[newIndex]);
+                this.setView(modes[Math.min(modes.length - 1, currentIndex + 1)]);
             } else if (level === 'reset') {
                 this.setView('Month');
             }
-        },
-
-        async exportAs(format) {
-            if (!this.chart) return;
-
-            try {
-                if (format === 'png') {
-                    await this.chart.exportImage(`gantt-chart-${new Date().toISOString().split('T')[0]}.png`);
-                } else if (format === 'pdf') {
-                    await this.chart.exportPdf(`gantt-chart-${new Date().toISOString().split('T')[0]}.pdf`);
-                }
-            } catch (error) {
-                console.error('Export error:', error);
-                this.showNotification('Export failed', 'error');
-            }
-        },
-
-        calculateStats(tasks) {
-            if (!tasks) {
-                tasks = this.chart?.tasks || [];
-            }
-
-            this.taskStats = {
-                total: tasks.length,
-                completed: tasks.filter(t => t.progress === 100).length,
-                inProgress: tasks.filter(t => t.progress > 0 && t.progress < 100).length,
-                overdue: tasks.filter(t => {
-                    const end = new Date(t.end);
-                    const today = new Date();
-                    return end < today && t.progress < 100;
-                }).length
-            };
         },
 
         showNotification(message, type = 'success') {
@@ -793,3 +695,6 @@ export function ganttChart(options = {}) {
 }
 
 export default GanttChart;
+
+// Alias for compatibility
+export { ganttChart as initTaskFlowGantt };

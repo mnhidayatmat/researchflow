@@ -72,7 +72,6 @@ class TaskStore {
      */
     getTasksByStatus() {
         const grouped = {
-            backlog: [],
             planned: [],
             in_progress: [],
             waiting_review: [],

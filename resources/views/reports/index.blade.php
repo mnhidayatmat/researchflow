@@ -14,12 +14,15 @@
                         <div>
                             <h3 class="text-sm font-semibold">{{ $report->title }}</h3>
                             <p class="text-xs text-secondary mt-0.5">
-                                {{ ucfirst($report->type) }} &middot;
+                                {{ $report->type_label }} &middot;
                                 {{ $report->created_at->format('d M Y') }}
                                 @if($report->period_start && $report->period_end)
                                     &middot; {{ $report->period_start->format('d M') }} — {{ $report->period_end->format('d M') }}
                                 @endif
                             </p>
+                            @if($report->attachment_path)
+                                <p class="text-[11px] text-secondary mt-1">Attachment: {{ $report->attachment_original_name }}</p>
+                            @endif
                         </div>
                         <x-status-badge :status="$report->status" />
                     </div>

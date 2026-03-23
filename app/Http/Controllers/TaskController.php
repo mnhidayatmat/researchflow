@@ -9,15 +9,40 @@ use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
-    public function index(Student $student)
+    public function index(Request $request, Student $student)
     {
         $this->authorize('view', $student);
 
-        $tasks = $student->tasks()
+        $query = $student->tasks()
             ->whereNull('parent_id')
-            ->with('subtasks')
-            ->orderBy('sort_order')
-            ->get();
+            ->with('subtasks');
+
+        // Filter by status
+        if ($request->filled('status') && $request->get('status') !== 'all') {
+            $query->where('status', $request->get('status'));
+        }
+
+        // Search by title or description
+        if ($request->filled('search')) {
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('description', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Sort
+        $sort = $request->get('sort', 'sort_order');
+        $order = $request->get('order', 'asc');
+
+        if ($sort === 'priority') {
+            $priorityOrder = $order === 'desc' ? ['urgent', 'high', 'medium', 'low'] : ['low', 'medium', 'high', 'urgent'];
+            $query->orderByRaw('FIELD(priority, \'' . implode('\',\'', $priorityOrder) . '\')');
+        } else {
+            $query->orderBy($sort, $order);
+        }
+
+        $tasks = $query->paginate(15)->withQueryString();
 
         return view('tasks.index', compact('student', 'tasks'));
     }
@@ -25,28 +50,13 @@ class TaskController extends Controller
     public function kanban(Student $student)
     {
         $this->authorize('view', $student);
-
-        $tasks = $student->tasks()
-            ->whereNull('parent_id')
-            ->with('subtasks')
-            ->orderBy('sort_order')
-            ->get()
-            ->groupBy('status');
-
-        return view('tasks.kanban', compact('student', 'tasks'));
+        return redirect()->route('tasks.index', ['student' => $student, 'tab' => 'kanban']);
     }
 
     public function gantt(Student $student)
     {
         $this->authorize('view', $student);
-
-        $tasks = $student->tasks()
-            ->whereNotNull('start_date')
-            ->whereNotNull('due_date')
-            ->orderBy('start_date')
-            ->get();
-
-        return view('tasks.gantt', compact('student', 'tasks'));
+        return redirect()->route('tasks.index', ['student' => $student, 'tab' => 'gantt']);
     }
 
     public function timelineOverview(Student $student)

@@ -5,57 +5,90 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
+use App\Models\AiProject;
 use App\Services\Ai\AiChatService;
 use App\Services\Ai\AiServiceFactory;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AiChatController extends Controller
 {
-    public function __construct()
+    public function projects(Request $request)
     {
-        $this->middleware('auth');
+        $projects = AiProject::where('user_id', Auth::id())
+            ->with(['conversations' => function ($query) {
+                $query->has('messages')
+                    ->withCount('messages')
+                    ->withMax('messages', 'created_at')
+                    ->orderByDesc('messages_max_created_at');
+            }])
+            ->withCount('conversations')
+            ->latest('updated_at')
+            ->get()
+            ->map(fn (AiProject $project) => $this->serializeProject($project));
+
+        return response()->json($projects);
     }
 
-    public function conversations(Request $request)
+    public function createProject(Request $request)
     {
-        $conversations = AiConversation::where('user_id', Auth::id())
-            ->withCount('messages')
-            ->latest()
-            ->get()
-            ->map(function ($conversation) {
-                return [
-                    'id' => $conversation->id,
-                    'title' => $conversation->title ?? 'New Chat',
-                    'scope' => $conversation->scope,
-                    'student_id' => $conversation->student_id,
-                    'created_at' => $conversation->created_at->toISOString(),
-                    'updated_at' => $conversation->updated_at->toISOString(),
-                    'messages_count' => $conversation->messages_count ?? 0,
-                ];
-            });
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'student_id' => 'nullable|exists:students,id',
+            'description' => 'nullable|string|max:1000',
+        ]);
 
-        return response()->json($conversations);
+        $project = AiProject::create([
+            'user_id' => Auth::id(),
+            'student_id' => $validated['student_id'] ?? null,
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        return response()->json($this->serializeProject($project->load('conversations')), 201);
+    }
+
+    public function deleteProject(Request $request, AiProject $project)
+    {
+        if ($project->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $project->delete();
+
+        return response()->json([
+            'success' => true,
+        ]);
     }
 
     public function createConversation(Request $request)
     {
         $validated = $request->validate([
+            'project_id' => 'required|exists:ai_projects,id',
             'title' => 'nullable|string|max:255',
             'student_id' => 'nullable|exists:students,id',
             'scope' => 'nullable|in:general,student,planning,proposal,analysis,writing',
             'context_files' => 'nullable|array',
+            'context_files.*' => 'integer|exists:files,id',
         ]);
+
+        $project = AiProject::whereKey($validated['project_id'])
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
 
         $conversation = AiConversation::create([
             'user_id' => Auth::id(),
+            'project_id' => $project->id,
             'title' => $validated['title'] ?? 'New Chat',
-            'student_id' => $validated['student_id'] ?? null,
+            'student_id' => $validated['student_id'] ?? $project->student_id,
             'scope' => $validated['scope'] ?? 'general',
             'context_files' => $validated['context_files'] ?? [],
         ]);
 
-        return response()->json($conversation, 201);
+        $project->touch();
+
+        return response()->json($this->serializeConversation($conversation), 201);
     }
 
     public function messages(Request $request, AiConversation $conversation)
@@ -73,10 +106,33 @@ class AiChatController extends Controller
                     'role' => $message->role,
                     'content' => $message->content,
                     'created_at' => $message->created_at->toISOString(),
+                    'metadata' => $message->metadata,
                 ];
             });
 
-        return response()->json($messages);
+        return response()->json([
+            'conversation' => $this->serializeConversation($conversation->loadCount('messages')),
+            'messages' => $messages,
+        ]);
+    }
+
+    public function deleteConversation(Request $request, AiConversation $conversation)
+    {
+        if ($conversation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $projectId = $conversation->project_id;
+
+        $conversation->delete();
+
+        if ($projectId) {
+            AiProject::whereKey($projectId)->update(['updated_at' => now()]);
+        }
+
+        return response()->json([
+            'success' => true,
+        ]);
     }
 
     public function sendMessage(Request $request, AiConversation $conversation)
@@ -88,7 +144,16 @@ class AiChatController extends Controller
         $validated = $request->validate([
             'message' => 'required|string',
             'use_rag' => 'nullable|boolean',
+            'use_web_search' => 'nullable|boolean',
+            'context_files' => 'nullable|array',
+            'context_files.*' => 'integer|exists:files,id',
         ]);
+
+        if (array_key_exists('context_files', $validated)) {
+            $conversation->update([
+                'context_files' => $validated['context_files'] ?? [],
+            ]);
+        }
 
         $provider = AiServiceFactory::getProvider();
 
@@ -117,8 +182,26 @@ class AiChatController extends Controller
 
         $systemPrompt = $this->getSystemPrompt($conversation->scope, $conversation->student_id);
 
-        $chatService = new AiChatService($provider);
-        $response = $chatService->chat($messages, $systemPrompt, $validated['use_rag'] ?? false, $conversation);
+        try {
+            $chatService = new AiChatService($provider);
+            $response = $chatService->chatWithMessages(
+                $messages,
+                $systemPrompt,
+                $validated['use_rag'] ?? false,
+                $conversation,
+                [
+                    'use_web_search' => $validated['use_web_search'] ?? false,
+                ]
+            );
+        } catch (Throwable $e) {
+            $status = is_int($e->getCode()) && $e->getCode() >= 400 && $e->getCode() < 600
+                ? $e->getCode()
+                : 500;
+
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], $status);
+        }
 
         AiMessage::create([
             'ai_conversation_id' => $conversation->id,
@@ -126,6 +209,9 @@ class AiChatController extends Controller
             'content' => $response,
             'metadata' => ['provider' => class_basename(get_class($provider))],
         ]);
+
+        $conversation->touch();
+        $conversation->project?->touch();
 
         if (!$conversation->title || $conversation->title === 'New Chat') {
             $firstUserMessage = $conversation->messages()->where('role', 'user')->first();
@@ -157,12 +243,47 @@ class AiChatController extends Controller
                 'id' => $conversation->id,
                 'messages' => $allMessages,
             ],
+            'conversation_meta' => $this->serializeConversation($conversation->loadCount('messages')),
         ]);
+    }
+
+    protected function serializeConversation(AiConversation $conversation): array
+    {
+        return [
+            'id' => $conversation->id,
+            'project_id' => $conversation->project_id,
+            'title' => $conversation->title ?? 'New Chat',
+            'scope' => $conversation->scope,
+            'student_id' => $conversation->student_id,
+            'context_files' => $conversation->context_files ?? [],
+            'created_at' => $conversation->created_at->toISOString(),
+            'updated_at' => $conversation->updated_at->toISOString(),
+            'messages_count' => $conversation->messages_count ?? $conversation->messages()->count(),
+        ];
+    }
+
+    protected function serializeProject(AiProject $project): array
+    {
+        return [
+            'id' => $project->id,
+            'name' => $project->name,
+            'description' => $project->description,
+            'student_id' => $project->student_id,
+            'created_at' => $project->created_at->toISOString(),
+            'updated_at' => $project->updated_at->toISOString(),
+            'conversations_count' => $project->conversations_count ?? $project->conversations()->count(),
+            'conversations' => $project->conversations
+                ->map(fn (AiConversation $conversation) => $this->serializeConversation($conversation))
+                ->values(),
+        ];
     }
 
     protected function getSystemPrompt(?string $scope, ?int $studentId): string
     {
+        $effectiveRole = session()->get('admin_role_switch', Auth::user()->role);
         $basePrompt = "You are a helpful AI assistant for a research supervision management system. You assist students, supervisors, and administrators with research-related tasks.";
+        $basePrompt .= "\nCurrent user role context: {$effectiveRole}.";
+        $basePrompt .= "\nIf web search is enabled, use it for current literature, recent developments, or time-sensitive claims.";
 
         if (!$scope || $scope === 'general') {
             return $basePrompt;

@@ -32,8 +32,9 @@ class FileController extends Controller
             ->paginate(20);
 
         $breadcrumbs = $this->buildBreadcrumbs($currentFolder);
+        $folderOptions = $this->buildFolderOptions($student);
 
-        return view('files.index', compact('student', 'folders', 'files', 'currentFolder', 'breadcrumbs'));
+        return view('files.index', compact('student', 'folders', 'files', 'currentFolder', 'breadcrumbs', 'folderOptions'));
     }
 
     public function upload(Request $request, Student $student)
@@ -44,14 +45,20 @@ class FileController extends Controller
             'file' => 'required|file|max:51200',
             'folder_id' => 'nullable|exists:folders,id',
             'description' => 'nullable|string|max:500',
+            'category' => 'nullable|in:thesis,manuscript,proposal,report,simulation,data,images,references,presentation,other',
         ]);
+
+        if ($request->filled('folder_id') && !Folder::where('id', $request->folder_id)->where('student_id', $student->id)->exists()) {
+            abort(422, 'Selected folder does not belong to this student.');
+        }
 
         $file = $this->storage->upload(
             $request->file('file'),
             $student,
             Auth::id(),
             $request->folder_id,
-            $request->description
+            $request->description,
+            $request->category
         );
 
         return back()->with('success', "File '{$file->original_name}' uploaded.");
@@ -93,8 +100,12 @@ class FileController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'parent_id' => 'nullable|exists:folders,id',
-            'category' => 'nullable|in:proposal,reports,thesis,simulation,data,images,references,other',
+            'category' => 'nullable|in:proposal,reports,thesis,simulation,data,images,references,presentations,other',
         ]);
+
+        if ($request->filled('parent_id') && !Folder::where('id', $request->parent_id)->where('student_id', $student->id)->exists()) {
+            abort(422, 'Selected parent folder does not belong to this student.');
+        }
 
         $this->storage->createFolder(
             $student,
@@ -106,10 +117,51 @@ class FileController extends Controller
         return back()->with('success', 'Folder created.');
     }
 
+    public function createDefaultFolders(Student $student)
+    {
+        $this->authorize('view', $student);
+
+        $this->storage->createDefaultFolders($student);
+
+        return back()->with('success', 'Default folders created successfully.');
+    }
+
+    public function deleteFolder(Request $request, Student $student, Folder $folder)
+    {
+        $this->authorize('view', $student);
+
+        // Verify folder belongs to student
+        if ($folder->student_id !== $student->id) {
+            abort(403, 'You do not own this folder.');
+        }
+
+        $recursive = $request->boolean('recursive', true);
+
+        // Check if folder has contents and recursive is not set
+        if (($folder->files()->count() > 0 || $folder->children()->count() > 0) && !$recursive) {
+            return back()->with('error', 'Folder is not empty. Please confirm to delete with contents.');
+        }
+
+        $this->storage->deleteFolder($folder, $recursive);
+
+        return back()->with('success', 'Folder deleted.');
+    }
+
     public function destroy(Student $student, File $file)
     {
         $this->authorize('view', $student);
+
+        // Verify file belongs to student
+        if ($file->student_id !== $student->id) {
+            abort(403, 'You do not own this file.');
+        }
+
         $this->storage->delete($file);
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'File deleted.']);
+        }
+
         return back()->with('success', 'File deleted.');
     }
 
@@ -121,5 +173,17 @@ class FileController extends Controller
             $folder = $folder->parent;
         }
         return $breadcrumbs;
+    }
+
+    private function buildFolderOptions(Student $student): array
+    {
+        $folders = $student->folders()->with('parent')->orderBy('path')->get();
+
+        return $folders->mapWithKeys(function (Folder $folder) {
+            $depth = max(substr_count($folder->path, '/') - 1, 0);
+            $prefix = $depth > 0 ? str_repeat('  ', $depth) . '- ' : '';
+
+            return [$folder->id => $prefix . $folder->name];
+        })->toArray();
     }
 }

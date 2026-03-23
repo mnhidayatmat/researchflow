@@ -236,9 +236,9 @@
                 addProvider() {
                     const defaults = {
                         openai: { model: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-                        gemini: { model: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+                        gemini: { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
                         anthropic: { model: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-                        zai: { model: 'glm-4.6', name: 'Z.Ai' },
+                        zai: { model: 'glm-5-turbo', name: 'Z.Ai' },
                         custom: { model: '', name: 'Custom Provider' },
                     };
 
@@ -275,9 +275,9 @@
                 setProviderDefaults(provider) {
                     const defaults = {
                         openai: { model: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-                        gemini: { model: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+                        gemini: { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
                         anthropic: { model: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-                        zai: { model: 'glm-4.6', name: 'Z.Ai' },
+                        zai: { model: 'glm-5-turbo', name: 'Z.Ai' },
                         custom: { model: '', name: 'Custom Provider' },
                     };
                     if (defaults[provider.slug] && !provider.name) {
@@ -288,9 +288,9 @@
                 modelPlaceholder(slug) {
                     const map = {
                         openai: 'e.g. gpt-4o-mini',
-                        gemini: 'e.g. gemini-1.5-pro',
+                        gemini: 'e.g. gemini-2.5-flash',
                         anthropic: 'e.g. claude-3-5-sonnet-20241022',
-                        zai: 'e.g. glm-4.6',
+                        zai: 'e.g. glm-5-turbo',
                         custom: 'Model name or ID',
                     };
                     return map[slug] || 'Model identifier';
@@ -310,7 +310,7 @@
                             is_active: true,
                             is_default: true,
                             has_key: false,
-                            expanded: true,
+                            expanded: false,
                             features: {}
                         }];
                     } else {
@@ -318,7 +318,7 @@
                         this.providers = this.providers.map((p, i) => ({
                             ...p,
                             features: p.settings?.features || {},
-                            expanded: p.expanded || i === 0
+                            expanded: Boolean(p.expanded) || (p.slug !== 'openai' && (p.is_default || p.is_active))
                         }));
                     }
                 }

@@ -98,6 +98,7 @@
         }
     </style>
     @stack('styles')
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-surface dark:bg-dark-bg text-primary dark:text-dark-primary font-sans">
     <div class="min-h-full" x-data="{

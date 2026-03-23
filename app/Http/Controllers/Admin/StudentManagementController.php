@@ -83,7 +83,7 @@ class StudentManagementController extends Controller
 
     public function show(Student $student)
     {
-        $student->load(['user', 'programme', 'supervisor', 'cosupervisor', 'tasks', 'progressReports']);
+        $student->load(['user', 'programme', 'supervisor', 'cosupervisor', 'tasks', 'progressReports', 'publicationTracks']);
         return view('admin.students.show', compact('student'));
     }
 

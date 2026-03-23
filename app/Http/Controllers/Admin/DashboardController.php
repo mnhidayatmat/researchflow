@@ -37,13 +37,14 @@ class DashboardController extends Controller
         // Recent activity (latest submissions, updates)
         $recentActivity = ProgressReport::with(['student.user'])
             ->where('status', 'submitted')
+            ->whereHas('student.user')
             ->latest('submitted_at')
             ->take(3)
             ->get()
             ->map(fn($report) => [
                 'type' => 'report',
                 'title' => $report->title,
-                'student' => $report->student->user->name,
+                'student' => $report->student->user->name ?? 'Unknown',
                 'time' => $report->submitted_at->diffForHumans(),
                 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
             ]);
@@ -52,6 +53,7 @@ class DashboardController extends Controller
         $tasksDue = Task::with(['student.user'])
             ->where('due_date', '<=', now()->addWeek())
             ->where('status', '!=', 'completed')
+            ->whereHas('student.user')
             ->orderBy('due_date')
             ->take(5)
             ->get();
@@ -82,31 +84,11 @@ class DashboardController extends Controller
             return redirect()->route('admin.dashboard')->with('success', 'Returned to admin view.');
         }
 
-        // For student/supervisor/cosupervisor roles, find a student to view
-        $student = match($role) {
-            'student' => Student::where('status', 'active')->first(),
-            'supervisor', 'cosupervisor' => Student::where('status', 'active')
-                ->where(function($query) {
-                    $query->where('supervisor_id', auth()->id())
-                          ->orWhere('cosupervisor_id', auth()->id());
-                })->first(),
-            default => null,
-        };
-
-        if (!$student) {
-            return back()->with('error', "No active students found for {$role} view.");
-        }
-
-        // Store the role switch and student ID in session
+        // For admin switching roles, redirect to student selection page
+        // Admins can view any student regardless of supervisor assignment
         session()->put('admin_role_switch', $role);
-        session()->put('admin_view_as_student_id', $student->id);
 
-        // Redirect to appropriate dashboard
-        return match($role) {
-            'student' => redirect()->route('student.dashboard'),
-            'supervisor', 'cosupervisor' => redirect()->route('supervisor.students.index'),
-            default => redirect()->route('admin.dashboard'),
-        };
+        return redirect()->route('admin.role-switch-select-student', ['role' => $role]);
     }
 
     public function resetRole()
@@ -120,17 +102,20 @@ class DashboardController extends Controller
     /**
      * Show student selection page for role switching
      */
-    public function showStudentSelection(Request $request)
+    public function showStudentSelection(Request $request, string $role)
     {
-        $role = $request->query('role', 'student');
+        // For admin role switching, show all active students regardless of supervisor assignment
+        $isAdminSwitching = session()->get('admin_role_switch') && auth()->user()->role === 'admin';
 
         $students = match($role) {
-            'student' => \App\Models\Student::where('status', 'active')->get(),
-            'supervisor', 'cosupervisor' => \App\Models\Student::where('status', 'active')
-                ->where(function($query) {
-                    $query->where('supervisor_id', auth()->id())
-                          ->orWhere('cosupervisor_id', auth()->id());
-                })->get(),
+            'student' => \App\Models\Student::with(['user', 'programme'])->where('status', 'active')->get(),
+            'supervisor', 'cosupervisor' => $isAdminSwitching
+                ? \App\Models\Student::with(['user', 'programme'])->where('status', 'active')->get()
+                : \App\Models\Student::with(['user', 'programme'])->where('status', 'active')
+                    ->where(function($query) {
+                        $query->where('supervisor_id', auth()->id())
+                              ->orWhere('cosupervisor_id', auth()->id());
+                    })->get(),
             default => collect(),
         };
 

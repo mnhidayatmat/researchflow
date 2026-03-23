@@ -32,7 +32,28 @@ abstract class BaseAiProvider implements AiProviderInterface
     protected function httpClient(): PendingRequest
     {
         return Http::timeout($this->timeout)
+            ->withOptions($this->httpOptions())
             ->withHeaders($this->headers());
+    }
+
+    protected function httpOptions(): array
+    {
+        $caBundle = env('AI_CA_BUNDLE');
+        $verifySsl = filter_var(env('AI_SSL_VERIFY', true), FILTER_VALIDATE_BOOL);
+
+        if (is_string($caBundle) && $caBundle !== '') {
+            return ['verify' => $caBundle];
+        }
+
+        if (!$verifySsl) {
+            return ['verify' => false];
+        }
+
+        if (app()->environment('local')) {
+            return ['verify' => false];
+        }
+
+        return [];
     }
 
     /**

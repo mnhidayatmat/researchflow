@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Student;
+use App\Services\Ai\AiRagService;
 use App\Services\StorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,7 +14,10 @@ use Illuminate\Support\Facades\Storage;
 
 class FileApiController extends Controller
 {
-    public function __construct(private StorageService $storage) {}
+    public function __construct(
+        private StorageService $storage,
+        private AiRagService $ragService
+    ) {}
 
     public function index(Request $request, Student $student)
     {
@@ -123,6 +127,8 @@ class FileApiController extends Controller
             $validated['category'] ?? null
         );
 
+        $this->indexFileForAi($file);
+
         return response()->json($file->load(['uploadedBy', 'folder']), 201);
     }
 
@@ -140,7 +146,7 @@ class FileApiController extends Controller
 
         $files = [];
         foreach ($validated['files'] as $uploadedFile) {
-            $files[] = $this->storage->upload(
+            $file = $this->storage->upload(
                 $uploadedFile,
                 $student,
                 Auth::id(),
@@ -148,6 +154,8 @@ class FileApiController extends Controller
                 $validated['description'] ?? null,
                 $validated['category'] ?? null
             );
+            $this->indexFileForAi($file);
+            $files[] = $file;
         }
 
         return response()->json([
@@ -171,6 +179,8 @@ class FileApiController extends Controller
             Auth::id(),
             $validated['description'] ?? null
         );
+
+        $this->indexFileForAi($newVersion);
 
         return response()->json($newVersion->load(['uploadedBy', 'folder']), 201);
     }
@@ -373,5 +383,14 @@ class FileApiController extends Controller
             ->get();
 
         return response()->json($files);
+    }
+
+    protected function indexFileForAi(File $file): void
+    {
+        try {
+            $this->ragService->indexFile($file);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

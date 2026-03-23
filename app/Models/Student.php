@@ -34,6 +34,7 @@ class Student extends Model
 
     public function tasks(): HasMany { return $this->hasMany(Task::class); }
     public function progressReports(): HasMany { return $this->hasMany(ProgressReport::class); }
+    public function publicationTracks(): HasMany { return $this->hasMany(PublicationTrack::class); }
     public function files(): HasMany { return $this->hasMany(File::class); }
     public function folders(): HasMany { return $this->hasMany(Folder::class); }
     public function meetings(): HasMany { return $this->hasMany(Meeting::class); }

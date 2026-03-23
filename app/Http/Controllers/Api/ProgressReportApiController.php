@@ -7,6 +7,7 @@ use App\Models\ProgressReport;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class ProgressReportApiController extends Controller
 {
@@ -56,13 +57,15 @@ class ProgressReportApiController extends Controller
             'achievements' => 'nullable|string|max:2000',
             'challenges' => 'nullable|string|max:2000',
             'next_steps' => 'nullable|string|max:2000',
-            'type' => 'required|in:weekly,monthly,milestone,custom',
+            'type' => ['required', Rule::in(array_keys(ProgressReport::typeOptions()))],
+            'custom_type' => 'nullable|string|max:255|required_if:type,other',
             'period_start' => 'nullable|date',
             'period_end' => 'nullable|date|after_or_equal:period_start',
         ]);
 
         $report = $student->progressReports()->create([
             ...$validated,
+            'custom_type' => $validated['type'] === 'other' ? ($validated['custom_type'] ?? null) : null,
             'status' => $request->boolean('submit') ? 'submitted' : 'draft',
             'submitted_at' => $request->boolean('submit') ? now() : null,
         ]);
@@ -80,7 +83,8 @@ class ProgressReportApiController extends Controller
             'achievements' => 'nullable|string|max:2000',
             'challenges' => 'nullable|string|max:2000',
             'next_steps' => 'nullable|string|max:2000',
-            'type' => 'sometimes|required|in:weekly,monthly,milestone,custom',
+            'type' => ['sometimes', 'required', Rule::in(array_keys(ProgressReport::typeOptions()))],
+            'custom_type' => 'nullable|string|max:255|required_if:type,other',
             'period_start' => 'nullable|date',
             'period_end' => 'nullable|date|after_or_equal:period_start',
         ]);
@@ -90,6 +94,7 @@ class ProgressReportApiController extends Controller
 
         $report->update([
             ...$validated,
+            'custom_type' => ($validated['type'] ?? $report->type) === 'other' ? ($validated['custom_type'] ?? $report->custom_type) : null,
             'status' => $shouldSubmit ? 'submitted' : ($wasDraft ? 'draft' : $report->status),
             'submitted_at' => ($shouldSubmit && !$report->submitted_at) ? now() : $report->submitted_at,
         ]);

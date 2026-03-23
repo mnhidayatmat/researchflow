@@ -97,10 +97,12 @@ class AiChatService
         // Add student context if available
         if ($conversation->student) {
             $student = $conversation->student;
+            $programmeName = $student->programme?->name ?? 'N/A';
+            $researchTitle = $student->research_title ?? 'TBD';
             $prompt .= "\nStudent Context:\n";
             $prompt .= "- Name: {$student->user->name}\n";
-            $prompt .= "- Programme: {$student->programme->name ?? 'N/A'}\n";
-            $prompt .= "- Research Title: {$student->research_title ?? 'TBD'}\n";
+            $prompt .= "- Programme: {$programmeName}\n";
+            $prompt .= "- Research Title: {$researchTitle}\n";
 
             // Add task context
             $pendingTasks = $student->tasks()
@@ -139,7 +141,13 @@ class AiChatService
     /**
      * Simple chat method that accepts messages array and returns response text.
      */
-    public function chatWithMessages(array $messages, string $systemPrompt = '', bool $useRag = false, ?AiConversation $conversation = null): string
+    public function chatWithMessages(
+        array $messages,
+        string $systemPrompt = '',
+        bool $useRag = false,
+        ?AiConversation $conversation = null,
+        array $options = []
+    ): string
     {
         if (!$this->provider) {
             throw new \RuntimeException('AI provider not configured.');
@@ -153,24 +161,59 @@ class AiChatService
             array_unshift($providerMessages, ['role' => 'system', 'content' => $systemPrompt]);
         }
 
-        // If RAG is enabled and conversation has context files, retrieve relevant content
-        if ($useRag && $conversation && !empty($conversation->context_files)) {
-            $ragService = new \App\Services\Ai\AiRagService($this->provider);
-            $context = $ragService->retrieveContext($conversation->context_files, end($messages)['content'] ?? '');
+        // If files are attached, inject either vector-retrieved context or direct extracted snippets.
+        if ($conversation && !empty($conversation->context_files)) {
+            $ragService = app(\App\Services\Ai\AiRagService::class, ['provider' => $this->provider]);
+            $query = end($messages)['content'] ?? '';
+            $inlineAttachmentParts = $this->provider->getName() === 'gemini'
+                ? $ragService->buildGeminiInlineParts($conversation->context_files)
+                : [];
+            $context = $useRag
+                ? $ragService->retrieveContext($conversation->context_files, $query)
+                : $ragService->extractAttachedFileContext($conversation->context_files);
 
-            if ($context) {
-                // Inject context into the last user message
-                $lastIndex = count($providerMessages) - 1;
-                if ($providerMessages[$lastIndex]['role'] === 'user') {
-                    $providerMessages[$lastIndex]['content'] = "Context:\n{$context}\n\nQuestion: {$providerMessages[$lastIndex]['content']}";
+            $lastIndex = count($providerMessages) - 1;
+            if ($providerMessages[$lastIndex]['role'] === 'user') {
+                $promptText = $providerMessages[$lastIndex]['content'];
+                if ($context) {
+                    $promptText = "Use the attached document context below when answering. If the answer is not in the attached documents, say so clearly.\n\n{$context}\n\nUser question: {$promptText}";
+                }
+
+                if (!empty($inlineAttachmentParts)) {
+                    $providerMessages[$lastIndex] = [
+                        'role' => 'user',
+                        'parts' => [
+                            ...$inlineAttachmentParts,
+                            ['text' => $promptText],
+                        ],
+                    ];
+                } elseif ($context) {
+                    $providerMessages[$lastIndex]['content'] = $promptText;
                 }
             }
         }
 
-        // Get AI response
-        return $this->provider->chat($providerMessages, [
+        $providerOptions = [
             'temperature' => 0.7,
             'max_tokens' => 2000,
+        ];
+
+        if (($options['use_web_search'] ?? false) && $this->provider->getName() === 'zai') {
+            $providerOptions['tools'] = [[
+                'type' => 'web_search',
+                'web_search' => [
+                    'enable' => true,
+                    'search_engine' => 'search_pro_jina',
+                    'count' => 8,
+                    'content_size' => 'high',
+                    'search_result' => true,
+                    'result_sequence' => 'after',
+                ],
+            ]];
+        }
+
+        return $this->provider->chat($providerMessages, [
+            ...$providerOptions,
         ]);
     }
 

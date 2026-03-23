@@ -1,16 +1,23 @@
 <?php
 
 use App\Http\Controllers\Admin;
+use App\Http\Controllers\Api\TaskApiController;
+use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\PublicationTrackController;
 use App\Http\Controllers\ProgressReportController;
+use App\Http\Controllers\Supervisor\CollaboratorController;
 use App\Http\Controllers\Supervisor;
+use App\Http\Controllers\Supervisor\GrantController;
 use App\Http\Controllers\Student;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TimelineController;
 use App\Http\Controllers\AiChatPageController;
+use App\Http\Controllers\UserStorageController;
 use App\Http\Controllers\UserSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,7 +27,15 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'login']);
     Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
     Route::post('/register', [RegisterController::class, 'register']);
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
 });
+
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware('signed')
+    ->name('verification.verify');
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
@@ -53,10 +68,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::resource('programmes', Admin\ProgrammeController::class)->except('show');
 
-    Route::get('/settings/storage', [Admin\SettingsController::class, 'storage'])->name('settings.storage');
-    Route::post('/settings/storage', [Admin\SettingsController::class, 'updateStorage'])->name('settings.storage.update');
-    Route::post('/settings/storage/test', [Admin\SettingsController::class, 'testStorage'])->name('settings.storage.test');
-    Route::get('/settings/storage/stats', [Admin\SettingsController::class, 'getStorageStats'])->name('settings.storage.stats');
+    Route::get('/settings/storage', [UserStorageController::class, 'edit'])->name('settings.storage');
+    Route::post('/settings/storage', [UserStorageController::class, 'update'])->name('settings.storage.update');
+    Route::post('/settings/storage/test', [UserStorageController::class, 'test'])->name('settings.storage.test');
     Route::get('/settings/ai', [Admin\SettingsController::class, 'ai'])->name('settings.ai');
     Route::post('/settings/ai', [Admin\SettingsController::class, 'updateAi'])->name('settings.ai.update');
     Route::get('/settings/users', [Admin\SettingsController::class, 'users'])->name('settings.users');
@@ -69,15 +83,25 @@ Route::prefix('supervisor')->name('supervisor.')->middleware(['auth', 'role:supe
     Route::get('/dashboard', [Supervisor\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/students', [Supervisor\StudentViewController::class, 'index'])->name('students.index');
     Route::get('/students/{student}', [Supervisor\StudentViewController::class, 'show'])->name('students.show');
+    Route::resource('grants', GrantController::class);
+    Route::resource('collaborators', CollaboratorController::class);
+    Route::get('/storage', [UserStorageController::class, 'edit'])->name('storage.edit');
+    Route::post('/storage', [UserStorageController::class, 'update'])->name('storage.update');
+    Route::post('/storage/test', [UserStorageController::class, 'test'])->name('storage.test');
 });
 
 // Student routes
 Route::prefix('student')->name('student.')->middleware(['auth', 'role:student'])->group(function () {
     Route::get('/dashboard', [Student\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/reports', [Student\ReportsController::class, 'index'])->name('reports.index');
 });
 
 // Shared resource routes (policy-based access)
 Route::middleware('auth')->group(function () {
+    Route::get('/storage/google/connect', [UserStorageController::class, 'redirectToGoogle'])->name('storage.google.connect');
+    Route::get('/storage/google/callback', [UserStorageController::class, 'handleGoogleCallback'])->name('storage.google.callback');
+    Route::post('/storage/google/disconnect', [UserStorageController::class, 'disconnectGoogle'])->name('storage.google.disconnect');
+
     // Tasks
     Route::get('/students/{student}/tasks', [TaskController::class, 'index'])->name('tasks.index');
     Route::get('/students/{student}/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
@@ -97,6 +121,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/reports/{report}/edit', [ProgressReportController::class, 'edit'])->name('reports.edit');
     Route::put('/students/{student}/reports/{report}', [ProgressReportController::class, 'update'])->name('reports.update');
     Route::post('/students/{student}/reports/{report}/review', [ProgressReportController::class, 'review'])->name('reports.review');
+    Route::get('/students/{student}/reports/{report}/attachment', [ProgressReportController::class, 'downloadAttachment'])->name('reports.download-attachment');
 
     // Meetings
     Route::get('/students/{student}/meetings', [MeetingController::class, 'index'])->name('meetings.index');
@@ -105,6 +130,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
     Route::put('/students/{student}/meetings/{meeting}', [MeetingController::class, 'update'])->name('meetings.update');
 
+    // Publication tracking
+    Route::get('/students/{student}/publications', [PublicationTrackController::class, 'index'])->name('publications.index');
+    Route::get('/students/{student}/publications/create', [PublicationTrackController::class, 'create'])->name('publications.create');
+    Route::post('/students/{student}/publications', [PublicationTrackController::class, 'store'])->name('publications.store');
+    Route::get('/students/{student}/publications/{publicationTrack}/edit', [PublicationTrackController::class, 'edit'])->name('publications.edit');
+    Route::put('/students/{student}/publications/{publicationTrack}', [PublicationTrackController::class, 'update'])->name('publications.update');
+    Route::delete('/students/{student}/publications/{publicationTrack}', [PublicationTrackController::class, 'destroy'])->name('publications.destroy');
+
     // Files
     Route::get('/students/{student}/files', [FileController::class, 'index'])->name('files.index');
     Route::post('/students/{student}/files/upload', [FileController::class, 'upload'])->name('files.upload');
@@ -112,6 +145,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/files/{file}/download', [FileController::class, 'download'])->name('files.download');
     Route::get('/students/{student}/files/{file}/versions', [FileController::class, 'versions'])->name('files.versions');
     Route::post('/students/{student}/files/folder', [FileController::class, 'createFolder'])->name('files.create-folder');
+    Route::post('/students/{student}/files/default-folders', [FileController::class, 'createDefaultFolders'])->name('files.create-default-folders');
+    Route::delete('/students/{student}/folders/{folder}', [FileController::class, 'deleteFolder'])->name('folders.delete');
     Route::delete('/students/{student}/files/{file}', [FileController::class, 'destroy'])->name('files.destroy');
 
     // AI Chat
@@ -120,6 +155,37 @@ Route::middleware('auth')->group(function () {
 
     // User Settings
     Route::post('/settings/theme', [UserSettingsController::class, 'updateTheme'])->name('settings.theme');
+
+    // API routes for AJAX requests (using web middleware for session auth)
+    Route::prefix('api')->group(function () {
+        // Tasks API (Kanban + Gantt)
+        Route::get('/students/{student}/tasks', [TaskApiController::class, 'index']);
+        Route::put('/tasks/{task}/status', [TaskApiController::class, 'updateStatus']);
+        Route::put('/tasks/{task}/progress', [TaskApiController::class, 'updateProgress']);
+        Route::post('/tasks/reorder', [TaskApiController::class, 'updateOrder']);
+        Route::get('/students/{student}/tasks/gantt', [TaskApiController::class, 'ganttData']);
+        Route::put('/tasks/{task}/dates', [TaskApiController::class, 'updateDates']);
+        Route::post('/students/{student}/tasks/activity', [TaskApiController::class, 'storeActivity']);
+        Route::get('/students/{student}/milestones', [TaskApiController::class, 'milestones']);
+
+        // AI Chat API
+        Route::get('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'projects']);
+        Route::post('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'createProject']);
+        Route::delete('/ai/projects/{project}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteProject']);
+        Route::post('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'createConversation']);
+        Route::get('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'messages']);
+        Route::post('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'sendMessage']);
+        Route::delete('/ai/conversations/{conversation}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteConversation']);
+
+        // Files API
+        Route::get('/students/{student}/files', [\App\Http\Controllers\Api\FileApiController::class, 'index']);
+        Route::post('/students/{student}/files/upload-multiple', [\App\Http\Controllers\Api\FileApiController::class, 'uploadMultiple']);
+
+        // Notifications API
+        Route::get('/notifications', [NotificationApiController::class, 'index']);
+        Route::post('/notifications/{id}/read', [NotificationApiController::class, 'markAsRead']);
+        Route::post('/notifications/read-all', [NotificationApiController::class, 'markAllRead']);
+    });
 
     // Global Timeline Overview (all roles)
     Route::get('/timeline', [TimelineController::class, 'index'])->name('timeline.index');

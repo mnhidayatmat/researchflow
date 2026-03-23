@@ -1,4 +1,5 @@
 @props([
+    'name' => null,
     'id' => null,
     'title' => null,
     'subtitle' => null,
@@ -10,6 +11,7 @@
 
 @php
 $id = $id ?? 'modal-' . uniqid();
+$eventName = $name ? "open-modal-{$name}" : null;
 $sizes = [
     'xs' => 'max-w-sm',
     'sm' => 'max-w-md',
@@ -22,11 +24,13 @@ $sizeClass = $sizes[$size] ?? $sizes['md'];
 @endphp
 
 <div {{ $attributes->merge(['class' => 'relative']) }}
-     x-data="{ show: {{ $show ? 'true' : 'false' }}, id: '{{ $id }}' }"
-     @escape-key.window="{{ $closeOnEscape ? 'show = false' : '' }}">
+     x-data="{ show: {{ $show ? 'true' : 'false' }}, id: '{{ $id }}', eventName: @js($eventName) }"
+     x-init="if (eventName) { window.addEventListener(eventName, () => { show = true }) }"
+     @escape-key.window="{{ $closeOnEscape ? 'show = false' : '' }}"
+>
 
     {{-- Trigger button if slot named 'trigger' exists --}}
-    @if($trigger)
+    @if(isset($trigger))
         <div @click="show = true">{{ $trigger }}</div>
     @endif
 

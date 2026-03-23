@@ -4,10 +4,9 @@
  */
 
 import { taskApi } from './api.js';
-import { taskStore } from './store.js';
 
 /**
- * Kanban column configuration (without backlog)
+ * Kanban column configuration
  */
 export const KANBAN_COLUMNS = {
     planned: { label: 'Planned', color: 'bg-blue-400', next: 'in_progress' },
@@ -145,60 +144,94 @@ export function initKanbanBoard(options = {}) {
         },
 
         async moveToNext(taskId, nextStatus) {
+            if (this.loading) return;
+
+            const card = this.$root.querySelector(`[data-task-id="${taskId}"]`);
+            if (!card) return;
+
             this.loading = true;
+            this.showLoadingState(card);
 
             try {
+                // Update status on server
                 await this.updateTaskStatus(taskId, nextStatus);
 
                 // Move the card to the new column
-                const card = this.$root.querySelector(`[data-task-id="${taskId}"]`);
                 const newColumn = this.$root.querySelector(`[data-kanban-column="${nextStatus}"]`);
 
                 if (card && newColumn) {
                     // Update data attribute
                     card.dataset.taskStatus = nextStatus;
+
+                    // Add animation
+                    card.style.transform = 'scale(0.95)';
+                    card.style.opacity = '0.5';
+
                     // Move to new column
-                    newColumn.appendChild(card);
-                    // Update counts
-                    this.updateAllColumnCounts();
+                    setTimeout(() => {
+                        newColumn.appendChild(card);
+
+                        // Update counts
+                        this.updateAllColumnCounts();
+
+                        // Reset animation
+                        setTimeout(() => {
+                            card.style.transform = '';
+                            card.style.opacity = '';
+                        }, 50);
+                    }, 150);
                 }
             } catch (error) {
                 console.error('Failed to move task:', error);
                 alert('Failed to move task. Please try again.');
+                this.hideLoadingState(card);
             } finally {
                 this.loading = false;
             }
         },
 
         getColumnCount(status) {
-            const column = this.$root.querySelector(`[data-kanban-column="${status}"]`);
+            const column = this.$root?.querySelector(`[data-kanban-column="${status}"]`);
             if (!column) return 0;
             return column.querySelectorAll('[data-task-id]').length;
         },
 
         updateAllColumnCounts() {
-            const columns = this.$root.querySelectorAll('[data-kanban-column]');
-            columns.forEach(column => {
-                const count = column.querySelectorAll('[data-task-id]').length;
-                const countEl = column.querySelector('[data-column-count]');
-                if (countEl) {
-                    countEl.textContent = count;
+            const statuses = ['planned', 'in_progress', 'waiting_review', 'revision', 'completed'];
+            statuses.forEach(status => {
+                this.columnCounts[status] = this.getColumnCount(status);
+            });
+
+            // Also update the DOM elements with x-text
+            this.$nextTick(() => {
+                const columns = this.$root?.querySelectorAll('[data-kanban-column]');
+                if (columns) {
+                    columns.forEach(column => {
+                        const count = column.querySelectorAll('[data-task-id]').length;
+                        const status = column.dataset.kanbanColumn;
+                        const countEl = column.querySelector('.column-count');
+                        if (countEl) {
+                            countEl.textContent = count;
+                        }
+                    });
                 }
             });
         },
 
         showLoadingState(card) {
+            if (!card) return;
             card.classList.add('kanban-loading');
             card.style.opacity = '0.6';
         },
 
         hideLoadingState(card) {
+            if (!card) return;
             card.classList.remove('kanban-loading');
             card.style.opacity = '';
         },
 
         destroy() {
-            this.sortables.forEach(sortable => sortable.destroy());
+            this.sortables.forEach(sortable => sortable?.destroy());
             this.sortables.clear();
         }
     };

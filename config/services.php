@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'google_drive' => [
+        'client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+    ],
+
+    'brevo' => [
+        'api_key' => env('BREVO_API_KEY'),
+        'base_url' => env('BREVO_BASE_URL', 'https://api.brevo.com/v3'),
+        'sender_name' => env('BREVO_SENDER_NAME', env('MAIL_FROM_NAME', env('APP_NAME', 'ResearchFlow'))),
+        'sender_email' => env('BREVO_SENDER_EMAIL', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+    ],
+
 ];

@@ -1,9 +1,91 @@
 <x-layouts.app title="AI Assistant">
     <x-slot:header>AI Assistant</x-slot:header>
 
+    @php
+        $roleLabel = ucfirst($effectiveRole ?? auth()->user()->role);
+        $studentOptions = $availableStudents->map(fn($contextStudent) => [
+            'id' => $contextStudent->id,
+            'name' => $contextStudent->user->name,
+            'programme' => $contextStudent->programme->code ?? ($contextStudent->programme->name ?? 'No programme'),
+        ])->values();
+        $initialFiles = $files->map(fn($file) => [
+            'id' => $file->id,
+            'original_name' => $file->original_name,
+            'mime_type' => $file->mime_type,
+            'size' => $file->size,
+            'size_human' => $file->sizeForHumans(),
+            'disk' => $file->disk,
+        ])->values();
+    @endphp
+
     <div x-data="aiChat()" x-init="init()" class="flex gap-4 h-[calc(100vh-8rem)]">
-        {{-- Left: File context --}}
-        <div class="w-60 shrink-0 hidden lg:block overflow-y-auto">
+        {{-- Left: Projects --}}
+        <div class="w-72 shrink-0 hidden lg:flex lg:flex-col gap-4">
+            <x-card :padding="'none'" class="overflow-hidden">
+                <div class="p-3 border-b border-border bg-surface/50 flex items-center justify-between">
+                    <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Projects</p>
+                    <button @click="creatingProject = !creatingProject; if (!creatingProject) newProjectName = ''" class="text-[10px] text-accent hover:underline">+ New</button>
+                </div>
+                <div class="p-3 border-b border-border/60" x-show="creatingProject">
+                    <div class="space-y-2">
+                        <input x-model="newProjectName" type="text" placeholder="Project name" class="w-full rounded-lg border border-border px-3 py-2 text-xs focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none">
+                        <div class="flex items-center gap-2">
+                            <button @click="createProject()" class="rounded-lg bg-accent px-3 py-1.5 text-[10px] font-medium text-white">Create</button>
+                            <button @click="creatingProject = false; newProjectName = ''" class="text-[10px] text-secondary hover:text-primary">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="max-h-[28rem] overflow-y-auto p-2 space-y-2">
+                    <template x-for="project in projects" :key="project.id">
+                        <div class="rounded-xl border border-border/80 bg-white">
+                            <div class="flex items-center justify-between px-3 py-2" :class="currentProjectId === project.id ? 'bg-amber-50' : ''">
+                                <button @click="openProject(project.id)" class="min-w-0 flex-1 text-left">
+                                    <p class="truncate text-xs font-semibold" :class="currentProjectId === project.id ? 'text-accent' : 'text-primary'" x-text="project.name"></p>
+                                    <p class="text-[10px] text-tertiary" x-text="`${project.conversations.length} chats`"></p>
+                                </button>
+                                <div class="ml-2 flex items-center gap-2">
+                                    <button @click="currentProjectId = project.id; clearChat()" class="text-[10px] text-accent hover:underline">+ Chat</button>
+                                    <button @click="deleteProject(project.id)" class="text-[10px] text-secondary hover:text-red-600">Delete</button>
+                                </div>
+                            </div>
+                            <div x-show="currentProjectId === project.id" class="border-t border-border/60 p-2 space-y-1">
+                                <template x-for="conv in project.conversations" :key="conv.id">
+                                    <div class="flex items-center gap-1">
+                                        <button @click="loadConversation(conv.id)" class="min-w-0 flex-1 truncate rounded-lg px-2.5 py-2 text-left text-xs transition-colors" :class="currentConversation === conv.id ? 'bg-amber-50 text-accent' : 'text-secondary hover:bg-surface hover:text-primary'" x-text="conv.title"></button>
+                                        <button @click="deleteConversation(conv.id)" class="rounded-lg px-2 py-2 text-[10px] text-secondary hover:bg-red-50 hover:text-red-600" title="Delete chat">Delete</button>
+                                    </div>
+                                </template>
+                                <template x-if="project.conversations.length === 0">
+                                    <p class="px-2.5 py-2 text-[10px] text-secondary">No chats yet in this project.</p>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="projects.length === 0">
+                        <p class="text-xs text-secondary text-center py-4">No projects yet</p>
+                    </template>
+                </div>
+            </x-card>
+
+            <x-card :padding="'none'" class="overflow-hidden">
+                <div class="p-3 border-b border-border bg-surface/50">
+                    <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Student</p>
+                </div>
+                <div class="p-3">
+                    <template x-if="availableStudents.length > 0">
+                        <select x-model.number="studentId" @change="handleStudentChange()" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none">
+                            <option value="">Select student context</option>
+                            <template x-for="contextStudent in availableStudents" :key="contextStudent.id">
+                                <option :value="contextStudent.id" x-text="`${contextStudent.name} | ${contextStudent.programme}`"></option>
+                            </template>
+                        </select>
+                    </template>
+                    <template x-if="availableStudents.length === 0">
+                        <p class="text-xs text-secondary">No student context available.</p>
+                    </template>
+                </div>
+            </x-card>
+
             <x-card :padding="'none'" class="mb-4">
                 <div class="p-3 border-b border-border bg-surface/50">
                     <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Context Files</p>
@@ -43,6 +125,12 @@
                         <span class="text-xs font-medium text-primary">Use Document Search (RAG)</span>
                     </label>
                     <p class="text-[10px] text-secondary mt-1">AI will search selected files for relevant context</p>
+
+                    <label class="mt-3 flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="useWebSearch" class="rounded border-gray-300 text-accent focus:ring-accent">
+                        <span class="text-xs font-medium text-primary">Use Web Search</span>
+                    </label>
+                    <p class="text-[10px] text-secondary mt-1">Use for latest literature, recent papers, and current information when supported by the active provider</p>
                 </div>
             </x-card>
         </div>
@@ -57,7 +145,12 @@
                     </div>
                     <div>
                         <h3 class="text-sm font-semibold text-primary">ResearchFlow AI</h3>
-                        <p class="text-[10px] text-secondary">Academic research assistant</p>
+                        <p class="text-[10px] text-secondary">
+                            {{ $roleLabel }} workspace
+                            @if($student)
+                                • {{ $student->user->name }}
+                            @endif
+                        </p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -75,7 +168,12 @@
                             <svg class="w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                         </div>
                         <h3 class="text-sm font-semibold text-primary mb-1">ResearchFlow AI</h3>
-                        <p class="text-xs text-secondary max-w-sm">Ask me about your research, get help with writing, methodology, deadline planning, or document analysis.</p>
+                        <p class="text-xs text-secondary max-w-sm">
+                            Ask about research planning, supervisor feedback, document analysis, literature review, or operational admin work.
+                            @if($student)
+                                Current context: {{ $student->user->name }}.
+                            @endif
+                        </p>
                     </div>
                 </template>
 
@@ -111,6 +209,27 @@
 
             {{-- Input --}}
             <div class="border-t border-border bg-white p-4">
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <input x-ref="fileUpload" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip,.rar,.7z" @change="handleLocalUpload">
+                    <button type="button" @click="triggerUpload()" class="rounded-lg border border-border px-3 py-2 text-xs font-medium text-primary hover:bg-surface disabled:opacity-50" :disabled="uploadingFiles">
+                        <span x-text="uploadingFiles ? 'Uploading...' : 'Upload photo & files'"></span>
+                    </button>
+                    <button type="button" @click="openFilePicker()" class="rounded-lg border border-border px-3 py-2 text-xs font-medium text-primary hover:bg-surface">
+                        <span x-text="storageDisk === 'google_drive' ? 'Add from Google Drive' : 'Add existing files'"></span>
+                    </button>
+                    <span class="text-[10px] text-secondary" x-show="!studentId">Select a student to enable attachments.</span>
+                </div>
+
+                <div class="mb-3 flex flex-wrap gap-2" x-show="selectedAttachments().length > 0">
+                    <template x-for="file in selectedAttachments()" :key="file.id">
+                        <div class="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs">
+                            <span class="max-w-44 truncate" x-text="file.original_name"></span>
+                            <span class="text-[10px] text-tertiary" x-text="file.size_human || 'File'"></span>
+                            <button type="button" @click="removeAttachment(file.id)" class="text-secondary hover:text-red-600">x</button>
+                        </div>
+                    </template>
+                </div>
+
                 <form @submit.prevent="send()" class="flex gap-3">
                     <div class="flex-1 relative">
                         <input x-model="input" type="text" placeholder="Ask about your research..." class="w-full rounded-xl border border-border bg-surface px-4 py-2.5 pr-24 text-sm focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all" :disabled="loading" @keydown.ctrl.enter="send()" @keydown.meta.enter="send()">
@@ -131,36 +250,36 @@
             </div>
         </div>
 
-        {{-- Right: Quick Actions & History --}}
-        <div class="w-56 shrink-0 hidden xl:block overflow-y-auto">
-            <x-card :padding="'none'" class="mb-4">
-                <div class="p-3 border-b border-border bg-surface/50">
-                    <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Quick Actions</p>
+        <div x-show="showFilePicker" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-sm px-4">
+            <div class="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                    <div>
+                        <p class="text-sm font-semibold text-primary" x-text="storageDisk === 'google_drive' ? 'Add from Google Drive' : 'Add Existing Files'"></p>
+                        <p class="text-[10px] text-secondary">Select files to attach as context to this chat.</p>
+                    </div>
+                    <button type="button" @click="showFilePicker = false" class="text-secondary hover:text-primary">Close</button>
                 </div>
-                <div class="p-2 space-y-0.5">
-                    <template x-for="action in quickActions" :key="action.label">
-                        <button @click="input = action.prompt; send()" class="w-full text-left text-xs text-secondary hover:text-accent hover:bg-amber-50 rounded-lg px-2.5 py-2 transition-colors flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0" x-html="action.icon"></span>
-                            <span x-text="action.label"></span>
-                        </button>
+                <div class="border-b border-border px-4 py-3">
+                    <input x-model="fileSearch" type="text" placeholder="Search files..." class="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none">
+                </div>
+                <div class="max-h-[28rem] overflow-y-auto p-3 space-y-2">
+                    <template x-for="file in filteredAvailableFiles()" :key="file.id">
+                        <label class="flex cursor-pointer items-center justify-between rounded-xl border border-border px-3 py-2 hover:bg-surface">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-medium text-primary" x-text="file.original_name"></p>
+                                <p class="text-[10px] text-secondary">
+                                    <span x-text="file.size_human || 'File'"></span>
+                                    <span x-show="file.disk"> | <span x-text="file.disk"></span></span>
+                                </p>
+                            </div>
+                            <input type="checkbox" class="rounded border-gray-300 text-accent focus:ring-accent" :checked="contextFiles.includes(file.id)" @change="toggleAttachment(file.id)">
+                        </label>
+                    </template>
+                    <template x-if="filteredAvailableFiles().length === 0">
+                        <p class="py-6 text-center text-sm text-secondary">No matching files found.</p>
                     </template>
                 </div>
-            </x-card>
-
-            <x-card :padding="'none'">
-                <div class="p-3 border-b border-border bg-surface/50 flex items-center justify-between">
-                    <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Conversations</p>
-                    <button @click="clearChat()" class="text-[10px] text-accent hover:underline">+ New</button>
-                </div>
-                <div class="max-h-64 overflow-y-auto p-2">
-                    <template x-for="conv in conversations" :key="conv.id">
-                        <button @click="loadConversation(conv.id)" class="w-full text-left text-xs text-secondary hover:text-accent hover:bg-gray-50 rounded-lg px-2.5 py-2 transition-colors truncate" :class="{ 'bg-amber-50 text-accent': currentConversation === conv.id }" x-text="conv.title"></button>
-                    </template>
-                    <template x-if="conversations.length === 0">
-                        <p class="text-xs text-secondary text-center py-4">No conversations yet</p>
-                    </template>
-                </div>
-            </x-card>
+            </div>
         </div>
     </div>
 
@@ -191,11 +310,21 @@
             return {
                 input: '',
                 messages: [],
-                conversations: [],
+                projects: [],
                 currentConversation: null,
+                currentProjectId: null,
+                studentId: {{ $student?->id ?? 'null' }},
+                availableStudents: @js($studentOptions),
+                storageDisk: @js($currentStorageDisk),
+                availableFiles: @js($initialFiles),
                 contextFiles: [],
                 useRag: false,
                 loading: false,
+                creatingProject: false,
+                newProjectName: '',
+                showFilePicker: false,
+                fileSearch: '',
+                uploadingFiles: false,
 
                 quickActions: [
                     { label: 'Summarize latest report', prompt: 'Summarize my latest progress report and highlight key achievements and challenges.', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' },
@@ -203,14 +332,179 @@
                     { label: 'Suggest next tasks', prompt: 'Based on my current progress, what should be my next 3-5 tasks?', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>' },
                     { label: 'Methodology review', prompt: 'Review my research methodology and suggest improvements.', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>' },
                     { label: 'Writing assistance', prompt: 'Help me improve my academic writing style and clarity.', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>' },
+                    { label: 'Latest literature review', prompt: 'Find the latest literature review and recent papers for my research topic, then summarize the main themes and gaps.', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"/></svg>' },
+                    { label: 'Build literature matrix', prompt: 'Create a literature matrix with columns for author, year, objective, method, dataset, findings, limitations, and relevance to my study.', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/></svg>' },
                 ],
+                useWebSearch: false,
 
                 async init() {
+                    if (!this.studentId && this.availableStudents.length === 1) {
+                        this.studentId = this.availableStudents[0].id;
+                    }
+                    await this.refreshProjects();
+                    await this.refreshAvailableFiles();
+                },
+
+                async handleStudentChange() {
+                    this.contextFiles = [];
+                    this.currentConversation = null;
+                    this.messages = [];
+                    await this.refreshAvailableFiles();
+                },
+
+                async refreshProjects() {
                     try {
-                        const res = await axios.get('/api/ai/conversations');
-                        this.conversations = res.data;
+                        const res = await axios.get('/api/ai/projects');
+                        this.projects = res.data;
+
+                        if (!this.currentProjectId && this.projects.length > 0) {
+                            this.currentProjectId = this.projects[0].id;
+                        }
                     } catch(e) {
-                        console.error('Failed to load conversations:', e);
+                        console.error('Failed to load projects:', e);
+                    }
+                },
+
+                async refreshAvailableFiles() {
+                    if (!this.studentId) {
+                        this.availableFiles = [];
+                        return;
+                    }
+
+                    try {
+                        const res = await axios.get(`/api/students/${this.studentId}/files`, {
+                            params: {
+                                per_page: 100,
+                                sort_by: 'created_at',
+                                sort_order: 'desc',
+                            }
+                        });
+                        this.availableFiles = res.data.data ?? [];
+                    } catch (e) {
+                        console.error('Failed to load files:', e);
+                    }
+                },
+
+                triggerUpload() {
+                    if (!this.studentId) {
+                        alert('Select a student context first.');
+                        return;
+                    }
+
+                    this.$refs.fileUpload.click();
+                },
+
+                openFilePicker() {
+                    if (!this.studentId) {
+                        alert('Select a student context first.');
+                        return;
+                    }
+
+                    this.showFilePicker = true;
+                },
+
+                async createProject() {
+                    const name = this.newProjectName.trim();
+                    if (!name) return;
+
+                    try {
+                        const res = await axios.post('/api/ai/projects', {
+                            name,
+                            student_id: this.studentId,
+                        });
+
+                        this.projects.unshift(res.data);
+                        this.currentProjectId = res.data.id;
+                        this.currentConversation = null;
+                        this.messages = [];
+                        this.newProjectName = '';
+                        this.creatingProject = false;
+                    } catch(e) {
+                        console.error('Failed to create project:', e);
+                    }
+                },
+
+                filteredAvailableFiles() {
+                    const term = this.fileSearch.trim().toLowerCase();
+                    if (!term) return this.availableFiles;
+
+                    return this.availableFiles.filter((file) => {
+                        return (file.original_name || '').toLowerCase().includes(term);
+                    });
+                },
+
+                selectedAttachments() {
+                    return this.availableFiles.filter((file) => this.contextFiles.includes(file.id));
+                },
+
+                toggleAttachment(id) {
+                    const numericId = Number(id);
+                    if (this.contextFiles.includes(numericId)) {
+                        this.contextFiles = this.contextFiles.filter((fileId) => fileId !== numericId);
+                        return;
+                    }
+
+                    this.contextFiles.push(numericId);
+                },
+
+                removeAttachment(id) {
+                    const numericId = Number(id);
+                    this.contextFiles = this.contextFiles.filter((fileId) => fileId !== numericId);
+                },
+
+                async handleLocalUpload(event) {
+                    const selectedFiles = Array.from(event.target.files || []);
+                    if (!this.studentId || selectedFiles.length === 0) {
+                        event.target.value = '';
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    selectedFiles.forEach((file) => formData.append('files[]', file));
+                    formData.append('category', 'references');
+
+                    this.uploadingFiles = true;
+
+                    try {
+                        const res = await axios.post(`/api/students/${this.studentId}/files/upload-multiple`, formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data',
+                            }
+                        });
+
+                        const uploaded = res.data.files || [];
+                        uploaded.forEach((file) => {
+                            file.size_human = file.size_human || this.formatBytes(file.size || 0);
+                            if (!this.availableFiles.some((existing) => existing.id === file.id)) {
+                                this.availableFiles.unshift(file);
+                            }
+                            if (!this.contextFiles.includes(file.id)) {
+                                this.contextFiles.push(file.id);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to upload files:', e);
+                    } finally {
+                        this.uploadingFiles = false;
+                        event.target.value = '';
+                    }
+                },
+
+                async deleteProject(id) {
+                    if (!confirm('Delete this project and all chats inside it?')) return;
+
+                    try {
+                        await axios.delete(`/api/ai/projects/${id}`);
+
+                        if (this.currentProjectId === id) {
+                            this.currentProjectId = null;
+                            this.currentConversation = null;
+                            this.messages = [];
+                        }
+
+                        await this.refreshProjects();
+                    } catch (e) {
+                        console.error('Failed to delete project:', e);
                     }
                 },
 
@@ -228,17 +522,45 @@
                 async clearChat() {
                     this.messages = [];
                     this.currentConversation = null;
+                    this.contextFiles = [];
                     this.input = '';
+                },
+
+                openProject(projectId) {
+                    this.currentProjectId = projectId;
+                    this.currentConversation = null;
+                    this.contextFiles = [];
+                    this.messages = [];
                 },
 
                 async loadConversation(id) {
                     try {
                         const res = await axios.get(`/api/ai/conversations/${id}/messages`);
-                        this.messages = res.data;
-                        this.currentConversation = id;
+                        this.messages = res.data.messages;
+                        this.currentConversation = res.data.conversation.id;
+                        this.currentProjectId = res.data.conversation.project_id;
+                        this.studentId = res.data.conversation.student_id || this.studentId;
+                        this.contextFiles = res.data.conversation.context_files || [];
                         this.$nextTick(() => this.scrollToBottom());
                     } catch(e) {
                         console.error('Failed to load conversation:', e);
+                    }
+                },
+
+                async deleteConversation(id) {
+                    if (!confirm('Delete this chat?')) return;
+
+                    try {
+                        await axios.delete(`/api/ai/conversations/${id}`);
+
+                        if (this.currentConversation === id) {
+                            this.currentConversation = null;
+                            this.messages = [];
+                        }
+
+                        await this.refreshProjects();
+                    } catch (e) {
+                        console.error('Failed to delete conversation:', e);
                     }
                 },
 
@@ -247,17 +569,23 @@
                     const content = this.input;
                     this.input = '';
 
+                    if (!this.currentProjectId) {
+                        this.creatingProject = true;
+                        this.newProjectName = this.newProjectName || 'New Project';
+                        await this.createProject();
+                    }
+
                     // Create conversation if needed
                     if (!this.currentConversation) {
                         try {
                             const res = await axios.post('/api/ai/conversations', {
+                                project_id: this.currentProjectId,
                                 title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
-                                student_id: {{ $student?->id ?? 'null' }},
+                                student_id: this.studentId,
                                 context_files: this.contextFiles,
-                                scope: '{{ $student ? "student" : "general" }}'
+                                scope: this.studentId ? 'student' : 'general'
                             });
                             this.currentConversation = res.data.id;
-                            this.conversations.unshift(res.data);
                         } catch(e) {
                             console.error('Failed to create conversation:', e);
                             return;
@@ -278,9 +606,15 @@
                     try {
                         const res = await axios.post(`/api/ai/conversations/${this.currentConversation}/messages`, {
                             message: content,
-                            use_rag: this.useRag
+                            use_rag: this.useRag,
+                            use_web_search: this.useWebSearch,
+                            context_files: this.contextFiles,
                         });
                         this.messages = res.data.conversation.messages;
+                        this.currentConversation = res.data.conversation_meta.id;
+                        this.currentProjectId = res.data.conversation_meta.project_id;
+                        this.contextFiles = res.data.conversation_meta.context_files || this.contextFiles;
+                        await this.refreshProjects();
                     } catch(e) {
                         console.error('Chat error:', e);
                         let errorMsg = 'Sorry, something went wrong. Please try again.';
@@ -344,6 +678,19 @@
                     if (!isoString) return '';
                     const date = new Date(isoString);
                     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                },
+
+                formatBytes(bytes) {
+                    const units = ['B', 'KB', 'MB', 'GB'];
+                    let value = Number(bytes || 0);
+                    let unitIndex = 0;
+
+                    while (value >= 1024 && unitIndex < units.length - 1) {
+                        value /= 1024;
+                        unitIndex++;
+                    }
+
+                    return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
                 },
 
                 truncateText(text, maxLength) {

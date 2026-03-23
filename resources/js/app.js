@@ -1,11 +1,11 @@
 import './bootstrap';
+import { initKanbanBoard } from './modules/kanban.js';
 
 // Export modules for use in Blade views or as global objects
 window.TaskFlow = {
     Api: null,
     Store: null,
-    Kanban: null,
-    Gantt: null
+    Kanban: null
 };
 
 // Dynamic import function for on-demand loading
@@ -26,12 +26,6 @@ async function loadModule(name) {
 
 // Global initialization helpers - these can be called from Blade views
 // Usage: x-data="initKanbanBoard({ studentId: 1 })"
-window.initKanbanBoard = async function(options) {
-    const { initKanbanBoard } = await import('./modules/kanban.js');
+window.initKanbanBoard = function(options) {
     return initKanbanBoard(options);
-};
-
-window.initTaskFlowGantt = async function(options) {
-    const { ganttChart } = await import('./modules/gantt.js');
-    return ganttChart(options);
 };

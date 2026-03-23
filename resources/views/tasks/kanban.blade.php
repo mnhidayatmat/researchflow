@@ -15,9 +15,9 @@
         <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm">+ New Task</x-button>
     </div>
 
-    <div x-data="initKanbanBoard({ studentId: {{ $student->id }} })" x-init="init()" class="flex gap-4 overflow-x-auto pb-4">
+    <div x-data="initKanbanBoard({ studentId: {{ $student->id }} })" x-init="init()" x-cloak class="flex gap-4 overflow-x-auto pb-4">
         @php
-            // Define columns WITHOUT backlog
+            // Define columns
             $columns = [
                 'planned' => 'Planned',
                 'in_progress' => 'In Progress',
@@ -47,7 +47,7 @@
                 <div class="flex items-center gap-2 mb-3 sticky top-0 bg-surface py-2 z-10">
                     <div class="w-2 h-2 rounded-full {{ $columnColors[$status] }}"></div>
                     <h3 class="text-xs font-semibold text-secondary uppercase tracking-wider">{{ $label }}</h3>
-                    <span class="text-[10px] text-secondary/60 bg-surface px-1.5 rounded" x-text="getColumnCount('{{ $status }}')">{{ ($tasks[$status] ?? collect())->count() }}</span>
+                    <span class="column-count text-[10px] text-secondary/60 bg-surface px-1.5 rounded">{{ ($tasks[$status] ?? collect())->count() }}</span>
                 </div>
                 <div
                     data-kanban-column="{{ $status }}"
@@ -55,7 +55,7 @@
                 >
                     @foreach(($tasks[$status] ?? []) as $task)
                         <div
-                            class="kanban-card bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all"
+                            class="kanban-card bg-card border border-border rounded-xl p-3 hover:shadow-md hover:border-accent/30 transition-all cursor-grab active:cursor-grabbing"
                             data-task-id="{{ $task->id }}"
                             data-task-status="{{ $task->status }}"
                         >
@@ -90,14 +90,14 @@
                             @endif
                             @if($nextStatus[$status])
                                 <button
-                                    x-data
                                     @click="moveToNext({{ $task->id }}, '{{ $nextStatus[$status] }}')"
-                                    class="mt-3 w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+                                    :disabled="loading"
+                                    class="mt-3 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                                     </svg>
-                                    Move to {{ $columns[$nextStatus[$status]] }}
+                                    <span>Move to {{ $columns[$nextStatus[$status]] }}</span>
                                 </button>
                             @endif
                         </div>
@@ -110,50 +110,44 @@
     @push('styles')
     <style>
         /* Kanban drag and drop styles */
+        .kanban-card {
+            user-select: none;
+            touch-action: none;
+        }
+        .kanban-card:hover {
+            transform: translateY(-1px);
+        }
         .kanban-ghost {
             opacity: 0.4;
             background: #FAFAF9;
+            border-style: dashed;
         }
         .kanban-dragging {
-            cursor: grabbing;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-            transform: rotate(1deg);
+            cursor: grabbing !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+            transform: rotate(2deg) scale(1.02);
+            opacity: 0.9;
         }
         .kanban-loading {
             pointer-events: none;
+            opacity: 0.6;
         }
         .kanban-column.drag-over {
             background: rgba(217, 119, 6, 0.08);
-            border-color: #D97706;
+            border-color: #D97706 !important;
         }
-        .kanban-card {
-            cursor: grab;
-            user-select: none;
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        .kanban-card:active {
-            cursor: grabbing;
-        }
-    </style>
-    <style>
-        /* Kanban drag and drop styles */
-        .kanban-ghost {
-            opacity: 0.3;
-            background: #F7F7F5;
-        }
-        .kanban-dragging {
-            cursor: grabbing;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
-            transform: rotate(2deg);
-        }
-        .kanban-loading {
-            pointer-events: none;
-        }
-        .kanban-column:hover {
-            border-color: #E5E7EB;
-        }
-        .kanban-column.drag-over {
-            background: rgba(217, 119, 6, 0.05);
-            border-color: #D97706;
+        .kanban-card.animate-in {
+            animation: slideIn 0.2s ease-out;
         }
     </style>
     @endpush

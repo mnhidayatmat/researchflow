@@ -69,6 +69,8 @@ return [
 
     'ai' => [
         'default_provider' => env('AI_DEFAULT_PROVIDER', 'openai'),
+        'ssl_verify' => env('AI_SSL_VERIFY', true),
+        'ca_bundle' => env('AI_CA_BUNDLE'),
 
         'providers' => [
             'openai' => [
@@ -81,7 +83,7 @@ return [
 
             'gemini' => [
                 'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/models'),
-                'model' => env('GEMINI_MODEL', 'gemini-2.0-flash-exp'),
+                'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
                 'api_key' => env('GEMINI_API_KEY'),
                 'max_tokens' => (int) env('GEMINI_MAX_TOKENS', 2000),
             ],

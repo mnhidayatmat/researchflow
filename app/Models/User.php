@@ -7,22 +7,25 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Auth\MustVerifyEmail;
 use Illuminate\Notifications\Notifiable;
 
 // Make sure AiConversation is available
 use App\Models\AiConversation;
+use App\Models\AiProject;
 use App\Models\AiMessage;
 use App\Models\AuditLog;
 use App\Models\Meeting;
 use App\Models\Student;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmailContract
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, MustVerifyEmail;
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'staff_id', 'matric_number',
-        'phone', 'avatar', 'department', 'faculty', 'status', 'bio',
+        'phone', 'avatar', 'department', 'faculty', 'university_name', 'status', 'bio',
         'theme',
     ];
 
@@ -49,6 +52,11 @@ class User extends Authenticatable
         return $this->hasOne(Student::class);
     }
 
+    public function storageProfile(): HasOne
+    {
+        return $this->hasOne(UserStorageSetting::class);
+    }
+
     public function supervisedStudents(): HasMany
     {
         return $this->hasMany(Student::class, 'supervisor_id');
@@ -73,6 +81,11 @@ class User extends Authenticatable
     public function aiConversations(): HasMany
     {
         return $this->hasMany(AiConversation::class);
+    }
+
+    public function aiProjects(): HasMany
+    {
+        return $this->hasMany(AiProject::class);
     }
 
     public function auditLogs(): HasMany

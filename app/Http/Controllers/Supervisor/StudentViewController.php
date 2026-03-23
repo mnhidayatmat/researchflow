@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Supervisor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
-use Illuminate\Support\Facades\Auth;
 
 class StudentViewController extends Controller
 {
     public function index()
     {
-        $students = Auth::user()->allStudents()
+        $students = $this->effectiveSupervisedStudentsQuery()
             ->with(['user', 'programme'])
             ->paginate(15);
 
@@ -25,6 +24,7 @@ class StudentViewController extends Controller
             'tasks' => fn($q) => $q->whereNull('parent_id')->orderBy('sort_order'),
             'progressReports' => fn($q) => $q->latest(),
             'meetings' => fn($q) => $q->latest('scheduled_at')->take(5),
+            'publicationTracks' => fn($q) => $q->latest('submission_date')->latest(),
         ]);
 
         return view('supervisor.students.show', compact('student'));

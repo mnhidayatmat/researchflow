@@ -5,7 +5,7 @@
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h2 class="text-lg font-semibold">{{ $report->title }}</h2>
-                <p class="text-xs text-secondary">{{ ucfirst($report->type) }} &middot; {{ $report->created_at->format('d M Y') }}</p>
+                <p class="text-xs text-secondary">{{ $report->type_label }} &middot; {{ $report->created_at->format('d M Y') }}</p>
             </div>
             <div class="flex items-center gap-2">
                 <x-status-badge :status="$report->status" />
@@ -35,6 +35,23 @@
             @if($report->next_steps)
                 <x-card title="Next Steps">
                     <div class="text-sm text-secondary leading-relaxed whitespace-pre-wrap">{{ $report->next_steps }}</div>
+                </x-card>
+            @endif
+
+            @if($report->attachment_path)
+                <x-card title="Attachment">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-primary">{{ $report->attachment_original_name }}</p>
+                            <p class="text-xs text-secondary mt-1">
+                                {{ number_format(($report->attachment_size ?? 0) / 1024, 1) }} KB
+                                @if($report->attachmentStorageOwner)
+                                    &middot; Stored in {{ $report->attachmentStorageOwner->name }}'s {{ $report->attachment_disk === 'google_drive' ? 'Google Drive' : 'local storage' }}
+                                @endif
+                            </p>
+                        </div>
+                        <x-button href="{{ route('reports.download-attachment', [$student, $report]) }}" variant="secondary" size="sm">Download</x-button>
+                    </div>
                 </x-card>
             @endif
 

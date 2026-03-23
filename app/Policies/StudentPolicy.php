@@ -29,7 +29,9 @@ class StudentPolicy
     public function update(User $user, Student $student): bool
     {
         if ($user->isAdmin()) return true;
+        if ($user->id === $student->user_id) return true;
         if ($user->id === $student->supervisor_id) return true;
+        if ($user->id === $student->cosupervisor_id) return true;
         return false;
     }
 

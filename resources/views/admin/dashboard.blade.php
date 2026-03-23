@@ -341,7 +341,7 @@
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-primary group-hover:text-accent transition-colors truncate">{{ $t->title }}</p>
                         <div class="flex items-center gap-3 mt-1">
-                            <p class="text-xs text-secondary">{{ $t->student->user->name }}</p>
+                            <p class="text-xs text-secondary">{{ $t->student->user->name ?? 'Unknown' }}</p>
                             <span class="text-tertiary">•</span>
                             <p class="text-xs text-tertiary">Due {{ $t->due_date->format('M j') }}</p>
                         </div>

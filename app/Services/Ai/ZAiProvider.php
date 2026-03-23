@@ -25,16 +25,24 @@ class ZAiProvider extends BaseAiProvider
 
     public function getChatEndpoint(): string
     {
-        // Z.Ai uses OpenAI-compatible API at /api/paas/v4/chat/completions
-        $baseUrl = $this->baseUrl ?? 'https://api.z.ai/api/paas/v4';
-        return rtrim($baseUrl, '/') . '/chat/completions';
+        $baseUrl = rtrim($this->baseUrl ?? 'https://api.z.ai/api', '/');
+
+        if (str_ends_with($baseUrl, '/paas/v4')) {
+            return $baseUrl . '/chat/completions';
+        }
+
+        return $baseUrl . '/paas/v4/chat/completions';
     }
 
     public function getEmbeddingEndpoint(): string
     {
-        // Z.Ai embeddings endpoint
-        $baseUrl = $this->baseUrl ?? 'https://api.z.ai/api/paas/v4';
-        return rtrim($baseUrl, '/') . '/embeddings';
+        $baseUrl = rtrim($this->baseUrl ?? 'https://api.z.ai/api', '/');
+
+        if (str_ends_with($baseUrl, '/paas/v4')) {
+            return $baseUrl . '/embeddings';
+        }
+
+        return $baseUrl . '/paas/v4/embeddings';
     }
 
     protected function formatMessages(array $messages): array
@@ -106,8 +114,8 @@ class ZAiProvider extends BaseAiProvider
     {
         return new self(
             apiKey: $config['api_key'],
-            model: $config['model'] ?? 'glm-4.6',
-            baseUrl: $config['base_url'] ?? 'https://api.z.ai/api/paas/v4',
+            model: $config['model'] ?? 'glm-5-turbo',
+            baseUrl: $config['base_url'] ?? 'https://api.z.ai/api',
             capabilities: [
                 'name' => 'zai',
                 'features' => $config['features'] ?? ['chat', 'embeddings'],

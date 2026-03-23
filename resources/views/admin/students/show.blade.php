@@ -80,6 +80,16 @@
                     <p class="text-xs text-secondary mt-2">Overall progress</p>
                 </div>
             </x-card>
+
+            <x-card title="Publication Tracking">
+                <div class="text-center py-2">
+                    <div class="text-3xl font-semibold text-primary">{{ $student->publicationTracks->count() }}</div>
+                    <p class="text-xs text-secondary mt-2">Journal records tracked</p>
+                    <div class="mt-4">
+                        <x-button :href="route('publications.index', $student)" variant="secondary" size="sm">Open Tracker</x-button>
+                    </div>
+                </div>
+            </x-card>
         </div>
 
         {{-- Right column --}}
@@ -126,6 +136,31 @@
                 @if($student->progressReports->count() > 5)
                     <div class="px-5 py-3 border-t border-border">
                         <a href="{{ route('reports.index', $student) }}" class="text-xs text-accent hover:underline">View all {{ $student->progressReports->count() }} reports</a>
+                    </div>
+                @endif
+            </x-card>
+
+            <x-card title="Publication Track" :padding='false'>
+                <div class="divide-y divide-border">
+                    @forelse($student->publicationTracks->take(5) as $publication)
+                        <div class="flex items-start justify-between px-5 py-3 gap-4">
+                            <div>
+                                <a href="{{ route('publications.index', $student) }}" class="text-sm font-medium text-primary hover:text-accent transition-colors">{{ $publication->title }}</a>
+                                <p class="text-xs text-secondary mt-0.5">{{ $publication->journal }}</p>
+                            </div>
+                            <span class="inline-flex rounded-full bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent">{{ $publication->stage_label }}</span>
+                        </div>
+                    @empty
+                        <div class="px-5 py-6 text-center text-sm text-secondary">No publication records yet</div>
+                    @endforelse
+                </div>
+                @if($student->publicationTracks->count() > 5)
+                    <div class="px-5 py-3 border-t border-border">
+                        <a href="{{ route('publications.index', $student) }}" class="text-xs text-accent hover:underline">View all {{ $student->publicationTracks->count() }} publication records</a>
+                    </div>
+                @else
+                    <div class="px-5 py-3 border-t border-border">
+                        <a href="{{ route('publications.index', $student) }}" class="text-xs text-accent hover:underline">Open publication tracker</a>
                     </div>
                 @endif
             </x-card>

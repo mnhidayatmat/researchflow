@@ -1,30 +1,98 @@
 <x-layouts.app title="My Students">
     <x-slot:header>My Students</x-slot:header>
 
-    {{-- Page header --}}
-    <div class="flex items-center justify-between mb-6">
+    @php
+        $target = request('target');
+        $targetLabel = match ($target) {
+            'tasks' => 'tasks',
+            'reports' => 'reports',
+            'meetings' => 'meetings',
+            default => null,
+        };
+        $pageTitle = match ($target) {
+            'tasks' => 'Select Student for Tasks',
+            'reports' => 'Select Student for Reports',
+            'meetings' => 'Select Student for Meetings',
+            default => 'My Students',
+        };
+        $targetMeta = match ($target) {
+            'tasks' => [
+                'verb' => 'Open task workspace',
+                'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+                'accent' => 'from-amber-50 to-orange-100 text-amber-700 border-amber-200',
+                'button' => 'Open Tasks',
+            ],
+            'reports' => [
+                'verb' => 'Review submitted reports',
+                'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'accent' => 'from-blue-50 to-sky-100 text-sky-700 border-sky-200',
+                'button' => 'Open Reports',
+            ],
+            'meetings' => [
+                'verb' => 'View and schedule meetings',
+                'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+                'accent' => 'from-emerald-50 to-teal-100 text-teal-700 border-teal-200',
+                'button' => 'Open Meetings',
+            ],
+            default => null,
+        };
+    @endphp
+
+    <div class="mb-6 flex items-center justify-between">
         <div>
-            <h2 class="text-base font-semibold text-primary">My Students</h2>
-            <p class="text-xs text-secondary mt-0.5">Students under your supervision</p>
+            <h2 class="text-base font-semibold text-primary">{{ $pageTitle }}</h2>
+            <p class="mt-0.5 text-xs text-secondary">
+                @if($targetLabel)
+                    Choose a student to continue to their {{ $targetLabel }} workspace
+                @else
+                    Students under your supervision
+                @endif
+            </p>
         </div>
     </div>
 
-    {{-- Search & filter --}}
+    @if($targetLabel)
+        <div class="mb-5 rounded-2xl border border-border bg-gradient-to-r from-white via-surface/60 to-white px-5 py-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl border bg-gradient-to-br {{ $targetMeta['accent'] }}">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="{{ $targetMeta['icon'] }}"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-primary">{{ ucfirst($targetLabel) }} Picker</p>
+                        <p class="mt-0.5 text-xs text-secondary">{{ $targetMeta['verb'] }}. Student details stay in the main My Students page.</p>
+                    </div>
+                </div>
+                <a href="{{ route('supervisor.students.index') }}" class="inline-flex items-center gap-2 text-xs font-medium text-secondary hover:text-primary">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to My Students
+                </a>
+            </div>
+        </div>
+    @endif
+
     <x-card class="mb-4">
         <form method="GET" action="{{ route('supervisor.students.index') }}" class="flex flex-wrap gap-3 items-end">
-            <div class="flex-1 min-w-[180px]">
-                <label class="block text-xs font-medium text-secondary mb-1">Search</label>
+            @if($target)
+                <input type="hidden" name="target" value="{{ $target }}">
+            @endif
+            <div class="min-w-[220px] flex-1">
+                <label class="mb-1 block text-xs font-medium text-secondary">Search</label>
                 <input
                     type="text"
                     name="search"
                     value="{{ request('search') }}"
-                    placeholder="Search by name or research title..."
-                    class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary placeholder-secondary/50 focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-colors"
+                    placeholder="{{ $targetLabel ? 'Search by student name...' : 'Search by name or research title...' }}"
+                    class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary placeholder-secondary/50 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30"
                 >
             </div>
             <div class="min-w-[140px]">
-                <label class="block text-xs font-medium text-secondary mb-1">Programme</label>
-                <select name="programme_id" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-colors">
+                <label class="mb-1 block text-xs font-medium text-secondary">Programme</label>
+                <select name="programme_id" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30">
                     <option value="">All Programmes</option>
                     @foreach($students->pluck('programme')->unique('id')->filter() as $programme)
                         <option value="{{ $programme->id }}" {{ request('programme_id') == $programme->id ? 'selected' : '' }}>
@@ -34,8 +102,8 @@
                 </select>
             </div>
             <div class="min-w-[130px]">
-                <label class="block text-xs font-medium text-secondary mb-1">Status</label>
-                <select name="status" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-colors">
+                <label class="mb-1 block text-xs font-medium text-secondary">Status</label>
+                <select name="status" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30">
                     <option value="">All</option>
                     <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                     <option value="on_hold" {{ request('status') === 'on_hold' ? 'selected' : '' }}>On Hold</option>
@@ -45,71 +113,111 @@
             <div class="flex gap-2">
                 <x-button type="submit" variant="primary" size="sm">Filter</x-button>
                 @if(request()->hasAny(['search', 'programme_id', 'status']))
-                    <x-button href="{{ route('supervisor.students.index') }}" variant="secondary" size="sm">Clear</x-button>
+                    <x-button href="{{ route('supervisor.students.index', array_filter(['target' => $target])) }}" variant="secondary" size="sm">Clear</x-button>
                 @endif
             </div>
         </form>
     </x-card>
 
-    {{-- Students grid --}}
     @if($students->isEmpty())
         <x-card>
             <div class="py-12 text-center text-secondary">
-                <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <svg class="mx-auto mb-3 h-10 w-10 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
                 <p class="text-sm font-medium">No students assigned</p>
-                <p class="text-xs mt-1">Students will appear here once assigned to you</p>
+                <p class="mt-1 text-xs">Students will appear here once assigned to you</p>
             </div>
         </x-card>
     @else
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($students as $student)
-                <a href="{{ route('supervisor.students.show', $student) }}" class="group block">
-                    <x-card class="h-full hover:shadow-sm hover:border-gray-300 transition-all">
-                        {{-- Student header --}}
-                        <div class="flex items-start gap-3 mb-4">
-                            <div class="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                                {{ substr($student->user->name, 0, 1) }}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-primary group-hover:text-accent transition-colors truncate">{{ $student->user->name }}</p>
-                                <p class="text-xs text-secondary font-mono">{{ $student->user->matric_number ?? 'No matric' }}</p>
-                            </div>
-                            <x-status-badge :status="$student->status" />
-                        </div>
+                @php
+                    $studentRoute = match ($target) {
+                        'tasks' => route('tasks.index', $student),
+                        'reports' => route('reports.index', $student),
+                        'meetings' => route('meetings.index', $student),
+                        default => route('supervisor.students.show', $student),
+                    };
+                @endphp
 
-                        {{-- Research info --}}
-                        <div class="space-y-2 mb-4">
-                            <div>
-                                <p class="text-[10px] font-medium text-secondary uppercase tracking-wide">Programme</p>
-                                <p class="text-xs text-primary mt-0.5">{{ $student->programme->name ?? '—' }}</p>
-                            </div>
-                            @if($student->research_title)
-                                <div>
-                                    <p class="text-[10px] font-medium text-secondary uppercase tracking-wide">Research Title</p>
-                                    <p class="text-xs text-primary mt-0.5 line-clamp-2">{{ $student->research_title }}</p>
+                <a href="{{ $studentRoute }}" class="group block">
+                    @if($targetLabel)
+                        <x-card class="h-full border border-border/80 transition-all hover:border-accent/30 hover:shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-sm font-semibold text-accent">
+                                    {{ substr($student->user->name, 0, 1) }}
                                 </div>
-                            @endif
-                        </div>
-
-                        {{-- Progress bar --}}
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="text-[10px] font-medium text-secondary uppercase tracking-wide">Progress</span>
-                                <span class="text-xs text-primary font-medium">{{ $student->overall_progress ?? 0 }}%</span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-primary transition-colors group-hover:text-accent">{{ $student->user->name }}</p>
+                                    <div class="mt-1 flex items-center gap-2 text-xs text-secondary">
+                                        <span class="truncate">{{ $student->programme->code ?? ($student->programme->name ?? 'No programme') }}</span>
+                                        <span class="text-border">•</span>
+                                        <span class="font-mono">{{ $student->user->matric_number ?? 'No matric' }}</span>
+                                    </div>
+                                </div>
+                                <x-status-badge :status="$student->status" size="sm" />
                             </div>
-                            <div class="w-full bg-gray-100 rounded-full h-1.5">
-                                <div class="bg-accent h-1.5 rounded-full transition-all" style="width: {{ $student->overall_progress ?? 0 }}%"></div>
-                            </div>
-                        </div>
 
-                        {{-- Quick stats --}}
-                        @if($student->expected_completion)
-                            <div class="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                            <div class="mt-4 flex items-center justify-between rounded-xl bg-surface/80 px-3 py-2.5">
+                                <div>
+                                    <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-tertiary">{{ ucfirst($targetLabel) }}</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ $targetMeta['verb'] }}</p>
+                                </div>
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl border bg-white text-secondary transition-colors group-hover:border-accent/30 group-hover:text-accent">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 flex items-center justify-between border-t border-border pt-3">
+                                <span class="text-xs text-secondary">Continue to {{ $targetLabel }}</span>
+                                <span class="text-xs font-semibold text-primary transition-colors group-hover:text-accent">{{ $targetMeta['button'] }}</span>
+                            </div>
+                        </x-card>
+                    @else
+                        <x-card class="h-full transition-all hover:border-gray-300 hover:shadow-sm">
+                            <div class="mb-4 flex items-start gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent">
+                                    {{ substr($student->user->name, 0, 1) }}
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-primary transition-colors group-hover:text-accent">{{ $student->user->name }}</p>
+                                    <p class="font-mono text-xs text-secondary">{{ $student->user->matric_number ?? 'No matric' }}</p>
+                                </div>
+                                <x-status-badge :status="$student->status" />
+                            </div>
+
+                            <div class="mb-4 space-y-2">
+                                <div>
+                                    <p class="text-[10px] font-medium uppercase tracking-wide text-secondary">Programme</p>
+                                    <p class="mt-0.5 text-xs text-primary">{{ $student->programme->name ?? '—' }}</p>
+                                </div>
+                                @if($student->research_title)
+                                    <div>
+                                        <p class="text-[10px] font-medium uppercase tracking-wide text-secondary">Research Title</p>
+                                        <p class="mt-0.5 line-clamp-2 text-xs text-primary">{{ $student->research_title }}</p>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <div class="mb-1 flex items-center justify-between">
+                                    <span class="text-[10px] font-medium uppercase tracking-wide text-secondary">Progress</span>
+                                    <span class="text-xs font-medium text-primary">{{ $student->overall_progress ?? 0 }}%</span>
+                                </div>
+                                <div class="h-1.5 w-full rounded-full bg-gray-100">
+                                    <div class="h-1.5 rounded-full bg-accent transition-all" style="width: {{ $student->overall_progress ?? 0 }}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 flex items-center justify-between border-t border-border pt-3">
                                 <span class="text-xs text-secondary">Expected completion</span>
-                                <span class="text-xs text-primary font-medium">{{ $student->expected_completion->format('M Y') }}</span>
+                                <span class="text-xs font-medium text-primary">{{ $student->expected_completion?->format('M Y') ?? 'N/A' }}</span>
                             </div>
-                        @endif
-                    </x-card>
+                        </x-card>
+                    @endif
                 </a>
             @endforeach
         </div>

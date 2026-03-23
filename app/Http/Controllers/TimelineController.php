@@ -14,6 +14,7 @@ class TimelineController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        $effectiveRole = $this->getEffectiveRole($user);
         $students = $this->getAccessibleStudents($user);
 
         // Get selected student from query param or first available
@@ -22,6 +23,10 @@ class TimelineController extends Controller
             $selectedStudent = $students->firstWhere('id', $selectedStudentId);
         } else {
             $selectedStudent = $students->first();
+        }
+
+        if ($effectiveRole === 'student' && $selectedStudent) {
+            return redirect()->route('timeline.show', $selectedStudent->id);
         }
 
         if (!$selectedStudent) {
@@ -58,7 +63,9 @@ class TimelineController extends Controller
      */
     protected function getAccessibleStudents($user)
     {
-        return match ($user->role) {
+        $effectiveRole = $this->getEffectiveRole($user);
+
+        return match ($effectiveRole) {
             'admin' => Student::with(['user', 'programme'])
                 ->where('status', 'active')
                 ->orderBy('created_at', 'desc')
@@ -73,13 +80,29 @@ class TimelineController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get(),
 
-            'student' => Student::with(['user', 'programme'])
-                ->where('id', $user->student?->id)
-                ->where('status', 'active')
-                ->get(),
+            'student' => $this->getStudentScopedQuery($user)->get(),
 
             default => collect(),
         };
+    }
+
+    protected function getEffectiveRole($user): string
+    {
+        if ($user->role === 'admin') {
+            return session()->get('admin_role_switch', $user->role);
+        }
+
+        return $user->role;
+    }
+
+    protected function getStudentScopedQuery($user)
+    {
+        $studentId = $user->role === 'admin' && session()->has('admin_view_as_student_id')
+            ? session()->get('admin_view_as_student_id')
+            : $user->student?->id;
+
+        return Student::with(['user', 'programme'])
+            ->when($studentId, fn ($query) => $query->where('id', $studentId), fn ($query) => $query->whereRaw('1 = 0'));
     }
 
     /**

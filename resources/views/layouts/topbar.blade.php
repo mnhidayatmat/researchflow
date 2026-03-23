@@ -2,6 +2,7 @@
     $role = auth()->user()->role;
     $effectiveRole = session()->get('admin_role_switch', $role);
     $isRoleSwitched = $role === 'admin' && $effectiveRole !== $role;
+    $items = collect($items ?? []);
 @endphp
 
 {{-- Enhanced topbar with improved visual hierarchy --}}

@@ -72,8 +72,7 @@
 
     if (in_array($displayRole, ['supervisor', 'cosupervisor'], true)) {
         array_splice($navGroups[$displayRole]['main'], 2, 0, [[
-            'route' => $studentId ? ['publications.index', $studentId] : 'supervisor.students.index',
-            'query' => $studentId ? [] : ['target' => 'publications'],
+            'route' => 'supervisor.publications.index',
             'icon' => 'journal',
             'label' => 'Publications',
         ]]);
@@ -85,7 +84,6 @@
             ['route' => $useDirectStudentLinks ? ['tasks.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'tasks'], 'icon' => 'check-square', 'label' => 'Tasks'],
             ['route' => $useDirectStudentLinks ? ['reports.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'reports'], 'icon' => 'file-text', 'label' => 'Reports'],
             ['route' => $useDirectStudentLinks ? ['meetings.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'meetings'], 'icon' => 'calendar', 'label' => 'Meetings'],
-            ['route' => $useDirectStudentLinks ? ['publications.index', $studentId] : 'supervisor.students.index', 'query' => $useDirectStudentLinks ? [] : ['target' => 'publications'], 'icon' => 'journal', 'label' => 'Publications'],
         ];
     }
 
@@ -121,9 +119,7 @@
     ];
 @endphp
 
-<div class="flex flex-col h-full" x-data="{
-    collapsed: localStorage.getItem('sidebarCollapsed') === 'true'
-}" x-cloak>
+<div class="flex flex-col h-full" x-cloak>
     {{-- Logo --}}
     <div class="flex items-center h-14 px-4 border-b border-border dark:border-dark-border shrink-0">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-amber-600 flex items-center justify-center shrink-0 shadow-sm">
@@ -131,7 +127,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
             </svg>
         </div>
-        <span x-show="!collapsed" x-transition.opacity.duration.200ms class="ml-2 font-semibold text-sm text-primary dark:text-dark-primary">ResearchFlow</span>
+        <span x-show="!sidebarCollapsed" x-transition.opacity.duration.200ms class="ml-2 font-semibold text-sm text-primary dark:text-dark-primary">ResearchFlow</span>
     </div>
 
     {{-- Navigation --}}
@@ -140,7 +136,7 @@
             @if(!empty($items))
                 {{-- Group header --}}
                 @if($group !== 'main')
-                    <div x-show="!collapsed" x-transition.opacity class="px-4 pt-4 pb-2">
+                    <div x-show="!sidebarCollapsed" x-transition.opacity class="px-4 pt-4 pb-2">
                         <span class="text-[10px] font-semibold uppercase tracking-wider text-tertiary dark:text-dark-tertiary">{{ $group }}</span>
                     </div>
                 @endif
@@ -162,6 +158,8 @@
                                 $isActive = request()->routeIs('supervisor.students.index', 'supervisor.students.show') && $currentTarget === null;
                             } elseif ($routeName === 'supervisor.grants.index') {
                                 $isActive = request()->routeIs('supervisor.grants.*');
+                            } elseif ($routeName === 'supervisor.publications.index') {
+                                $isActive = request()->routeIs('supervisor.publications.*');
                             } elseif ($routeName === 'supervisor.collaborators.index') {
                                 $isActive = request()->routeIs('supervisor.collaborators.*');
                             } else {
@@ -175,7 +173,7 @@
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="{{ $icons[$item['icon']] ?? '' }}"/>
                             </svg>
-                            <span x-show="!collapsed" x-transition.opacity.duration.200ms class="text-sm font-medium">{{ $item['label'] }}</span>
+                            <span x-show="!sidebarCollapsed" x-transition.opacity.duration.200ms class="text-sm font-medium">{{ $item['label'] }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -185,9 +183,9 @@
 
     {{-- Collapse Toggle --}}
     <div class="p-3 border-t border-border dark:border-dark-border">
-        <button @click="collapsed = !collapsed; localStorage.setItem('sidebarCollapsed', collapsed)"
+        <button @click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed)"
                 class="flex items-center justify-center w-full p-2 rounded-xl text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary hover:bg-surface/50 dark:hover:bg-dark-surface/50 transition-all">
-            <svg class="w-5 h-5 transition-transform duration-200" :class="{ 'rotate-180': collapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 transition-transform duration-200" :class="{ 'rotate-180': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
             </svg>
         </button>

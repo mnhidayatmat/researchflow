@@ -69,6 +69,70 @@
 
             <x-card :padding="'none'" class="overflow-hidden">
                 <div class="p-3 border-b border-border bg-surface/50">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Mode</p>
+                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Premium</span>
+                    </div>
+                </div>
+                <div class="space-y-3 p-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" @click="mode = 'chat'" :class="mode === 'chat' ? 'border-accent bg-amber-50 text-accent' : 'border-border text-secondary'" class="rounded-lg border px-3 py-2 text-xs font-medium transition-colors">Chat</button>
+                        <button type="button" @click="mode = 'cowork'" :class="mode === 'cowork' ? 'border-accent bg-amber-50 text-accent' : 'border-border text-secondary'" class="rounded-lg border px-3 py-2 text-xs font-medium transition-colors">Cowork</button>
+                    </div>
+                    <div x-show="mode === 'cowork'" x-cloak class="space-y-2">
+                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-secondary">Local workspace</label>
+                        <div class="flex gap-2">
+                            <input x-model="workspacePath" type="text" readonly placeholder="Select a local folder from your device" class="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-xs focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none">
+                            <button type="button" @click="pickLocalWorkspace()" class="rounded-lg border border-border px-3 py-2 text-xs font-medium text-primary hover:bg-surface">Select Folder</button>
+                        </div>
+                        <p class="text-[10px] text-secondary">Your browser will ask you to choose a real local folder. Cowork edits files there directly when your browser supports the File System Access API.</p>
+                        <div x-show="localWorkspaceNodes.length > 0" x-cloak class="rounded-xl border border-border bg-white">
+                            <div class="flex items-center justify-between border-b border-border px-3 py-2">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-secondary">Workspace Tree</p>
+                                <span class="text-[10px] text-secondary" x-text="selectedLocalFiles.length ? `${selectedLocalFiles.length} selected` : `${localWorkspaceEntries.length} entries`"></span>
+                            </div>
+                            <div class="max-h-64 overflow-y-auto p-2 space-y-1">
+                                <template x-for="node in localWorkspaceNodes" :key="node.path">
+                                    <div>
+                                        <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-surface">
+                                            <button type="button" class="w-5 shrink-0 text-tertiary" @click="node.kind === 'directory' ? toggleTreeNode(node.path) : null">
+                                                <span x-text="node.kind === 'directory' ? (isTreeNodeExpanded(node.path) ? '-' : '+') : ''"></span>
+                                            </button>
+                                            <template x-if="node.kind === 'file'">
+                                                <input type="checkbox" class="rounded border-gray-300 text-accent focus:ring-accent" :checked="selectedLocalFiles.includes(node.path)" @change="toggleLocalFileSelection(node.path)">
+                                            </template>
+                                            <template x-if="node.kind === 'directory'">
+                                                <span class="w-4 shrink-0 text-[10px] font-semibold text-amber-700">DIR</span>
+                                            </template>
+                                            <button type="button" class="min-w-0 flex-1 text-left" @click="node.kind === 'directory' ? toggleTreeNode(node.path) : previewLocalFile(node.path)">
+                                                <div class="flex items-center gap-2" :style="`padding-left:${node.depth * 14}px`">
+                                                    <span class="truncate text-primary" x-text="node.name"></span>
+                                                    <span class="shrink-0 text-[10px] text-tertiary" x-show="node.kind === 'file' && node.size_human" x-text="node.size_human"></span>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="border-t border-border px-3 py-2 text-[10px] text-secondary">
+                                Select one or more files to prioritize them in Cowork context. Click a file name to preview text content.
+                            </div>
+                        </div>
+                        <div x-show="localFilePreview.path" x-cloak class="rounded-xl border border-border bg-white">
+                            <div class="flex items-center justify-between border-b border-border px-3 py-2">
+                                <p class="truncate text-[10px] font-semibold uppercase tracking-wider text-secondary" x-text="localFilePreview.path"></p>
+                                <button type="button" class="text-[10px] text-secondary hover:text-primary" @click="clearLocalFilePreview()">Close</button>
+                            </div>
+                            <div class="max-h-48 overflow-auto p-3">
+                                <pre class="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-primary" x-text="localFilePreview.content"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </x-card>
+
+            <x-card :padding="'none'" class="overflow-hidden">
+                <div class="p-3 border-b border-border bg-surface/50">
                     <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Student</p>
                 </div>
                 <div class="p-3">
@@ -146,7 +210,7 @@
                     <div>
                         <h3 class="text-sm font-semibold text-primary">ResearchFlow AI</h3>
                         <p class="text-[10px] text-secondary">
-                            {{ $roleLabel }} workspace
+                            <span x-text="mode === 'cowork' ? '{{ $roleLabel }} cowork workspace' : '{{ $roleLabel }} workspace'"></span>
                             @if($student)
                                 • {{ $student->user->name }}
                             @endif
@@ -169,7 +233,8 @@
                         </div>
                         <h3 class="text-sm font-semibold text-primary mb-1">ResearchFlow AI</h3>
                         <p class="text-xs text-secondary max-w-sm">
-                            Ask about research planning, supervisor feedback, document analysis, literature review, or operational admin work.
+                            <span x-show="mode === 'chat'">Ask about research planning, supervisor feedback, document analysis, literature review, or operational admin work.</span>
+                            <span x-show="mode === 'cowork'">Select a real local folder from your device, then ask Cowork to read, create, update, list, or delete files inside it.</span>
                             @if($student)
                                 Current context: {{ $student->user->name }}.
                             @endif
@@ -188,6 +253,9 @@
                                 <span class="text-[10px]" x-text="formatTime(msg.created_at)"></span>
                                 <template x-if="msg.metadata?.provider">
                                     <span class="text-[9px] px-1.5 py-0.5 rounded bg-black/10" x-text="msg.metadata.provider"></span>
+                                </template>
+                                <template x-if="msg.metadata?.operation">
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700" x-text="msg.metadata.operation"></span>
                                 </template>
                             </div>
                         </div>
@@ -209,7 +277,7 @@
 
             {{-- Input --}}
             <div class="border-t border-border bg-white p-4">
-                <div class="mb-3 flex flex-wrap items-center gap-2">
+                <div class="mb-3 flex flex-wrap items-center gap-2" x-show="mode === 'chat'">
                     <input x-ref="fileUpload" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip,.rar,.7z" @change="handleLocalUpload">
                     <button type="button" @click="triggerUpload()" class="rounded-lg border border-border px-3 py-2 text-xs font-medium text-primary hover:bg-surface disabled:opacity-50" :disabled="uploadingFiles">
                         <span x-text="uploadingFiles ? 'Uploading...' : 'Upload photo & files'"></span>
@@ -220,7 +288,11 @@
                     <span class="text-[10px] text-secondary" x-show="!studentId">Select a student to enable attachments.</span>
                 </div>
 
-                <div class="mb-3 flex flex-wrap gap-2" x-show="selectedAttachments().length > 0">
+                <div class="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-secondary" x-show="mode === 'cowork'">
+                    Cowork requires premium access and a Chromium-based browser with local folder permissions.
+                </div>
+
+                <div class="mb-3 flex flex-wrap gap-2" x-show="mode === 'chat' && selectedAttachments().length > 0">
                     <template x-for="file in selectedAttachments()" :key="file.id">
                         <div class="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs">
                             <span class="max-w-44 truncate" x-text="file.original_name"></span>
@@ -232,7 +304,7 @@
 
                 <form @submit.prevent="send()" class="flex gap-3">
                     <div class="flex-1 relative">
-                        <input x-model="input" type="text" placeholder="Ask about your research..." class="w-full rounded-xl border border-border bg-surface px-4 py-2.5 pr-24 text-sm focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all" :disabled="loading" @keydown.ctrl.enter="send()" @keydown.meta.enter="send()">
+                        <input x-model="input" type="text" :placeholder="mode === 'cowork' ? 'Example: update this Blade file and add a cowork mode badge' : 'Ask about your research...'" class="w-full rounded-xl border border-border bg-surface px-4 py-2.5 pr-24 text-sm focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all" :disabled="loading" @keydown.ctrl.enter="send()" @keydown.meta.enter="send()">
                         <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                             <span class="text-[10px] text-secondary">Ctrl+Enter</span>
                         </div>
@@ -281,6 +353,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 
     @push('styles')
@@ -313,6 +386,8 @@
                 projects: [],
                 currentConversation: null,
                 currentProjectId: null,
+                mode: 'chat',
+                workspacePath: '',
                 studentId: {{ $student?->id ?? 'null' }},
                 availableStudents: @js($studentOptions),
                 storageDisk: @js($currentStorageDisk),
@@ -325,6 +400,16 @@
                 showFilePicker: false,
                 fileSearch: '',
                 uploadingFiles: false,
+                localWorkspaceHandle: null,
+                localWorkspaceSupported: typeof window.showDirectoryPicker === 'function',
+                localWorkspaceEntries: [],
+                localWorkspaceNodes: [],
+                expandedTreeNodes: [''],
+                selectedLocalFiles: [],
+                localFilePreview: {
+                    path: '',
+                    content: '',
+                },
 
                 quickActions: [
                     { label: 'Summarize latest report', prompt: 'Summarize my latest progress report and highlight key achievements and challenges.', icon: '<svg class="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>' },
@@ -401,6 +486,350 @@
                     }
 
                     this.showFilePicker = true;
+                },
+
+                async pickLocalWorkspace() {
+                    if (!this.localWorkspaceSupported) {
+                        alert('This browser does not support local folder access. Use a recent Chromium-based browser.');
+                        return;
+                    }
+
+                    try {
+                        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                        this.localWorkspaceHandle = handle;
+                        this.workspacePath = handle.name;
+                        this.selectedLocalFiles = [];
+                        this.localFilePreview = { path: '', content: '' };
+                        await this.loadLocalWorkspaceEntries();
+                    } catch (e) {
+                        if (e?.name !== 'AbortError') {
+                            console.error('Failed to select local workspace:', e);
+                            alert('Failed to select local folder.');
+                        }
+                    }
+                },
+
+                async verifyWorkspacePermission() {
+                    if (!this.localWorkspaceHandle) return false;
+
+                    const current = await this.localWorkspaceHandle.queryPermission({ mode: 'readwrite' });
+                    if (current === 'granted') return true;
+
+                    const requested = await this.localWorkspaceHandle.requestPermission({ mode: 'readwrite' });
+                    return requested === 'granted';
+                },
+
+                async loadLocalWorkspaceEntries() {
+                    if (!this.localWorkspaceHandle) {
+                        this.localWorkspaceEntries = [];
+                        this.localWorkspaceNodes = [];
+                        return;
+                    }
+
+                    const entries = [];
+                    const nodes = [];
+                    const maxEntries = 160;
+                    const maxDepth = 4;
+
+                    const walk = async (directoryHandle, prefix = '', depth = 0) => {
+                        if (depth > maxDepth || entries.length >= maxEntries) return;
+
+                        const currentEntries = [];
+                        for await (const [name, handle] of directoryHandle.entries()) {
+                            currentEntries.push([name, handle]);
+                        }
+
+                        currentEntries.sort((a, b) => {
+                            if (a[1].kind !== b[1].kind) {
+                                return a[1].kind === 'directory' ? -1 : 1;
+                            }
+
+                            return a[0].localeCompare(b[0]);
+                        });
+
+                        for (const [name, handle] of currentEntries) {
+                            if (entries.length >= maxEntries) break;
+
+                            const entry = {
+                                name,
+                                path: prefix ? `${prefix}/${name}` : name,
+                                kind: handle.kind,
+                                depth,
+                            };
+
+                            if (handle.kind === 'file') {
+                                try {
+                                    const file = await handle.getFile();
+                                    entry.size = file.size;
+                                    entry.size_human = this.formatBytes(file.size);
+                                } catch (e) {
+                                    entry.size_human = '';
+                                }
+                            }
+
+                            entries.push(entry);
+                            nodes.push(entry);
+
+                            if (handle.kind === 'directory') {
+                                await walk(handle, entry.path, depth + 1);
+                            }
+                        }
+                    };
+
+                    await walk(this.localWorkspaceHandle);
+
+                    this.localWorkspaceEntries = entries;
+                    this.localWorkspaceNodes = nodes.filter((node) => this.isNodeVisible(node.path));
+                    this.expandedTreeNodes = [''];
+                },
+
+                isTreeNodeExpanded(path) {
+                    return this.expandedTreeNodes.includes(path);
+                },
+
+                isNodeVisible(path) {
+                    const parent = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+                    return parent === '' || this.expandedTreeNodes.includes(parent);
+                },
+
+                refreshVisibleTreeNodes() {
+                    this.localWorkspaceNodes = this.localWorkspaceEntries.filter((node) => this.isNodeVisible(node.path));
+                },
+
+                toggleTreeNode(path) {
+                    if (this.expandedTreeNodes.includes(path)) {
+                        this.expandedTreeNodes = this.expandedTreeNodes.filter((item) => item !== path);
+                    } else {
+                        this.expandedTreeNodes.push(path);
+                    }
+
+                    this.refreshVisibleTreeNodes();
+                },
+
+                toggleLocalFileSelection(path) {
+                    if (this.selectedLocalFiles.includes(path)) {
+                        this.selectedLocalFiles = this.selectedLocalFiles.filter((item) => item !== path);
+                        return;
+                    }
+
+                    this.selectedLocalFiles.push(path);
+                },
+
+                async previewLocalFile(path) {
+                    if (!this.localWorkspaceHandle || !this.isTextLikeFile(path)) {
+                        return;
+                    }
+
+                    try {
+                        const { directory, fileName } = await this.resolveLocalTarget(path);
+                        const handle = await directory.getFileHandle(fileName);
+                        const file = await handle.getFile();
+                        const content = await file.text();
+                        this.localFilePreview = {
+                            path,
+                            content: content.length > 6000 ? `${content.slice(0, 6000)}\n\n[preview truncated]` : content,
+                        };
+                    } catch (e) {
+                        console.error('Failed to preview local file:', e);
+                    }
+                },
+
+                clearLocalFilePreview() {
+                    this.localFilePreview = { path: '', content: '' };
+                },
+
+                async buildWorkspaceContext() {
+                    if (!this.localWorkspaceHandle) {
+                        throw new Error('Select a local folder first.');
+                    }
+
+                    const entries = [];
+                    const files = [];
+                    let totalFiles = 0;
+                    const maxEntries = 120;
+                    const maxTextFiles = 8;
+                    const maxDepth = 3;
+                    const prioritized = new Set(this.selectedLocalFiles);
+
+                    const walk = async (directoryHandle, prefix = '', depth = 0) => {
+                        if (depth > maxDepth || entries.length >= maxEntries) return;
+
+                        for await (const [name, handle] of directoryHandle.entries()) {
+                            if (entries.length >= maxEntries) break;
+
+                            const relativePath = prefix ? `${prefix}/${name}` : name;
+                            entries.push({
+                                path: relativePath,
+                                type: handle.kind,
+                            });
+
+                            if (handle.kind === 'file') {
+                                totalFiles++;
+                                const shouldInclude = prioritized.size === 0 || prioritized.has(relativePath);
+                                if (files.length < maxTextFiles && shouldInclude && this.isTextLikeFile(name)) {
+                                    const file = await handle.getFile();
+                                    if (file.size <= 25000) {
+                                        files.push({
+                                            path: relativePath,
+                                            size: file.size,
+                                            content: await file.text(),
+                                        });
+                                    }
+                                }
+                            } else if (handle.kind === 'directory') {
+                                await walk(handle, relativePath, depth + 1);
+                            }
+                        }
+                    };
+
+                    await walk(this.localWorkspaceHandle);
+
+                    return {
+                        workspace_label: this.workspacePath || this.localWorkspaceHandle.name,
+                        root_name: this.localWorkspaceHandle.name,
+                        scanned_entry_count: entries.length,
+                        total_files_seen: totalFiles,
+                        selected_files: Array.from(prioritized),
+                        entries,
+                        text_files: files,
+                    };
+                },
+
+                isTextLikeFile(name) {
+                    const lower = (name || '').toLowerCase();
+                    return ['.php', '.blade.php', '.js', '.ts', '.tsx', '.jsx', '.json', '.md', '.txt', '.css', '.scss', '.html', '.xml', '.yml', '.yaml', '.sql', '.csv']
+                        .some((ext) => lower.endsWith(ext));
+                },
+
+                async applyCoworkPlan(plan) {
+                    const relativePath = (plan.relative_path || '').replace(/^\/+/, '');
+                    if (!relativePath && plan.operation !== 'list') {
+                        throw new Error('Cowork did not return a target path.');
+                    }
+
+                    switch (plan.operation) {
+                        case 'list':
+                            return await this.listLocalDirectory(relativePath);
+                        case 'read':
+                            return await this.readLocalFile(relativePath);
+                        case 'create':
+                            return plan.target_type === 'directory'
+                                ? await this.createLocalDirectory(relativePath)
+                                : await this.writeLocalFile(relativePath, plan.content || '', true);
+                        case 'update':
+                            return await this.writeLocalFile(relativePath, plan.content || '', false);
+                        case 'delete':
+                            return plan.target_type === 'directory'
+                                ? await this.deleteLocalDirectory(relativePath)
+                                : await this.deleteLocalFile(relativePath);
+                        default:
+                            throw new Error(plan.clarification || 'Unsupported Cowork operation.');
+                    }
+                },
+
+                async resolveLocalTarget(relativePath, createDirectories = false) {
+                    const segments = (relativePath || '').split('/').filter(Boolean);
+                    const fileName = segments.pop();
+                    let current = this.localWorkspaceHandle;
+
+                    for (const segment of segments) {
+                        current = await current.getDirectoryHandle(segment, { create: createDirectories });
+                    }
+
+                    return { directory: current, fileName };
+                },
+
+                async listLocalDirectory(relativePath = '') {
+                    let directoryHandle = this.localWorkspaceHandle;
+                    if (relativePath) {
+                        for (const segment of relativePath.split('/').filter(Boolean)) {
+                            directoryHandle = await directoryHandle.getDirectoryHandle(segment);
+                        }
+                    }
+
+                    const entries = [];
+                    for await (const [name, handle] of directoryHandle.entries()) {
+                        entries.push(`${name} (${handle.kind})`);
+                    }
+
+                    return {
+                        operation: 'list',
+                        relative_path: relativePath || '.',
+                        summary: 'Listed local directory contents.',
+                        preview: entries.join('\n'),
+                    };
+                },
+
+                async readLocalFile(relativePath) {
+                    const { directory, fileName } = await this.resolveLocalTarget(relativePath);
+                    const handle = await directory.getFileHandle(fileName);
+                    const file = await handle.getFile();
+                    const content = await file.text();
+
+                    return {
+                        operation: 'read',
+                        relative_path: relativePath,
+                        summary: 'Read local file contents.',
+                        preview: content.length > 4000 ? `${content.slice(0, 4000)}\n\n[preview truncated]` : content,
+                    };
+                },
+
+                async writeLocalFile(relativePath, content, createNew) {
+                    const { directory, fileName } = await this.resolveLocalTarget(relativePath, true);
+                    const handle = await directory.getFileHandle(fileName, { create: true });
+                    const writable = await handle.createWritable();
+                    await writable.write(content);
+                    await writable.close();
+
+                    return {
+                        operation: createNew ? 'create' : 'update',
+                        relative_path: relativePath,
+                        summary: createNew ? 'Created local file.' : 'Updated local file.',
+                        preview: content.length > 4000 ? `${content.slice(0, 4000)}\n\n[preview truncated]` : content,
+                    };
+                },
+
+                async createLocalDirectory(relativePath) {
+                    let current = this.localWorkspaceHandle;
+                    for (const segment of relativePath.split('/').filter(Boolean)) {
+                        current = await current.getDirectoryHandle(segment, { create: true });
+                    }
+
+                    return {
+                        operation: 'create',
+                        relative_path: relativePath,
+                        summary: 'Created local directory.',
+                        preview: null,
+                    };
+                },
+
+                async deleteLocalFile(relativePath) {
+                    const { directory, fileName } = await this.resolveLocalTarget(relativePath);
+                    await directory.removeEntry(fileName);
+
+                    return {
+                        operation: 'delete',
+                        relative_path: relativePath,
+                        summary: 'Deleted local file.',
+                        preview: null,
+                    };
+                },
+
+                async deleteLocalDirectory(relativePath) {
+                    const segments = relativePath.split('/').filter(Boolean);
+                    const name = segments.pop();
+                    let current = this.localWorkspaceHandle;
+                    for (const segment of segments) {
+                        current = await current.getDirectoryHandle(segment);
+                    }
+                    await current.removeEntry(name, { recursive: true });
+
+                    return {
+                        operation: 'delete',
+                        relative_path: relativePath,
+                        summary: 'Deleted local directory.',
+                        preview: null,
+                    };
                 },
 
                 async createProject() {
@@ -541,6 +970,8 @@
                         this.currentProjectId = res.data.conversation.project_id;
                         this.studentId = res.data.conversation.student_id || this.studentId;
                         this.contextFiles = res.data.conversation.context_files || [];
+                        this.mode = res.data.conversation.metadata?.mode === 'cowork' ? 'cowork' : 'chat';
+                        this.workspacePath = res.data.conversation.metadata?.workspace_label || res.data.conversation.metadata?.workspace_path || '';
                         this.$nextTick(() => this.scrollToBottom());
                     } catch(e) {
                         console.error('Failed to load conversation:', e);
@@ -566,6 +997,11 @@
 
                 async send() {
                     if (!this.input.trim() || this.loading) return;
+                    if (this.mode === 'cowork' && !this.localWorkspaceHandle) {
+                        alert('Select a local folder first.');
+                        return;
+                    }
+
                     const content = this.input;
                     this.input = '';
 
@@ -583,7 +1019,12 @@
                                 title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
                                 student_id: this.studentId,
                                 context_files: this.contextFiles,
-                                scope: this.studentId ? 'student' : 'general'
+                                scope: this.mode === 'cowork' ? 'cowork' : (this.studentId ? 'student' : 'general'),
+                                metadata: {
+                                    mode: this.mode,
+                                    workspace_label: this.workspacePath || null,
+                                    workspace_source: this.mode === 'cowork' ? 'browser' : null,
+                                }
                             });
                             this.currentConversation = res.data.id;
                         } catch(e) {
@@ -604,16 +1045,43 @@
                     this.scrollToBottom();
 
                     try {
-                        const res = await axios.post(`/api/ai/conversations/${this.currentConversation}/messages`, {
-                            message: content,
-                            use_rag: this.useRag,
-                            use_web_search: this.useWebSearch,
-                            context_files: this.contextFiles,
-                        });
+                        let res;
+                        if (this.mode === 'cowork') {
+                            const granted = await this.verifyWorkspacePermission();
+                            if (!granted) {
+                                throw new Error('Local folder permission was not granted.');
+                            }
+
+                            const workspaceContext = await this.buildWorkspaceContext();
+                            const planRes = await axios.post(`/api/ai/conversations/${this.currentConversation}/cowork-plan`, {
+                                message: content,
+                                workspace_label: this.workspacePath,
+                                workspace_context: workspaceContext,
+                            });
+
+                            const executionResult = await this.applyCoworkPlan(planRes.data.plan);
+
+                            res = await axios.post(`/api/ai/conversations/${this.currentConversation}/cowork-complete`, {
+                                message: content,
+                                workspace_label: this.workspacePath,
+                                plan: planRes.data.plan,
+                                execution_result: executionResult,
+                            });
+                        } else {
+                            res = await axios.post(`/api/ai/conversations/${this.currentConversation}/messages`, {
+                                message: content,
+                                use_rag: this.useRag,
+                                use_web_search: this.useWebSearch,
+                                context_files: this.contextFiles,
+                            });
+                        }
+
                         this.messages = res.data.conversation.messages;
                         this.currentConversation = res.data.conversation_meta.id;
                         this.currentProjectId = res.data.conversation_meta.project_id;
                         this.contextFiles = res.data.conversation_meta.context_files || this.contextFiles;
+                        this.mode = res.data.conversation_meta.metadata?.mode === 'cowork' ? 'cowork' : this.mode;
+                        this.workspacePath = res.data.conversation_meta.metadata?.workspace_label || res.data.conversation_meta.metadata?.workspace_path || this.workspacePath;
                         await this.refreshProjects();
                     } catch(e) {
                         console.error('Chat error:', e);

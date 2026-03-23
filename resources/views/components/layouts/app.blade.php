@@ -34,7 +34,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="h-full bg-surface text-primary">
-    <div class="min-h-full" x-data="{ sidebarOpen: false }">
+    <div class="min-h-full" x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true' }">
         {{-- Mobile sidebar overlay --}}
         <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-40 lg:hidden">
             <div class="fixed inset-0 bg-gray-900/50" @click="sidebarOpen = false"></div>
@@ -44,14 +44,15 @@
         </div>
 
         {{-- Desktop sidebar --}}
-        <div class="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-60 lg:flex-col">
+        <div class="hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-200"
+             :class="sidebarCollapsed ? 'lg:w-20' : 'lg:w-60'">
             <div class="flex flex-col flex-grow bg-white border-r border-border">
                 @include('layouts.sidebar')
             </div>
         </div>
 
         {{-- Main content --}}
-        <div class="lg:pl-60">
+        <div class="transition-all duration-200" :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-60'">
             {{-- Top bar --}}
             @php
                 $role = auth()->user()->role;

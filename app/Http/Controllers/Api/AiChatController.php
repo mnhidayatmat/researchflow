@@ -7,6 +7,7 @@ use App\Models\AiConversation;
 use App\Models\AiMessage;
 use App\Models\AiProject;
 use App\Services\Ai\AiChatService;
+use App\Services\Ai\Cowork\AiCoworkService;
 use App\Services\Ai\AiServiceFactory;
 use Throwable;
 use Illuminate\Http\Request;
@@ -68,9 +69,10 @@ class AiChatController extends Controller
             'project_id' => 'required|exists:ai_projects,id',
             'title' => 'nullable|string|max:255',
             'student_id' => 'nullable|exists:students,id',
-            'scope' => 'nullable|in:general,student,planning,proposal,analysis,writing',
+            'scope' => 'nullable|in:general,student,planning,proposal,analysis,writing,cowork',
             'context_files' => 'nullable|array',
             'context_files.*' => 'integer|exists:files,id',
+            'metadata' => 'nullable|array',
         ]);
 
         $project = AiProject::whereKey($validated['project_id'])
@@ -84,6 +86,7 @@ class AiChatController extends Controller
             'student_id' => $validated['student_id'] ?? $project->student_id,
             'scope' => $validated['scope'] ?? 'general',
             'context_files' => $validated['context_files'] ?? [],
+            'metadata' => $validated['metadata'] ?? [],
         ]);
 
         $project->touch();
@@ -247,6 +250,228 @@ class AiChatController extends Controller
         ]);
     }
 
+    public function coworkMessage(Request $request, AiConversation $conversation, AiCoworkService $coworkService)
+    {
+        if ($conversation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'message' => 'required|string',
+            'workspace_path' => 'required|string|max:1000',
+            'context_files' => 'nullable|array',
+            'context_files.*' => 'integer|exists:files,id',
+        ]);
+
+        $conversation->update([
+            'scope' => 'cowork',
+            'context_files' => $validated['context_files'] ?? $conversation->context_files ?? [],
+            'metadata' => [
+                ...($conversation->metadata ?? []),
+                'mode' => 'cowork',
+                'workspace_path' => $validated['workspace_path'],
+            ],
+        ]);
+
+        AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'user',
+            'content' => $validated['message'],
+            'metadata' => [
+                'mode' => 'cowork',
+                'workspace_path' => $validated['workspace_path'],
+            ],
+        ]);
+
+        try {
+            $result = $coworkService->execute(Auth::user(), $validated['message'], $validated['workspace_path']);
+        } catch (Throwable $e) {
+            $status = is_int($e->getCode()) && $e->getCode() >= 400 && $e->getCode() < 600
+                ? $e->getCode()
+                : 422;
+
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], $status);
+        }
+
+        AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => $result['message'],
+            'metadata' => [
+                'provider' => 'ZAiProvider',
+                ...($result['metadata'] ?? []),
+            ],
+        ]);
+
+        $conversation->update([
+            'metadata' => [
+                ...($conversation->metadata ?? []),
+                'mode' => 'cowork',
+                'workspace_path' => $result['metadata']['workspace_path'] ?? $validated['workspace_path'],
+            ],
+        ]);
+        $conversation->touch();
+        $conversation->project?->touch();
+
+        $allMessages = $conversation->messages()
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($message) {
+                return [
+                    'id' => $message->id,
+                    'role' => $message->role,
+                    'content' => $message->content,
+                    'created_at' => $message->created_at->toISOString(),
+                    'metadata' => $message->metadata,
+                ];
+            });
+
+        return response()->json([
+            'conversation' => [
+                'id' => $conversation->id,
+                'messages' => $allMessages,
+            ],
+            'conversation_meta' => $this->serializeConversation($conversation->loadCount('messages')),
+        ]);
+    }
+
+    public function coworkPlan(Request $request, AiConversation $conversation, AiCoworkService $coworkService)
+    {
+        if ($conversation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'message' => 'required|string',
+            'workspace_label' => 'required|string|max:255',
+            'workspace_context' => 'required|array',
+        ]);
+
+        try {
+            $plan = $coworkService->plan(Auth::user(), $validated['message'], $validated['workspace_context']);
+        } catch (Throwable $e) {
+            $status = is_int($e->getCode()) && $e->getCode() >= 400 && $e->getCode() < 600
+                ? $e->getCode()
+                : 422;
+
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], $status);
+        }
+
+        $conversation->update([
+            'scope' => 'cowork',
+            'metadata' => [
+                ...($conversation->metadata ?? []),
+                'mode' => 'cowork',
+                'workspace_label' => $validated['workspace_label'],
+                'workspace_source' => 'browser',
+            ],
+        ]);
+
+        return response()->json([
+            'plan' => $plan,
+            'conversation_meta' => $this->serializeConversation($conversation->fresh()->loadCount('messages')),
+        ]);
+    }
+
+    public function coworkComplete(Request $request, AiConversation $conversation)
+    {
+        if ($conversation->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'message' => 'required|string',
+            'workspace_label' => 'required|string|max:255',
+            'plan' => 'required|array',
+            'execution_result' => 'required|array',
+        ]);
+
+        $conversation->update([
+            'scope' => 'cowork',
+            'metadata' => [
+                ...($conversation->metadata ?? []),
+                'mode' => 'cowork',
+                'workspace_label' => $validated['workspace_label'],
+                'workspace_source' => 'browser',
+            ],
+        ]);
+
+        AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'user',
+            'content' => $validated['message'],
+            'metadata' => [
+                'mode' => 'cowork',
+                'workspace_label' => $validated['workspace_label'],
+            ],
+        ]);
+
+        AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => $this->formatCoworkCompletionMessage($validated['plan'], $validated['execution_result'], $validated['workspace_label']),
+            'metadata' => [
+                'provider' => 'ZAiProvider',
+                'mode' => 'cowork',
+                'workspace_label' => $validated['workspace_label'],
+                'operation' => $validated['execution_result']['operation'] ?? ($validated['plan']['operation'] ?? null),
+                'target' => $validated['execution_result']['relative_path'] ?? ($validated['plan']['relative_path'] ?? null),
+                'summary' => $validated['execution_result']['summary'] ?? null,
+            ],
+        ]);
+
+        $conversation->touch();
+        $conversation->project?->touch();
+
+        if (!$conversation->title || $conversation->title === 'New Chat') {
+            $conversation->update([
+                'title' => substr($validated['message'], 0, 50) . (strlen($validated['message']) > 50 ? '...' : ''),
+            ]);
+        }
+
+        $allMessages = $conversation->messages()
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($message) {
+                return [
+                    'id' => $message->id,
+                    'role' => $message->role,
+                    'content' => $message->content,
+                    'created_at' => $message->created_at->toISOString(),
+                    'metadata' => $message->metadata,
+                ];
+            });
+
+        return response()->json([
+            'conversation' => [
+                'id' => $conversation->id,
+                'messages' => $allMessages,
+            ],
+            'conversation_meta' => $this->serializeConversation($conversation->fresh()->loadCount('messages')),
+        ]);
+    }
+
+    public function browseCoworkDirectories(Request $request, \App\Services\Ai\Cowork\LocalWorkspaceService $workspaceService)
+    {
+        $validated = $request->validate([
+            'path' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            $browser = $workspaceService->browse($validated['path'] ?? null);
+        } catch (Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json($browser);
+    }
+
     protected function serializeConversation(AiConversation $conversation): array
     {
         return [
@@ -256,6 +481,7 @@ class AiChatController extends Controller
             'scope' => $conversation->scope,
             'student_id' => $conversation->student_id,
             'context_files' => $conversation->context_files ?? [],
+            'metadata' => $conversation->metadata ?? [],
             'created_at' => $conversation->created_at->toISOString(),
             'updated_at' => $conversation->updated_at->toISOString(),
             'messages_count' => $conversation->messages_count ?? $conversation->messages()->count(),
@@ -313,5 +539,27 @@ class AiChatController extends Controller
         }
 
         return $prompt;
+    }
+
+    protected function formatCoworkCompletionMessage(array $plan, array $result, string $workspaceLabel): string
+    {
+        $lines = [
+            '**Cowork completed the request on your local workspace.**',
+            '',
+            '- Workspace: `' . $workspaceLabel . '`',
+            '- Operation: ' . ucfirst($result['operation'] ?? ($plan['operation'] ?? 'unknown')),
+            '- Target: `' . ($result['relative_path'] ?? ($plan['relative_path'] ?? '')) . '`',
+            '- Summary: ' . ($result['summary'] ?? ($plan['summary'] ?? 'Completed.')),
+        ];
+
+        if (!empty($result['preview'])) {
+            $lines[] = '';
+            $lines[] = 'Preview:';
+            $lines[] = '```';
+            $lines[] = $result['preview'];
+            $lines[] = '```';
+        }
+
+        return implode("\n", $lines);
     }
 }

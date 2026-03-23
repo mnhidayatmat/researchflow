@@ -17,6 +17,7 @@ use App\Models\AiProject;
 use App\Models\AiMessage;
 use App\Models\AuditLog;
 use App\Models\Meeting;
+use App\Models\SupervisorPublication;
 use App\Models\Student;
 
 class User extends Authenticatable implements MustVerifyEmailContract
@@ -91,5 +92,10 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function supervisorPublications(): HasMany
+    {
+        return $this->hasMany(SupervisorPublication::class);
     }
 }

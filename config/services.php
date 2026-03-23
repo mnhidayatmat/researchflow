@@ -47,4 +47,8 @@ return [
         'sender_email' => env('BREVO_SENDER_EMAIL', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
     ],
 
+    'cowork' => [
+        'require_premium' => env('COWORK_REQUIRE_PREMIUM', env('APP_ENV') === 'production'),
+    ],
+
 ];

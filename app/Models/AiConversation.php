@@ -23,12 +23,14 @@ class AiConversation extends Model
         'title',
         'scope',
         'context_files',
+        'metadata',
     ];
 
     protected function casts(): array
     {
         return [
             'context_files' => 'array',
+            'metadata' => 'array',
         ];
     }
 

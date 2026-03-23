@@ -11,6 +11,7 @@ use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\PublicationTrackController;
 use App\Http\Controllers\ProgressReportController;
 use App\Http\Controllers\Supervisor\CollaboratorController;
+use App\Http\Controllers\Supervisor\PublicationController;
 use App\Http\Controllers\Supervisor;
 use App\Http\Controllers\Supervisor\GrantController;
 use App\Http\Controllers\Student;
@@ -39,7 +40,7 @@ Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 've
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Redirect root
+// Landing page
 Route::get('/', function () {
     if (auth()->check()) {
         $role = auth()->user()->role;
@@ -52,8 +53,8 @@ Route::get('/', function () {
             'student' => '/student/dashboard',
         });
     }
-    return redirect('/login');
-});
+    return view('landing');
+})->name('landing');
 
 // Admin routes
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
@@ -85,6 +86,7 @@ Route::prefix('supervisor')->name('supervisor.')->middleware(['auth', 'role:supe
     Route::get('/students/{student}', [Supervisor\StudentViewController::class, 'show'])->name('students.show');
     Route::resource('grants', GrantController::class);
     Route::resource('collaborators', CollaboratorController::class);
+    Route::resource('publications', PublicationController::class)->except('show');
     Route::get('/storage', [UserStorageController::class, 'edit'])->name('storage.edit');
     Route::post('/storage', [UserStorageController::class, 'update'])->name('storage.update');
     Route::post('/storage/test', [UserStorageController::class, 'test'])->name('storage.test');
@@ -174,7 +176,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('/ai/projects/{project}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteProject']);
         Route::post('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'createConversation']);
         Route::get('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'messages']);
+        Route::get('/ai/cowork/directories', [\App\Http\Controllers\Api\AiChatController::class, 'browseCoworkDirectories']);
+        Route::post('/ai/conversations/{conversation}/cowork-plan', [\App\Http\Controllers\Api\AiChatController::class, 'coworkPlan']);
+        Route::post('/ai/conversations/{conversation}/cowork-complete', [\App\Http\Controllers\Api\AiChatController::class, 'coworkComplete']);
         Route::post('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'sendMessage']);
+        Route::post('/ai/conversations/{conversation}/cowork', [\App\Http\Controllers\Api\AiChatController::class, 'coworkMessage']);
         Route::delete('/ai/conversations/{conversation}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteConversation']);
 
         // Files API

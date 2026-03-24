@@ -1,13 +1,13 @@
 @props(['variant' => 'primary', 'size' => 'md', 'href' => null])
 
 @php
-$base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-accent/50';
+$base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-accent/50 dark:focus:ring-offset-dark-bg';
 $variants = [
-    'primary' => 'bg-primary text-white hover:bg-gray-700',
-    'accent' => 'bg-accent text-white hover:bg-amber-600',
-    'secondary' => 'bg-white text-primary border border-border hover:bg-gray-50',
-    'danger' => 'bg-red-600 text-white hover:bg-red-700',
-    'ghost' => 'text-secondary hover:text-primary hover:bg-gray-50',
+    'primary' => 'bg-primary dark:bg-dark-primary text-white dark:text-dark-bg hover:bg-gray-700 dark:hover:bg-gray-200',
+    'accent' => 'bg-accent dark:bg-dark-accent text-white hover:bg-amber-600 dark:hover:bg-amber-500',
+    'secondary' => 'bg-white dark:bg-dark-card text-primary dark:text-dark-primary border border-border dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-surface',
+    'danger' => 'bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600',
+    'ghost' => 'text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary hover:bg-gray-50 dark:hover:bg-dark-surface',
 ];
 $sizes = [
     'sm' => 'px-3 py-1.5 text-xs gap-1.5',

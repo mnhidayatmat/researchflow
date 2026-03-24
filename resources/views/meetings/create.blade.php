@@ -21,9 +21,9 @@
                 <x-input name="location" label="Location" placeholder="Room number or building" />
                 <x-input name="meeting_link" label="Meeting Link" type="url" placeholder="https://meet.google.com/..." />
 
-                <div class="flex items-center gap-3 pt-2">
-                    <x-button type="submit" variant="accent">Schedule Meeting</x-button>
-                    <x-button href="{{ route('meetings.index', $student) }}" variant="secondary">Cancel</x-button>
+                <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                    <x-button href="{{ route('meetings.index', $student) }}" variant="secondary" class="w-full justify-center sm:w-auto">Cancel</x-button>
+                    <x-button type="submit" variant="accent" class="w-full justify-center sm:w-auto">Schedule Meeting</x-button>
                 </div>
             </form>
         </x-card>

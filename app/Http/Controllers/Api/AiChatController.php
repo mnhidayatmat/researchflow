@@ -186,6 +186,8 @@ class AiChatController extends Controller
         $systemPrompt = $this->getSystemPrompt($conversation->scope, $conversation->student_id);
 
         try {
+            set_time_limit(120);
+
             $chatService = new AiChatService($provider);
             $response = $chatService->chatWithMessages(
                 $messages,

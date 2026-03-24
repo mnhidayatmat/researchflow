@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full" x-data="themeManager()" x-init="initTheme()">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,50 +8,56 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        serif: ['"Playfair Display"', 'Georgia', 'serif'],
-                        sans: ['"DM Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'Segoe UI', 'sans-serif'],
                     },
                     colors: {
-                        surface: '#F7F7F5',
+                        surface: '#FAFAF9',
                         card: '#FFFFFF',
-                        border: '#E5E7EB',
-                        primary: '#1F2937',
-                        secondary: '#6B7280',
+                        border: '#E5E5E4',
+                        'border-light': '#F5F5F4',
+                        primary: '#1C1917',
+                        secondary: '#78716C',
+                        tertiary: '#A8A29E',
                         accent: '#D97706',
                         'accent-light': '#FEF3C7',
-                        ink: '#1a1a2e',
-                        paper: '#faf9f7',
-                        cream: '#f5f3ef',
-                        sage: {
-                            50: '#f7f9f7',
-                            100: '#e8ede9',
-                            200: '#d5e0d8',
-                            300: '#b8c9b9',
-                            400: '#9aab9b',
-                            500: '#7d8a7e',
-                            600: '#5a6a5c',
-                        },
-                        teal: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            200: '#99f6e4',
-                            300: '#5eead4',
-                            400: '#2dd4bf',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                        },
-                        rose: {
-                            50: '#fff1f2',
-                            100: '#ffe4e6',
-                            200: '#fecdd3',
-                            300: '#fda4af',
-                            400: '#fb7185',
-                            500: '#f43f5e',
-                            600: '#e11d48',
-                        },
+                        success: '#059669',
+                        'success-light': '#D1FAE5',
+                        warning: '#F59E0B',
+                        'warning-light': '#FEF3C7',
+                        danger: '#DC2626',
+                        'danger-light': '#FEE2E2',
+                        info: '#2563EB',
+                        'info-light': '#DBEAFE',
+                        dark: {
+                            bg: '#0D0D0D',
+                            surface: '#1A1A1A',
+                            card: '#1C1C1E',
+                            border: '#2C2C2E',
+                            'border-light': '#252527',
+                            primary: '#F5F5F7',
+                            secondary: '#86868B',
+                            tertiary: '#636366',
+                            accent: '#FF9F0A',
+                            'accent-light': 'rgba(255, 159, 10, 0.15)',
+                            success: '#30D158',
+                            'success-light': 'rgba(48, 209, 88, 0.15)',
+                            warning: '#FFD60A',
+                            'warning-light': 'rgba(255, 214, 10, 0.15)',
+                            danger: '#FF453A',
+                            'danger-light': 'rgba(255, 69, 58, 0.15)',
+                            info: '#0A84FF',
+                            'info-light': 'rgba(10, 132, 255, 0.15)',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+                        'medium': '0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -1px rgba(0,0,0,0.02)',
+                        'dark-soft': '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
+                        'dark-medium': '0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2)',
                     }
                 }
             }
@@ -60,221 +66,174 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #E5E5E4; border-radius: 3px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #D4D4D4; }
+        .dark .scrollbar-thin::-webkit-scrollbar-thumb { background: #3A3A3C; }
+        .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #4A4A4C; }
+
+        *, *::before, *::after {
+            transition-property: color, background-color, border-color;
+            transition-duration: 200ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .no-transition *, .no-transition *::before, .no-transition *::after {
+            transition: none !important;
+        }
+
+        @media (max-width: 639px) {
+            .mobile-safe-px {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+            }
+        }
+        @media (max-width: 1023px) {
+            .mobile-bottom-spacing {
+                padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+            }
+        }
     </style>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
-    <!-- Alpine.js loaded after Vite to ensure globals are available -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="h-full bg-surface text-primary">
-    <div class="min-h-full" x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true' }">
+<body class="h-full bg-surface dark:bg-dark-bg text-primary dark:text-dark-primary font-sans">
+    <div class="min-h-full overflow-x-hidden" x-data="{
+        sidebarOpen: false,
+        sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true'
+    }" x-init="
+        $watch('sidebarCollapsed', val => localStorage.setItem('sidebarCollapsed', val));
+        $el.addEventListener('close-mobile-sidebar', () => { sidebarOpen = false; });
+    ">
         {{-- Mobile sidebar overlay --}}
-        <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-40 lg:hidden">
-            <div class="fixed inset-0 bg-gray-900/50" @click="sidebarOpen = false"></div>
-            <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-xl">
+        <div x-show="sidebarOpen" x-cloak
+             x-transition:enter="transition-opacity ease-out duration-200"
+             x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-in duration-150"
+             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 lg:hidden">
+            <div class="fixed inset-0 bg-primary/20 dark:bg-black/50 backdrop-blur-sm" @click="sidebarOpen = false"></div>
+            <div class="fixed inset-y-0 left-0 w-[calc(100vw-2.5rem)] max-w-72 bg-white dark:bg-dark-card shadow-2xl"
+                 x-transition:enter="transition-transform ease-out duration-200"
+                 x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transition-transform ease-in duration-150"
+                 x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full">
                 @include('layouts.sidebar')
             </div>
         </div>
 
         {{-- Desktop sidebar --}}
-        <div class="hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-200"
-             :class="sidebarCollapsed ? 'lg:w-20' : 'lg:w-60'">
-            <div class="flex flex-col flex-grow bg-white border-r border-border">
-                @include('layouts.sidebar')
-            </div>
-        </div>
+        <aside :class="sidebarCollapsed ? 'w-16' : 'w-64'"
+               class="hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col bg-white dark:bg-dark-card border-r border-border dark:border-dark-border transition-all duration-200 ease-in-out z-40">
+            @include('layouts.sidebar')
+        </aside>
 
         {{-- Main content --}}
-        <div class="transition-all duration-200" :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-60'">
+        <div :class="sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'" class="min-h-screen transition-all duration-200 ease-in-out">
             {{-- Top bar --}}
-            @php
-                $role = auth()->user()->role;
-                $effectiveRole = session()->get('admin_role_switch', $role);
-                $isRoleSwitched = $role === 'admin' && $effectiveRole !== $role;
-            @endphp
-            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-border @if($isRoleSwitched) border-t-4 border-t-accent @endif">
-                <div class="flex items-center justify-between h-14 px-4 sm:px-6">
-                    <div class="flex items-center gap-3">
-                        <button @click="sidebarOpen = true" class="lg:hidden text-secondary hover:text-primary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                        </button>
-                        <h1 class="text-sm font-medium text-primary">{{ $header ?? '' }}</h1>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        {{-- Role Switcher (Admin only) --}}
-                        @if(auth()->check() && auth()->user()->role === 'admin')
-                            @php
-                                $role = auth()->user()->role;
-                                $effectiveRole = session()->get('admin_role_switch', $role);
-                                $isRoleSwitched = $role === 'admin' && $effectiveRole !== $role;
-                            @endphp
-                            <div x-data="{ open: false }" class="relative">
-                                <button @click="open = !open" @click.outside="open = false"
-                                        class="flex items-center gap-2 px-3 py-1.5 text-sm rounded-xl border border-border hover:border-accent/30 hover:bg-surface transition-all @if($isRoleSwitched) bg-accent/5 border-accent/30 @endif">
-                                    @if($isRoleSwitched)
-                                        <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-                                        <span class="text-secondary hover:text-primary">{{ ucfirst($effectiveRole) }}</span>
-                                    @else
-                                        <span class="text-secondary hover:text-primary">View as:</span>
-                                        <span class="text-primary font-medium">{{ ucfirst($effectiveRole) }}</span>
-                                    @endif
-                                    <svg class="w-4 h-4 text-tertiary" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </button>
-
-                                <div x-show="open" x-cloak
-                                     x-transition:enter="transition ease-out duration-150"
-                                     x-transition:enter-start="opacity-0 scale-95"
-                                     x-transition:enter-end="opacity-100 scale-100"
-                                     x-transition:leave="transition ease-in duration-100"
-                                     x-transition:leave-start="opacity-100 scale-100"
-                                     x-transition:leave-end="opacity-0 scale-95"
-                                     class="absolute right-0 top-12 w-48 bg-white dark:bg-dark-card rounded-xl shadow-medium dark:shadow-dark-medium border border-border dark:border-dark-border overflow-hidden z-50">
-                                    <div class="p-2">
-                                        {{-- Admin Role --}}
-                                        <form method="POST" action="{{ route('admin.switch-role-reset') }}" class="block">
-                                            @csrf
-                                            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm @if(!$isRoleSwitched) bg-accent/10 text-accent @else text-secondary hover:bg-surface hover:text-primary @endif transition-colors">
-                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 flex items-center justify-center">
-                                                    <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="text-left">
-                                                    <p class="font-medium text-primary">Admin</p>
-                                                    <p class="text-xs text-secondary">Full access</p>
-                                                </div>
-                                            </button>
-                                        </form>
-
-                                        <div class="my-1 border-t border-border dark:border-dark-border"></div>
-
-                                        {{-- Student Role --}}
-                                        <form method="POST" action="{{ route('admin.switch-role') }}" class="block">
-                                            @csrf
-                                            <input type="hidden" name="role" value="student">
-                                            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm @if($effectiveRole === 'student') bg-accent/10 text-accent @else text-secondary hover:bg-surface hover:text-primary @endif transition-colors">
-                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center">
-                                                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14.9c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm2.5-10c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="text-left">
-                                                    <p class="font-medium text-primary">Student</p>
-                                                    <p class="text-xs text-secondary">Student view</p>
-                                                </div>
-                                            </button>
-                                        </form>
-
-                                        {{-- Supervisor Role --}}
-                                        <form method="POST" action="{{ route('admin.switch-role') }}" class="block">
-                                            @csrf
-                                            <input type="hidden" name="role" value="supervisor">
-                                            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm @if($effectiveRole === 'supervisor') bg-accent/10 text-accent @else text-secondary hover:bg-surface hover:text-primary @endif transition-colors">
-                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 flex items-center justify-center">
-                                                    <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="text-left">
-                                                    <p class="font-medium text-primary">Supervisor</p>
-                                                    <p class="text-xs text-secondary">Supervisor view</p>
-                                                </div>
-                                            </button>
-                                        </form>
-
-                                        {{-- Co-Supervisor Role --}}
-                                        <form method="POST" action="{{ route('admin.switch-role') }}" class="block">
-                                            @csrf
-                                            <input type="hidden" name="role" value="cosupervisor">
-                                            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm @if($effectiveRole === 'cosupervisor') bg-accent/10 text-accent @else text-secondary hover:bg-surface hover:text-primary @endif transition-colors">
-                                                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/20 flex items-center justify-center">
-                                                    <svg class="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="text-left">
-                                                    <p class="font-medium text-primary">Co-Supervisor</p>
-                                                    <p class="text-xs text-secondary">Co-supervisor view</p>
-                                                </div>
-                                            </button>
-                                        </form>
-
-                                        @if($isRoleSwitched)
-                                            <div class="mt-1 pt-2 border-t border-border dark:border-dark-border">
-                                                <form method="POST" action="{{ route('admin.switch-role-reset') }}" class="block">
-                                                    @csrf
-                                                    <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/5 rounded-lg transition-colors">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                                        </svg>
-                                                        Exit Role View
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        {{-- Notifications --}}
-                        <div x-data="notifications()" class="relative">
-
-                        {{-- User menu --}}
-                        <div x-data="{ open: false }" class="relative">
-                            <button @click="open = !open" class="flex items-center gap-2 text-sm text-secondary hover:text-primary">
-                                <div class="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-semibold">
-                                    {{ substr(auth()->user()->name, 0, 1) }}
-                                </div>
-                                <span class="hidden sm:block">{{ auth()->user()->name }}</span>
-                            </button>
-                            <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-border py-1 z-50">
-                                <div class="px-3 py-2 border-b border-border">
-                                    <p class="text-xs text-secondary">{{ ucfirst(auth()->user()->role) }}</p>
-                                    <p class="text-xs text-secondary truncate">{{ auth()->user()->email }}</p>
-                                </div>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-gray-50 hover:text-primary">Sign out</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            @include('layouts.topbar')
 
             {{-- Flash messages --}}
-            @if(session('success'))
-                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" class="mx-4 sm:mx-6 mt-4">
-                    <div class="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-lg flex justify-between">
-                        <span>{{ session('success') }}</span>
-                        <button @click="show = false" class="text-green-500 hover:text-green-700">&times;</button>
+            <div class="mobile-safe-px px-4 pt-4 space-y-2 sm:px-6 lg:px-8">
+                @if(session('success'))
+                    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 translate-y-2"
+                         class="bg-success-light dark:bg-dark-success-light border border-success/20 dark:border-dark-success/30 text-success dark:text-dark-success text-sm px-4 py-3 rounded-lg flex items-start gap-3">
+                        <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="flex-1">{{ session('success') }}</span>
+                        <button @click="show = false" class="text-success/60 dark:text-dark-success/60 hover:text-success dark:hover:text-dark-success">&times;</button>
                     </div>
-                </div>
-            @endif
-            @if(session('error'))
-                <div x-data="{ show: true }" x-show="show" class="mx-4 sm:mx-6 mt-4">
-                    <div class="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex justify-between">
-                        <span>{{ session('error') }}</span>
-                        <button @click="show = false" class="text-red-500 hover:text-red-700">&times;</button>
+                @endif
+                @if(session('error'))
+                    <div x-data="{ show: true }" x-show="show"
+                         class="bg-danger-light dark:bg-dark-danger-light border border-danger/20 dark:border-dark-danger/30 text-danger dark:text-dark-danger text-sm px-4 py-3 rounded-lg flex items-start gap-3">
+                        <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="flex-1">{{ session('error') }}</span>
+                        <button @click="show = false" class="text-danger/60 dark:text-dark-danger/60 hover:text-danger dark:hover:text-dark-danger">&times;</button>
                     </div>
-                </div>
-            @endif
+                @endif
+                @if(session('warning'))
+                    <div x-data="{ show: true }" x-show="show"
+                         class="bg-warning-light dark:bg-dark-warning-light border border-warning/20 dark:border-dark-warning/30 text-warning dark:text-dark-warning text-sm px-4 py-3 rounded-lg flex items-start gap-3">
+                        <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span class="flex-1">{{ session('warning') }}</span>
+                        <button @click="show = false" class="text-warning/60 dark:text-dark-warning/60 hover:text-warning dark:hover:text-dark-warning">&times;</button>
+                    </div>
+                @endif
+            </div>
 
             {{-- Page content --}}
-            <main class="p-4 sm:p-6">
+            <main class="mobile-safe-px px-4 py-6 sm:px-6 lg:px-8 mobile-bottom-spacing">
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Mobile Bottom Navigation --}}
+        @auth
+            @include('layouts.bottom-nav')
+        @endauth
     </div>
 
     <script>
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
         axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
         axios.defaults.withCredentials = true;
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('[placeholder*="Search"]')?.focus();
+            }
+            if (e.key === 'Escape') {
+                document.dispatchEvent(new CustomEvent('escape-key'));
+            }
+        });
+
+        function themeManager() {
+            return {
+                theme: 'light',
+                initTheme() {
+                    const stored = localStorage.getItem('theme');
+                    const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                    this.theme = stored || system;
+                    this.applyTheme();
+                },
+                toggleTheme() {
+                    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+                    localStorage.setItem('theme', this.theme);
+                    this.applyTheme();
+                    if (document.querySelector('meta[name="csrf-token"]')) {
+                        axios.post('/settings/theme', { theme: this.theme }).catch(() => {});
+                    }
+                },
+                applyTheme() {
+                    const html = document.documentElement;
+                    const body = document.body;
+                    body.classList.add('no-transition');
+                    if (this.theme === 'dark') {
+                        html.classList.add('dark');
+                    } else {
+                        html.classList.remove('dark');
+                    }
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            body.classList.remove('no-transition');
+                        });
+                    });
+                }
+            }
+        }
 
         function notifications() {
             return {

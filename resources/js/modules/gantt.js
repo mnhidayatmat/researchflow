@@ -196,10 +196,10 @@ class GanttChart {
                 <div class="flex items-center gap-3 flex-1 min-w-0">
                     <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusInfo.bg}; flex-shrink: 0;" title="${statusInfo.label}"></span>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-primary truncate" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(task.name)}</p>
-                        <p class="text-xs text-secondary">${this.formatDateRange(task.start, task.end)}</p>
+                        <p class="text-sm font-medium text-primary dark:text-dark-primary truncate" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(task.name)}</p>
+                        <p class="text-xs text-secondary dark:text-dark-secondary">${this.formatDateRange(task.start, task.end)}</p>
                     </div>
-                    <span class="text-xs text-tertiary">${task.progress || 0}%</span>
+                    <span class="text-xs text-tertiary dark:text-dark-tertiary">${task.progress || 0}%</span>
                 </div>
             `;
 
@@ -403,31 +403,38 @@ class GanttChart {
     createPopup(task) {
         const statusInfo = STATUS_COLORS[task.status] || STATUS_COLORS['planned'];
         const taskId = this.extractTaskId(task.id);
+        const isDark = document.documentElement.classList.contains('dark');
+        const popupBg = isDark ? '#1C1C1E' : '#FFFFFF';
+        const popupBorder = isDark ? '#2C2C2E' : '#E5E5E4';
+        const textPrimary = isDark ? '#F5F5F7' : '#1C1917';
+        const textSecondary = isDark ? '#86868B' : '#78716C';
+        const accentColor = isDark ? '#FF9F0A' : '#D97706';
+        const accentBg = isDark ? 'rgba(255, 159, 10, 0.15)' : 'rgba(217, 119, 6, 0.1)';
 
         return `
-            <div class="gantt-popup bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[220px]">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="font-semibold text-sm">${this.escapeHtml(task.name)}</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full" style="background-color: ${statusInfo.bg}20; color: ${statusInfo.bg}">
+            <div class="gantt-popup" style="background:${popupBg}; border: 1px solid ${popupBorder}; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,${isDark ? '0.3' : '0.1'}); padding: 1rem; min-width: 220px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <span style="font-weight: 600; font-size: 0.875rem; color: ${textPrimary};">${this.escapeHtml(task.name)}</span>
+                    <span style="font-size: 10px; padding: 2px 8px; border-radius: 9999px; background-color: ${statusInfo.bg}20; color: ${statusInfo.bg};">
                         ${statusInfo.label}
                     </span>
                 </div>
-                <div class="text-xs text-gray-500 space-y-1.5 mb-3">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div style="font-size: 0.75rem; color: ${textSecondary};">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.375rem;">
+                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                         <span>${task.start} → ${task.end}</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                         </svg>
                         <span>Progress: ${task.progress}%</span>
                     </div>
                 </div>
                 <a href="/students/${this.studentId}/tasks/${taskId}"
-                   class="block w-full text-center text-xs font-medium text-accent hover:text-amber-700 py-2 rounded-lg bg-accent/10 hover:bg-accent/20 transition-colors">
+                   style="display: block; width: 100%; text-align: center; font-size: 0.75rem; font-weight: 500; color: ${accentColor}; padding: 0.5rem; border-radius: 0.5rem; background: ${accentBg}; text-decoration: none;">
                     View Details →
                 </a>
             </div>
@@ -470,6 +477,15 @@ class GanttChart {
             .gantt-popup { font-family: system-ui, -apple-system, sans-serif; z-index: 1000; }
             .gantt .arrow { stroke: #A8A29E; stroke-width: 1.5; fill: none; }
             .gantt .arrow-head { fill: #A8A29E; }
+
+            /* Dark mode overrides */
+            .dark .gantt .grid-header { fill: #1A1A1A; stroke: #2C2C2E; }
+            .dark .gantt .tick { stroke: #2C2C2E; }
+            .dark .gantt .today-highlight { fill: rgba(255, 159, 10, 0.08); }
+            .dark .gantt .grid-text { fill: #86868B; }
+            .dark .gantt .lower-text, .dark .gantt .upper-text { fill: #86868B; }
+            .dark .gantt .arrow { stroke: #636366; }
+            .dark .gantt .arrow-head { fill: #636366; }
         `;
     }
 

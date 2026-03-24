@@ -19,33 +19,33 @@
                 <x-textarea name="challenges" label="Challenges" rows="3" placeholder="What challenges did you face?" />
                 <x-textarea name="next_steps" label="Next Steps" rows="3" placeholder="What are your plans for the next period?" />
 
-                <div class="rounded-xl border border-border bg-surface p-4">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-primary">Report Attachment</p>
-                            <p class="text-xs text-secondary mt-1">
+                <div class="rounded-xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-primary dark:text-dark-primary">Report Attachment</p>
+                            <p class="text-xs text-secondary dark:text-dark-secondary mt-1">
                                 @if($storageOwner)
-                                    Files will be stored in {{ $storageOwner->name }}'s {{ $usesGoogleDrive ? 'Google Drive' : 'local storage' }}.
+                                    Files stored in {{ $storageOwner->name }}'s {{ $usesGoogleDrive ? 'Google Drive' : 'local storage' }}.
                                 @else
-                                    No supervisor storage owner is assigned yet.
+                                    No supervisor storage owner assigned yet.
                                 @endif
                             </p>
                         </div>
-                        <span class="text-[10px] px-2 py-1 rounded-full {{ $usesGoogleDrive ? 'bg-info/10 text-info' : 'bg-secondary/10 text-secondary' }}">
+                        <span class="text-[10px] px-2 py-1 rounded-full shrink-0 {{ $usesGoogleDrive ? 'bg-info/10 text-info' : 'bg-secondary/10 text-secondary' }}">
                             {{ $usesGoogleDrive ? 'Google Drive' : 'Local' }}
                         </span>
                     </div>
                     <div class="mt-3">
-                        <input type="file" name="attachment" class="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-primary">
+                        <input type="file" name="attachment" class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary dark:text-dark-primary">
                         @error('attachment')
                             <p class="text-xs text-danger mt-2">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 pt-2">
-                    <x-button type="submit" name="save" variant="secondary">Save Draft</x-button>
-                    <x-button type="submit" name="submit" value="1" variant="accent">Submit to Supervisor</x-button>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                    <x-button type="submit" name="save" variant="secondary" class="w-full justify-center sm:w-auto order-2 sm:order-1">Save Draft</x-button>
+                    <x-button type="submit" name="submit" value="1" variant="accent" class="w-full justify-center sm:w-auto order-1 sm:order-2">Submit to Supervisor</x-button>
                 </div>
             </form>
         </x-card>

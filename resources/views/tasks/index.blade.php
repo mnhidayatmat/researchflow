@@ -11,23 +11,23 @@
 
 <x-layouts.app title="Tasks">
     <x-slot:header>
-        <div class="flex items-center gap-2">
+        <div class="flex min-w-0 items-center gap-2">
             <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
             </svg>
             <span>Tasks</span>
-            <span class="text-xs text-secondary">{{ $student->user->name }}</span>
+            <span class="truncate text-xs text-secondary dark:text-dark-secondary">{{ $student->user->name }}</span>
         </div>
     </x-slot:header>
 
     <!-- Enhanced Toolbar -->
-    <div class="bg-card rounded-2xl border border-border p-4 mb-5">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-4 mb-5">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <!-- Left: Filters & Sort -->
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <!-- Filter Dropdown -->
                 <div x-data="{ open: false, filter: '{{ request()->get('status', 'all') }}' }" class="relative">
-                    <button @click="open = !open" @click.away="open = false" class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg text-secondary hover:text-primary border border-border hover:bg-surface transition-all">
+                    <button @click="open = !open" @click.away="open = false" class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary border border-border dark:border-dark-border hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V5l4 4v11.586a1 1 0 01-.293.707l-1 1a1 1 0 01-1.414 0l-1-1a1 1 0 01-.293-.707V8l-4-4H4a1 1 0 01-1-1V4z"/>
                         </svg>
@@ -37,28 +37,28 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
-                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute left-0 mt-2 w-44 bg-card rounded-xl border border-border shadow-lg py-1 z-50">
-                        <a href="{{ Request::fullUrl() }}" :class="filter === 'all' ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
+                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute left-0 z-50 mt-2 w-44 max-w-[calc(100vw-2rem)] rounded-xl border border-border dark:border-dark-border bg-card dark:bg-dark-card py-1 shadow-lg">
+                        <a href="{{ Request::fullUrl() }}" :class="filter === 'all' ? 'bg-accent/10 text-accent' : 'text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
                             <span class="w-2 h-2 rounded-full bg-secondary"></span>
                             All Tasks
                         </a>
-                        <a href="{{ Request::fullUrlWithQuery(['status' => 'planned']) }}" :class="filter === 'planned' ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
+                        <a href="{{ Request::fullUrlWithQuery(['status' => 'planned']) }}" :class="filter === 'planned' ? 'bg-accent/10 text-accent' : 'text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
                             <span class="w-2 h-2 rounded-full bg-info"></span>
                             Planned
                         </a>
-                        <a href="{{ Request::fullUrlWithQuery(['status' => 'in_progress']) }}" :class="filter === 'in_progress' ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
+                        <a href="{{ Request::fullUrlWithQuery(['status' => 'in_progress']) }}" :class="filter === 'in_progress' ? 'bg-accent/10 text-accent' : 'text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
                             <span class="w-2 h-2 rounded-full bg-warning"></span>
                             In Progress
                         </a>
-                        <a href="{{ Request::fullUrlWithQuery(['status' => 'waiting_review']) }}" :class="filter === 'waiting_review' ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
+                        <a href="{{ Request::fullUrlWithQuery(['status' => 'waiting_review']) }}" :class="filter === 'waiting_review' ? 'bg-accent/10 text-accent' : 'text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
                             <span class="w-2 h-2 rounded-full bg-accent"></span>
                             Review
                         </a>
-                        <a href="{{ Request::fullUrlWithQuery(['status' => 'revision']) }}" :class="filter === 'revision' ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
+                        <a href="{{ Request::fullUrlWithQuery(['status' => 'revision']) }}" :class="filter === 'revision' ? 'bg-accent/10 text-accent' : 'text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
                             <span class="w-2 h-2 rounded-full bg-purple-500"></span>
                             Revision
                         </a>
-                        <a href="{{ Request::fullUrlWithQuery(['status' => 'completed']) }}" :class="filter === 'completed' ? 'bg-accent/10 text-accent' : 'text-secondary hover:bg-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
+                        <a href="{{ Request::fullUrlWithQuery(['status' => 'completed']) }}" :class="filter === 'completed' ? 'bg-accent/10 text-accent' : 'text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface'" class="flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-colors">
                             <span class="w-2 h-2 rounded-full bg-success"></span>
                             Completed
                         </a>
@@ -67,7 +67,7 @@
 
                 <!-- Sort Dropdown -->
                 <div x-data="{ open: false }" class="relative">
-                    <button @click="open = !open" @click.away="open = false" class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg text-secondary hover:text-primary border border-border hover:bg-surface transition-all">
+                    <button @click="open = !open" @click.away="open = false" class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary border border-border dark:border-dark-border hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m0 0l4-4m0 0l4 4"/>
                         </svg>
@@ -76,29 +76,29 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
-                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute left-0 mt-2 w-40 bg-card rounded-xl border border-border shadow-lg py-1 z-50">
-                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'due_date', 'order' => 'asc']) }}" class="block px-3 py-2 text-xs text-secondary hover:bg-surface">Due Date: Earliest</a>
-                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'due_date', 'order' => 'desc']) }}" class="block px-3 py-2 text-xs text-secondary hover:bg-surface">Due Date: Latest</a>
-                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'priority', 'order' => 'desc']) }}" class="block px-3 py-2 text-xs text-secondary hover:bg-surface">Priority: High to Low</a>
-                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'priority', 'order' => 'asc']) }}" class="block px-3 py-2 text-xs text-secondary hover:bg-surface">Priority: Low to High</a>
-                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'created_at', 'order' => 'desc']) }}" class="block px-3 py-2 text-xs text-secondary hover:bg-surface">Newest First</a>
-                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'created_at', 'order' => 'asc']) }}" class="block px-3 py-2 text-xs text-secondary hover:bg-surface">Oldest First</a>
+                    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute left-0 z-50 mt-2 w-40 max-w-[calc(100vw-2rem)] rounded-xl border border-border dark:border-dark-border bg-card dark:bg-dark-card py-1 shadow-lg">
+                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'due_date', 'order' => 'asc']) }}" class="block px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Due Date: Earliest</a>
+                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'due_date', 'order' => 'desc']) }}" class="block px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Due Date: Latest</a>
+                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'priority', 'order' => 'desc']) }}" class="block px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Priority: High to Low</a>
+                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'priority', 'order' => 'asc']) }}" class="block px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Priority: Low to High</a>
+                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'created_at', 'order' => 'desc']) }}" class="block px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Newest First</a>
+                        <a href="{{ Request::fullUrlWithQuery(['sort' => 'created_at', 'order' => 'asc']) }}" class="block px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Oldest First</a>
                     </div>
                 </div>
             </div>
 
             <!-- Right: Search & Actions -->
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <!-- Search -->
-                <div class="relative">
-                    <svg class="w-4 h-4 text-secondary absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="relative w-full sm:w-auto">
+                    <svg class="w-4 h-4 text-secondary dark:text-dark-secondary absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" placeholder="Search tasks..." class="pl-9 pr-4 py-2 text-xs border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-accent/20 focus:border-accent w-48" x-data="{ search: '{{ request()->get('search', '') }}' }" x-init="$el.value = search" @keyup.enter="window.location.href = '{{ Request::fullUrlWithQuery(['search' => '']) }}'.replace('search=', 'search=' + $el.value)">
+                    <input type="text" placeholder="Search tasks..." class="w-full rounded-lg border border-border dark:border-dark-border py-2 pl-9 pr-4 text-xs focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20 sm:w-48" x-data="{ search: '{{ request()->get('search', '') }}' }" x-init="$el.value = search" @keyup.enter="window.location.href = '{{ Request::fullUrlWithQuery(['search' => '']) }}'.replace('search=', 'search=' + $el.value)">
                 </div>
 
                 <!-- New Task Button -->
-                <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm" class="flex items-center gap-1.5">
+                <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm" class="flex w-full items-center justify-center gap-1.5 sm:w-auto">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
@@ -109,8 +109,8 @@
 
         <!-- Active Filters Display -->
         @if(request()->has('status') || request()->has('search'))
-        <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-            <span class="text-xs text-secondary">Active:</span>
+        <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-border dark:border-dark-border pt-3">
+            <span class="text-xs text-secondary dark:text-dark-secondary">Active:</span>
             @if(request()->has('status'))
                 <a href="{{ Request::fullUrlWithoutQuery('status') }}" class="flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-accent text-xs font-medium">
                     {{ $statusLabels[request()->get('status')] ?? ucfirst(request()->get('status')) }}
@@ -133,32 +133,81 @@
 
     <!-- View Tabs -->
     <div x-data="{ activeTab: '{{ $activeTab }}' }" class="mb-5">
-        <div class="flex items-center gap-1 bg-surface rounded-xl p-1 border border-border w-fit">
-            <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'bg-card text-accent shadow-sm' : 'text-secondary hover:text-primary'" class="px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5">
+        <div class="w-full overflow-x-auto pb-1">
+            <div class="flex min-w-max items-center gap-1 rounded-xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface p-1">
+            <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'bg-card dark:bg-dark-card text-accent shadow-sm' : 'text-secondary dark:text-dark-secondary hover:text-primary'" class="px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                 </svg>
                 List
             </button>
-            <button @click="activeTab = 'kanban'" :class="activeTab === 'kanban' ? 'bg-card text-accent shadow-sm' : 'text-secondary hover:text-primary'" class="px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5">
+            <button @click="activeTab = 'kanban'" :class="activeTab === 'kanban' ? 'bg-card dark:bg-dark-card text-accent shadow-sm' : 'text-secondary dark:text-dark-secondary hover:text-primary'" class="px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
                 Kanban
             </button>
-            <button @click="activeTab = 'gantt'" :class="activeTab === 'gantt' ? 'bg-card text-accent shadow-sm' : 'text-secondary hover:text-primary'" class="px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5">
+            <button @click="activeTab = 'gantt'" :class="activeTab === 'gantt' ? 'bg-card dark:bg-dark-card text-accent shadow-sm' : 'text-secondary dark:text-dark-secondary hover:text-primary'" class="px-4 py-2 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
                 Gantt Chart
             </button>
+            </div>
         </div>
 
         <!-- List View -->
-        <div x-show="activeTab === 'list'" class="bg-card rounded-2xl border border-border overflow-hidden">
-            <table class="w-full text-sm">
+        <div x-show="activeTab === 'list'">
+            {{-- Mobile Card List --}}
+            <div class="sm:hidden space-y-3">
+                @forelse($tasks as $task)
+                    <a href="{{ route('tasks.show', [$student, $task]) }}" class="block bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-4 active:bg-surface dark:bg-dark-surface dark:active:bg-dark-surface transition-colors">
+                        <div class="flex items-start gap-3">
+                            <div class="w-1 h-full min-h-[40px] rounded-full shrink-0 bg-{{ $task->priority === 'urgent' ? 'danger' : ($task->priority === 'high' ? 'warning' : ($task->priority === 'medium' ? 'info' : 'tertiary')) }}"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="text-sm font-semibold text-primary dark:text-dark-primary truncate">{{ $task->title }}</p>
+                                    <x-status-badge :status="$task->status" size="sm" />
+                                </div>
+                                @if($task->description)
+                                    <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5 line-clamp-1">{{ \Illuminate\Support\Str::limit($task->description, 60) }}</p>
+                                @endif
+                                <div class="flex items-center gap-3 mt-2">
+                                    <x-badge :color="match($task->priority) { 'urgent' => 'red', 'high' => 'orange', 'medium' => 'yellow', default => 'gray' }" size="sm">{{ ucfirst($task->priority) }}</x-badge>
+                                    @if($task->due_date)
+                                        <span class="text-xs {{ $task->due_date->isPast() && !$task->completed_at ? 'text-danger font-medium' : 'text-secondary dark:text-dark-secondary' }}">
+                                            Due {{ $task->due_date->format('M d') }}
+                                        </span>
+                                    @endif
+                                    @if($task->subtasks->count())
+                                        <span class="text-xs text-secondary dark:text-dark-secondary">{{ $task->subtasks->count() }} subtask{{ $task->subtasks->count() > 1 ? 's' : '' }}</span>
+                                    @endif
+                                </div>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <div class="flex-1 max-w-[120px] h-1.5 bg-border-light dark:bg-dark-border rounded-full overflow-hidden">
+                                        <div class="bg-accent h-1.5 rounded-full" style="width: {{ $task->progress }}%"></div>
+                                    </div>
+                                    <span class="text-[10px] font-medium text-secondary dark:text-dark-secondary">{{ $task->progress }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                @empty
+                    <div class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-8 text-center">
+                        <p class="text-sm text-secondary dark:text-dark-secondary">No tasks found</p>
+                    </div>
+                @endforelse
+                @if($tasks instanceof \Illuminate\Pagination\LengthAwarePaginator && $tasks->hasPages())
+                    <div class="pt-2">{{ $tasks->withQueryString()->links() }}</div>
+                @endif
+            </div>
+
+            {{-- Desktop Table --}}
+            <div class="hidden sm:block bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border overflow-hidden">
+            <div class="overflow-x-auto">
+            <table class="min-w-[720px] w-full text-sm">
                 <thead>
-                    <tr class="text-left text-xs font-medium text-secondary uppercase tracking-wider border-b border-border bg-surface">
+                    <tr class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider border-b border-border dark:border-dark-border bg-surface dark:bg-dark-surface">
                         <th class="px-5 py-3">Task</th>
                         <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3">Priority</th>
@@ -169,17 +218,17 @@
                 </thead>
                 <tbody class="divide-y divide-border">
                     @forelse($tasks as $task)
-                        <tr class="hover:bg-surface group transition-colors">
+                        <tr class="hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface group transition-colors">
                             <td class="px-5 py-3">
                                 <div class="flex items-start gap-3">
                                     <div class="w-1 h-8 rounded-full mt-1 bg-{{ $task->priority === 'urgent' ? 'danger' : ($task->priority === 'high' ? 'warning' : ($task->priority === 'medium' ? 'info' : 'tertiary')) }}"></div>
                                     <div>
-                                        <a href="{{ route('tasks.show', [$student, $task]) }}" class="font-medium text-primary hover:text-accent block">{{ $task->title }}</a>
+                                        <a href="{{ route('tasks.show', [$student, $task]) }}" class="font-medium text-primary dark:text-dark-primary hover:text-accent block">{{ $task->title }}</a>
                                         @if($task->description)
-                                            <p class="text-xs text-secondary mt-0.5 line-clamp-1 max-w-xs">{{ \Illuminate\Support\Str::limit($task->description, 60) }}</p>
+                                            <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5 line-clamp-1 max-w-xs">{{ \Illuminate\Support\Str::limit($task->description, 60) }}</p>
                                         @endif
                                         @if($task->subtasks->count())
-                                            <span class="inline-flex items-center gap-1 mt-1 text-xs text-secondary">
+                                            <span class="inline-flex items-center gap-1 mt-1 text-xs text-secondary dark:text-dark-secondary">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/>
                                                 </svg>
@@ -210,10 +259,10 @@
                                             {{ $task->due_date->format('M d') }}
                                         </span>
                                     @else
-                                        <span class="text-secondary">{{ $task->due_date->format('M d') }}</span>
+                                        <span class="text-secondary dark:text-dark-secondary">{{ $task->due_date->format('M d') }}</span>
                                     @endif
                                 @else
-                                    <span class="text-tertiary">—</span>
+                                    <span class="text-tertiary dark:text-dark-tertiary">—</span>
                                 @endif
                             </td>
                             <td class="px-5 py-3">
@@ -221,33 +270,33 @@
                                     <div class="w-16 bg-border-light rounded-full h-1.5 overflow-hidden">
                                         <div class="bg-accent h-1.5 rounded-full transition-all duration-300" style="width: {{ $task->progress }}%"></div>
                                     </div>
-                                    <span class="text-xs text-secondary">{{ $task->progress }}%</span>
+                                    <span class="text-xs text-secondary dark:text-dark-secondary">{{ $task->progress }}%</span>
                                 </div>
                             </td>
                             <td class="px-5 py-3 text-right">
-                                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="flex items-center justify-end gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                                     <!-- Quick Actions Dropdown -->
                                     <div x-data="{ open: false }" class="relative">
-                                        <button @click.stop="open = !open" @click.outside="open = false" class="p-1.5 text-secondary hover:text-primary hover:bg-surface rounded-lg transition-all">
+                                        <button @click.stop="open = !open" @click.outside="open = false" class="p-1.5 text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface rounded-lg transition-all">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                                             </svg>
                                         </button>
-                                        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 mt-1 w-48 bg-card rounded-xl border border-border shadow-lg py-1 z-50">
-                                            <a href="{{ route('tasks.show', [$student, $task]) }}" class="flex items-center gap-2 px-3 py-2 text-xs text-secondary hover:bg-surface hover:text-primary">
+                                        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 mt-1 w-48 bg-card dark:bg-dark-card rounded-xl border border-border dark:border-dark-border shadow-lg py-1 z-50">
+                                            <a href="{{ route('tasks.show', [$student, $task]) }}" class="flex items-center gap-2 px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7"/>
                                                 </svg>
                                                 View Details
                                             </a>
-                                            <a href="{{ route('tasks.edit', [$student, $task]) }}" class="flex items-center gap-2 px-3 py-2 text-xs text-secondary hover:bg-surface hover:text-primary">
+                                            <a href="{{ route('tasks.edit', [$student, $task]) }}" class="flex items-center gap-2 px-3 py-2 text-xs text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2h2.828l8.586-8.586z"/>
                                                 </svg>
                                                 Edit Task
                                             </a>
-                                            <hr class="border-border my-1">
+                                            <hr class="border-border dark:border-dark-border my-1">
                                             <form action="{{ route('tasks.destroy', [$student, $task]) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this task?');">
                                                 @csrf
                                                 @method('DELETE')
@@ -272,8 +321,8 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                         </svg>
                                     </div>
-                                    <h3 class="text-sm font-semibold text-primary mb-1">No tasks yet</h3>
-                                    <p class="text-xs text-secondary max-w-xs">Create your first task to get started with tracking your research progress.</p>
+                                    <h3 class="text-sm font-semibold text-primary dark:text-dark-primary mb-1">No tasks yet</h3>
+                                    <p class="text-xs text-secondary dark:text-dark-secondary max-w-xs">Create your first task to get started with tracking your research progress.</p>
                                     <x-button href="{{ route('tasks.create', $student) }}" variant="accent" size="sm" class="mt-4">Create Task</x-button>
                                 </div>
                             </td>
@@ -281,31 +330,33 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             <!-- Pagination -->
             @if($tasks->hasPages())
-            <div class="px-5 py-4 border-t border-border flex items-center justify-between">
-                <span class="text-xs text-secondary">
+            <div class="flex flex-col gap-3 border-t border-border dark:border-dark-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <span class="text-xs text-secondary dark:text-dark-secondary">
                     Showing {{ $tasks->firstItem() }} to {{ $tasks->lastItem() }} of {{ $tasks->total() }} tasks
                 </span>
                 <div class="flex items-center gap-1">
                     @if($tasks->onFirstPage())
-                        <span class="px-3 py-1.5 text-xs text-secondary rounded-lg border border-border">Previous</span>
+                        <span class="px-3 py-1.5 text-xs text-secondary dark:text-dark-secondary rounded-lg border border-border dark:border-dark-border">Previous</span>
                     @else
-                        <a href="{{ $tasks->appends(['status' => request()->get('status')])->previousPageUrl() }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border text-secondary hover:text-primary hover:bg-surface transition-all">Previous</a>
+                        <a href="{{ $tasks->appends(['status' => request()->get('status')])->previousPageUrl() }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border dark:border-dark-border text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface transition-all">Previous</a>
                     @endif
                     @if($tasks->hasMorePages())
-                        <a href="{{ $tasks->appends(['status' => request()->get('status')])->nextPageUrl() }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border text-secondary hover:text-primary hover:bg-surface transition-all">Next</a>
+                        <a href="{{ $tasks->appends(['status' => request()->get('status')])->nextPageUrl() }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border dark:border-dark-border text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface transition-all">Next</a>
                     @else
-                        <span class="px-3 py-1.5 text-xs text-secondary rounded-lg border border-border">Next</span>
+                        <span class="px-3 py-1.5 text-xs text-secondary dark:text-dark-secondary rounded-lg border border-border dark:border-dark-border">Next</span>
                     @endif
                 </div>
             </div>
             @endif
+            </div>
         </div>
 
         <!-- Kanban View -->
-        <div x-show="activeTab === 'kanban'" class="bg-card rounded-2xl border border-border p-4">
+        <div x-show="activeTab === 'kanban'" class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-4">
             @php
                 $allTasks = $student->tasks()->whereNull('parent_id')->with('subtasks')->orderBy('sort_order')->get()->groupBy('status');
                 $columns = [
@@ -333,38 +384,38 @@
             <div x-data="initKanbanBoard({ studentId: {{ $student->id }} })" x-init="init()" x-cloak class="flex gap-4 overflow-x-auto pb-4">
                 @foreach($columns as $status => $label)
                     <div class="flex-shrink-0 w-72">
-                        <div class="flex items-center gap-2 mb-3 sticky top-0 bg-card py-2 z-10">
+                        <div class="flex items-center gap-2 mb-3 sticky top-0 bg-card dark:bg-dark-card py-2 z-10">
                             <div class="w-2 h-2 rounded-full {{ $columnColors[$status] }}"></div>
-                            <h3 class="text-xs font-semibold text-secondary uppercase tracking-wider">{{ $label }}</h3>
-                            <span class="column-count text-[10px] text-secondary/60 bg-surface px-1.5 rounded">{{ ($allTasks[$status] ?? collect())->count() }}</span>
+                            <h3 class="text-xs font-semibold text-secondary dark:text-dark-secondary uppercase tracking-wider">{{ $label }}</h3>
+                            <span class="column-count text-[10px] text-secondary/60 bg-surface dark:bg-dark-surface px-1.5 rounded">{{ ($allTasks[$status] ?? collect())->count() }}</span>
                         </div>
                         <div
                             data-kanban-column="{{ $status }}"
-                            class="kanban-column space-y-2 min-h-[400px] p-2 rounded-lg bg-surface border border-border transition-colors"
+                            class="kanban-column space-y-2 min-h-[400px] p-2 rounded-lg bg-surface dark:bg-dark-surface border border-border dark:border-dark-border transition-colors"
                         >
                             @foreach(($allTasks[$status] ?? []) as $task)
                                 <div
-                                    class="kanban-card bg-card border border-border rounded-xl p-3 hover:shadow-md hover:border-accent/30 transition-all cursor-grab active:cursor-grabbing"
+                                    class="kanban-card bg-card dark:bg-dark-card border border-border dark:border-dark-border rounded-xl p-3 hover:shadow-md hover:border-accent/30 transition-all cursor-grab active:cursor-grabbing"
                                     data-task-id="{{ $task->id }}"
                                     data-task-status="{{ $task->status }}"
                                 >
                                     <div class="flex items-start justify-between gap-2">
-                                        <a href="{{ route('tasks.show', [$student, $task]) }}" class="text-sm font-medium text-primary hover:text-accent flex-1">{{ $task->title }}</a>
+                                        <a href="{{ route('tasks.show', [$student, $task]) }}" class="text-sm font-medium text-primary dark:text-dark-primary hover:text-accent flex-1">{{ $task->title }}</a>
                                         <span class="flex-shrink-0 w-2 h-2 rounded-full {{ $columnColors[$status] }}" title="{{ $label }}"></span>
                                     </div>
                                     @if($task->description)
-                                        <p class="text-xs text-secondary mt-1 line-clamp-2">{{ \Illuminate\Support\Str::limit($task->description, 80) }}</p>
+                                        <p class="text-xs text-secondary dark:text-dark-secondary mt-1 line-clamp-2">{{ \Illuminate\Support\Str::limit($task->description, 80) }}</p>
                                     @endif
                                     <div class="flex items-center justify-between mt-3">
                                         <span class="text-[10px] px-2 py-1 rounded-full font-medium
                                             @if($task->priority === 'urgent') bg-danger/10 text-danger
                                             @elseif($task->priority === 'high') bg-warning/10 text-warning
                                             @elseif($task->priority === 'medium') bg-info/10 text-info
-                                            @else bg-tertiary/10 text-secondary @endif">
+                                            @else bg-tertiary/10 text-secondary dark:text-dark-secondary @endif">
                                             {{ ucfirst($task->priority) }}
                                         </span>
                                         @if($task->due_date)
-                                            <span class="text-[10px] text-secondary flex items-center gap-1">
+                                            <span class="text-[10px] text-secondary dark:text-dark-secondary flex items-center gap-1">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                                 </svg>
@@ -437,17 +488,17 @@
         </div>
 
         <!-- Gantt Chart View -->
-        <div x-show="activeTab === 'gantt'" class="bg-card rounded-2xl border border-border overflow-hidden">
+        <div x-show="activeTab === 'gantt'" class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border overflow-hidden">
             <div x-data="ganttChartApp({{ $student->id }})" x-init="init()" x-cloak>
-                <div class="flex items-center justify-between p-4 border-b border-border">
+                <div class="flex items-center justify-between p-4 border-b border-border dark:border-dark-border">
                     <div class="flex flex-wrap items-center gap-3">
-                        <div class="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border">
-                            <button @click="setView('Day')" :class="viewMode === 'Day' ? 'bg-card text-accent shadow-sm' : 'text-secondary hover:text-primary'" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all">Day</button>
-                            <button @click="setView('Week')" :class="viewMode === 'Week' ? 'bg-card text-accent shadow-sm' : 'text-secondary hover:text-primary'" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all">Week</button>
-                            <button @click="setView('Month')" :class="viewMode === 'Month' ? 'bg-card text-accent shadow-sm' : 'text-secondary hover:text-primary'" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all">Month</button>
+                        <div class="flex items-center gap-1 bg-surface dark:bg-dark-surface rounded-lg p-0.5 border border-border dark:border-dark-border">
+                            <button @click="setView('Day')" :class="viewMode === 'Day' ? 'bg-card dark:bg-dark-card text-accent shadow-sm' : 'text-secondary dark:text-dark-secondary hover:text-primary'" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all">Day</button>
+                            <button @click="setView('Week')" :class="viewMode === 'Week' ? 'bg-card dark:bg-dark-card text-accent shadow-sm' : 'text-secondary dark:text-dark-secondary hover:text-primary'" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all">Week</button>
+                            <button @click="setView('Month')" :class="viewMode === 'Month' ? 'bg-card dark:bg-dark-card text-accent shadow-sm' : 'text-secondary dark:text-dark-secondary hover:text-primary'" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all">Month</button>
                         </div>
 
-                        <div class="hidden xl:flex items-center gap-3 text-xs text-secondary">
+                        <div class="hidden xl:flex items-center gap-3 text-xs text-secondary dark:text-dark-secondary">
                             <span class="flex items-center gap-1.5">
                                 <span class="w-3 h-3 rounded-full bg-blue-500"></span>
                                 Planned
@@ -476,7 +527,7 @@
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                             New Task
                         </button>
-                        <button @click="refresh()" class="p-2 text-secondary hover:text-primary hover:bg-surface rounded-xl transition-all" title="Refresh">
+                        <button @click="refresh()" class="p-2 text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface rounded-xl transition-all" title="Refresh">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
@@ -492,28 +543,28 @@
                             </svg>
                         </div>
                     </div>
-                    <p class="text-sm text-secondary mt-4">Loading Gantt Chart...</p>
+                    <p class="text-sm text-secondary dark:text-dark-secondary mt-4">Loading Gantt Chart...</p>
                 </div>
 
                 <div x-show="!loading" class="gantt-split-layout">
-                    <div class="flex border-b border-border bg-surface/50">
-                        <div class="flex-shrink-0 w-[260px] px-4 py-3 border-r border-border">
-                            <span class="text-xs font-semibold text-secondary uppercase tracking-wider">Task Name</span>
+                    <div class="flex border-b border-border dark:border-dark-border bg-surface/50">
+                        <div class="flex-shrink-0 w-[260px] px-4 py-3 border-r border-border dark:border-dark-border">
+                            <span class="text-xs font-semibold text-secondary dark:text-dark-secondary uppercase tracking-wider">Task Name</span>
                         </div>
                         <div class="flex-1 px-4 py-3">
-                            <span class="text-xs font-semibold text-secondary uppercase tracking-wider">Timeline</span>
+                            <span class="text-xs font-semibold text-secondary dark:text-dark-secondary uppercase tracking-wider">Timeline</span>
                         </div>
                     </div>
 
                     <div class="flex" style="max-height: 560px;">
-                        <div class="gantt-task-list flex-shrink-0 w-[260px] border-r border-border bg-card overflow-y-auto">
+                        <div class="gantt-task-list flex-shrink-0 w-[260px] border-r border-border dark:border-dark-border bg-card dark:bg-dark-card overflow-y-auto">
                             <template x-if="tasks.length === 0">
                                 <div class="flex flex-col items-center justify-center py-16 text-center px-4">
-                                    <svg class="w-12 h-12 text-tertiary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-12 h-12 text-tertiary dark:text-dark-tertiary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
                                     </svg>
-                                    <h3 class="text-sm font-medium text-primary mb-1">No tasks yet</h3>
-                                    <p class="text-xs text-secondary mb-4">Click "New Task" or click on the timeline to create tasks</p>
+                                    <h3 class="text-sm font-medium text-primary dark:text-dark-primary mb-1">No tasks yet</h3>
+                                    <p class="text-xs text-secondary dark:text-dark-secondary mb-4">Click "New Task" or click on the timeline to create tasks</p>
                                     <button @click="openTaskModal()" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-accent text-white hover:bg-amber-700 transition-all">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                                         Create First Task
@@ -523,26 +574,26 @@
 
                             <template x-for="task in tasks" :key="task.id">
                                 <a :href="`/students/${studentId}/tasks/${task.task_id}`"
-                                   class="gantt-task-row flex items-center gap-3 px-4 py-3 hover:bg-surface transition-colors border-b border-border-light"
+                                   class="gantt-task-row flex items-center gap-3 px-4 py-3 hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface transition-colors border-b border-border-light"
                                    style="min-height: 56px;">
                                     <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full"
                                           :style="`background-color: ${statusColors[task.status] || '#9CA3AF'}`"></span>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-primary truncate" x-text="task.name"></p>
-                                        <p class="text-xs text-secondary" x-text="formatDateRange(task.start, task.end)"></p>
+                                        <p class="text-sm font-medium text-primary dark:text-dark-primary truncate" x-text="task.name"></p>
+                                        <p class="text-xs text-secondary dark:text-dark-secondary" x-text="formatDateRange(task.start, task.end)"></p>
                                     </div>
-                                    <span class="text-xs text-tertiary" x-text="`${task.progress || 0}%`"></span>
+                                    <span class="text-xs text-tertiary dark:text-dark-tertiary" x-text="`${task.progress || 0}%`"></span>
                                 </a>
                             </template>
                         </div>
 
-                        <div class="gantt-timeline flex-1 overflow-auto bg-card">
+                        <div class="gantt-timeline flex-1 overflow-auto bg-card dark:bg-dark-card">
                             <div id="gantt-chart-container" class="min-w-[1100px]" style="min-height: 400px; cursor: crosshair;" @click="handleTimelineClick"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="px-4 py-3 border-t border-border text-center text-xs text-secondary">
+                <div class="px-4 py-3 border-t border-border dark:border-dark-border text-center text-xs text-secondary dark:text-dark-secondary">
                     <p>Colors: blue = planned, amber = in progress, orange = review, violet = revision, green = completed</p>
                     <p class="mt-1">Drag task ends to adjust dates • Click on timeline to create task • Click task to view details</p>
                 </div>
@@ -555,14 +606,14 @@
                     <div x-show="showTaskModal" x-transition:enter="transition-opacity ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-primary/20 backdrop-blur-sm" @click="closeTaskModal()"></div>
 
                     <!-- Modal Content -->
-                    <div x-show="showTaskModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="relative bg-card rounded-2xl border border-border shadow-xl w-full max-w-lg">
+                    <div x-show="showTaskModal" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="relative bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border shadow-xl w-full max-w-lg">
                         <!-- Header -->
-                        <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+                        <div class="flex items-center justify-between px-6 py-4 border-b border-border dark:border-dark-border">
                             <div>
-                                <h3 class="text-base font-semibold text-primary">Create New Task</h3>
-                                <p class="text-xs text-secondary mt-0.5">Fill in the task details below</p>
+                                <h3 class="text-base font-semibold text-primary dark:text-dark-primary">Create New Task</h3>
+                                <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">Fill in the task details below</p>
                             </div>
-                            <button @click="closeTaskModal()" class="p-2 text-secondary hover:text-primary hover:bg-surface rounded-xl transition-all">
+                            <button @click="closeTaskModal()" class="p-2 text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface rounded-xl transition-all">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                         </div>
@@ -574,31 +625,31 @@
 
                             <!-- Task Name -->
                             <div>
-                                <label class="block text-xs font-medium text-secondary mb-1.5">Task Name *</label>
+                                <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Task Name *</label>
                                 <input type="text" name="name" x-model="newTask.name" required
                                     placeholder="Enter task name..."
-                                    class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                    class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                             </div>
 
                             <!-- Dates Row -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Start Date *</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Start Date *</label>
                                     <input type="date" name="start_date" x-model="newTask.start_date" required
-                                        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Due Date *</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Due Date *</label>
                                     <input type="date" name="due_date" x-model="newTask.due_date" required
-                                        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                        class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                                 </div>
                             </div>
 
                             <!-- Priority & Status -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Priority</label>
-                                    <select name="priority" x-model="newTask.priority" class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Priority</label>
+                                    <select name="priority" x-model="newTask.priority" class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                                         <option value="low">Low</option>
                                         <option value="medium" selected>Medium</option>
                                         <option value="high">High</option>
@@ -606,8 +657,8 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Status</label>
-                                    <select name="status" x-model="newTask.status" class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Status</label>
+                                    <select name="status" x-model="newTask.status" class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                                         <option value="planned" selected>Planned</option>
                                         <option value="in_progress">In Progress</option>
                                     </select>
@@ -616,16 +667,16 @@
 
                             <!-- Description -->
                             <div>
-                                <label class="block text-xs font-medium text-secondary mb-1.5">Description</label>
+                                <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Description</label>
                                 <textarea name="description" x-model="newTask.description" rows="3"
                                     placeholder="Task description..."
-                                    class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all resize-none"></textarea>
+                                    class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all resize-none"></textarea>
                             </div>
 
                             <!-- Milestone Selection (Optional) -->
                             <div>
-                                <label class="block text-xs font-medium text-secondary mb-1.5">Milestone (Optional)</label>
-                                <select name="milestone_id" x-model="newTask.milestone_id" class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
+                                <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Milestone (Optional)</label>
+                                <select name="milestone_id" x-model="newTask.milestone_id" class="w-full px-3 py-2 text-sm border border-border dark:border-dark-border rounded-lg focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all">
                                     <option value="">No milestone</option>
                                     @foreach($milestones ?? [] as $milestone)
                                     <option value="{{ $milestone->id }}">{{ $milestone->name }}</option>
@@ -640,7 +691,7 @@
 
                             <!-- Actions -->
                             <div class="flex items-center justify-end gap-3 pt-2">
-                                <button type="button" @click="closeTaskModal()" class="px-4 py-2 text-sm font-medium text-secondary hover:text-primary border border-border hover:bg-surface rounded-lg transition-all">
+                                <button type="button" @click="closeTaskModal()" class="px-4 py-2 text-sm font-medium text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary border border-border dark:border-dark-border hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface rounded-lg transition-all">
                                     Cancel
                                 </button>
                                 <button type="submit" :disabled="taskSubmitting" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-accent text-white hover:bg-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">

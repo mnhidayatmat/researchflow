@@ -10,11 +10,11 @@
 
 @php
 $variants = [
-    'default' => 'bg-white border border-border',
-    'bordered' => 'bg-white border border-border',
-    'borderless' => 'bg-white border-0',
-    'elevated' => 'bg-white border-0 shadow-medium',
-    'surface' => 'bg-surface border-0',
+    'default' => 'bg-white dark:bg-dark-card border border-border dark:border-dark-border',
+    'bordered' => 'bg-white dark:bg-dark-card border border-border dark:border-dark-border',
+    'borderless' => 'bg-white dark:bg-dark-card border-0',
+    'elevated' => 'bg-white dark:bg-dark-card border-0 shadow-medium dark:shadow-dark-medium',
+    'surface' => 'bg-surface dark:bg-dark-surface border-0',
 ];
 
 $paddings = [
@@ -27,20 +27,20 @@ $paddings = [
 
 $classes = ($variants[$variant] ?? $variants['default'])
     . ($borderless ? ' border-0' : '')
-    . ($hoverable ? ' hover:shadow-soft cursor-pointer transition-shadow duration-150' : '');
+    . ($hoverable ? ' hover:shadow-soft dark:hover:shadow-dark-soft cursor-pointer transition-shadow duration-150' : '');
 
 $paddingClass = $paddings[$padding] ?? $paddings['normal'];
 @endphp
 
 <div {{ $attributes->merge(['class' => 'rounded-xl overflow-hidden ' . $classes]) }}>
     @if($title || $subtitle || $action)
-        <div class="flex items-center justify-between {{ $padding !== 'none' ? substr_replace($paddingClass, '-y', -1) : 'px-5 py-4' }} {{ $padding !== 'none' && !$action ? 'border-b border-border' : '' }}">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between {{ $padding !== 'none' ? substr_replace($paddingClass, '-y', -1) : 'px-5 py-4' }} {{ $padding !== 'none' && !$action ? 'border-b border-border dark:border-dark-border' : '' }}">
             <div>
                 @if($title)
-                    <h3 class="text-sm font-semibold text-primary">{{ $title }}</h3>
+                    <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">{{ $title }}</h3>
                 @endif
                 @if($subtitle)
-                    <p class="text-xs text-secondary mt-0.5">{{ $subtitle }}</p>
+                    <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">{{ $subtitle }}</p>
                 @endif
             </div>
             @if($action)
@@ -54,7 +54,7 @@ $paddingClass = $paddings[$padding] ?? $paddings['normal'];
     </div>
 
     @if(isset($footer))
-        <div class="px-5 py-3 bg-surface border-t border-border">
+        <div class="px-5 py-3 bg-surface dark:bg-dark-surface border-t border-border dark:border-dark-border">
             {{ $footer }}
         </div>
     @endif

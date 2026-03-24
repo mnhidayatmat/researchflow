@@ -18,23 +18,23 @@ $sizes = [
 ];
 
 $variants = [
-    'default' => 'bg-accent',
-    'success' => 'bg-success',
-    'warning' => 'bg-warning',
-    'danger' => 'bg-danger',
-    'info' => 'bg-info',
+    'default' => 'bg-accent dark:bg-dark-accent',
+    'success' => 'bg-success dark:bg-dark-success',
+    'warning' => 'bg-warning dark:bg-dark-warning',
+    'danger' => 'bg-danger dark:bg-dark-danger',
+    'info' => 'bg-info dark:bg-dark-info',
 ];
 @endphp
 
 <div class="w-full">
     @if($showLabel)
         <div class="flex items-center justify-between mb-1">
-            <span class="text-xs font-medium text-secondary">Progress</span>
-            <span class="text-xs font-medium text-primary">{{ $percentage }}%</span>
+            <span class="text-xs font-medium text-secondary dark:text-dark-secondary">Progress</span>
+            <span class="text-xs font-medium text-primary dark:text-dark-primary">{{ $percentage }}%</span>
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-full bg-border {{ $sizes[$size] ?? $sizes['md'] }}">
+    <div class="overflow-hidden rounded-full bg-border dark:bg-dark-border {{ $sizes[$size] ?? $sizes['md'] }}">
         <div class="{{ $variants[$variant] ?? $variants['default'] }} {{ $sizes[$size] ?? $sizes['md'] }} transition-all duration-300 ease-out"
              style="width: {{ $percentage }}%"
              role="progressbar"

@@ -14,18 +14,18 @@
         @endif
 
         <div class="space-y-2">
-            <h2 class="text-base font-semibold text-primary">Personal Storage Profile</h2>
-            <p class="text-xs text-secondary">
+            <h2 class="text-base font-semibold text-primary dark:text-dark-primary">Personal Storage Profile</h2>
+            <p class="text-xs text-secondary dark:text-dark-secondary">
                 Choose where report attachments are stored. Google Drive now uses a normal sign-in and consent flow instead of manual OAuth token setup.
             </p>
         </div>
 
         <x-card class="space-y-6">
-            <div class="rounded-2xl border border-border bg-surface p-5">
+            <div class="rounded-2xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface p-5">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div class="space-y-2">
                         <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-semibold text-primary">Google Drive Connection</h3>
+                            <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Google Drive Connection</h3>
                             @if ($isGoogleConnected)
                                 <span class="rounded-full bg-success-light px-2.5 py-1 text-[11px] font-medium text-success">Connected</span>
                             @else
@@ -34,7 +34,7 @@
                         </div>
 
                         @if ($hasGoogleOAuthConfig)
-                            <p class="text-xs text-secondary">
+                            <p class="text-xs text-secondary dark:text-dark-secondary">
                                 Sign in with your Google account and authorize access. The app stores only your refresh token and optional folder ID.
                             </p>
                         @else
@@ -49,7 +49,7 @@
                             @if ($isGoogleConnected)
                                 <form method="POST" action="{{ route('storage.google.disconnect') }}">
                                     @csrf
-                                    <button type="submit" class="rounded-xl border border-border px-4 py-2.5 text-sm text-secondary transition-all hover:bg-surface hover:text-primary">
+                                    <button type="submit" class="rounded-xl border border-border dark:border-dark-border px-4 py-2.5 text-sm text-secondary dark:text-dark-secondary transition-all hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary">
                                         Disconnect Google
                                     </button>
                                 </form>
@@ -62,7 +62,7 @@
 
                         <button type="button"
                                 @click="testConnection('{{ $testRoute }}')"
-                                class="rounded-xl border border-border px-4 py-2.5 text-sm text-secondary transition-all hover:bg-surface hover:text-primary">
+                                class="rounded-xl border border-border dark:border-dark-border px-4 py-2.5 text-sm text-secondary dark:text-dark-secondary transition-all hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary">
                             Test Connection
                         </button>
                     </div>
@@ -73,20 +73,20 @@
                 @csrf
 
                 <div>
-                    <label class="mb-2 block text-xs font-medium text-secondary">Storage Destination</label>
+                    <label class="mb-2 block text-xs font-medium text-secondary dark:text-dark-secondary">Storage Destination</label>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-4">
+                        <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-border dark:border-dark-border p-4">
                             <input type="radio" name="storage_disk" value="local" class="mt-1" {{ old('storage_disk', $profile->storage_disk) === 'local' ? 'checked' : '' }}>
                             <div>
-                                <p class="text-sm font-medium text-primary">Local</p>
-                                <p class="mt-1 text-xs text-secondary">Store report attachments on the application server.</p>
+                                <p class="text-sm font-medium text-primary dark:text-dark-primary">Local</p>
+                                <p class="mt-1 text-xs text-secondary dark:text-dark-secondary">Store report attachments on the application server.</p>
                             </div>
                         </label>
-                        <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-4">
+                        <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-border dark:border-dark-border p-4">
                             <input type="radio" name="storage_disk" value="google_drive" class="mt-1" {{ old('storage_disk', $profile->storage_disk) === 'google_drive' ? 'checked' : '' }} {{ !$isGoogleConnected ? 'disabled' : '' }}>
                             <div>
-                                <p class="text-sm font-medium text-primary">Google Drive</p>
-                                <p class="mt-1 text-xs text-secondary">Store report attachments in your own Google Drive space after account authorization.</p>
+                                <p class="text-sm font-medium text-primary dark:text-dark-primary">Google Drive</p>
+                                <p class="mt-1 text-xs text-secondary dark:text-dark-secondary">Store report attachments in your own Google Drive space after account authorization.</p>
                             </div>
                         </label>
                     </div>
@@ -94,29 +94,29 @@
                         <p class="mt-2 text-xs text-danger">{{ $message }}</p>
                     @enderror
                     @if (!$isGoogleConnected)
-                        <p class="mt-2 text-xs text-secondary">Google Drive becomes selectable after you connect your account.</p>
+                        <p class="mt-2 text-xs text-secondary dark:text-dark-secondary">Google Drive becomes selectable after you connect your account.</p>
                     @endif
                 </div>
 
                 <div>
-                    <label class="mb-1.5 block text-xs font-medium text-secondary">Root Folder ID</label>
+                    <label class="mb-1.5 block text-xs font-medium text-secondary dark:text-dark-secondary">Root Folder ID</label>
                     <input type="text"
                            name="google_drive_folder_id"
                            value="{{ old('google_drive_folder_id', $profile->google_drive_folder_id) }}"
                            placeholder="Optional: defaults to Drive root"
-                           class="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm text-primary">
-                    <p class="mt-2 text-xs text-secondary">
+                           class="w-full rounded-xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface px-4 py-3 text-sm text-primary dark:text-dark-primary">
+                    <p class="mt-2 text-xs text-secondary dark:text-dark-secondary">
                         Optional. Leave blank to store files under your Google Drive root. If provided, ResearchFlow creates its own subfolders inside that folder.
                     </p>
-                    <div class="mt-3 rounded-2xl border border-border bg-surface px-4 py-3 text-xs text-secondary space-y-2">
-                        <p class="font-medium text-primary">How to find your Root Folder ID</p>
+                    <div class="mt-3 rounded-2xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface px-4 py-3 text-xs text-secondary dark:text-dark-secondary space-y-2">
+                        <p class="font-medium text-primary dark:text-dark-primary">How to find your Root Folder ID</p>
                         <p>1. Open Google Drive and create or open the folder you want to use.</p>
                         <p>2. Look at the browser URL. Example:</p>
-                        <p class="rounded-lg bg-white px-3 py-2 font-mono text-[11px] text-primary break-all">
+                        <p class="rounded-lg bg-white dark:bg-dark-card px-3 py-2 font-mono text-[11px] text-primary dark:text-dark-primary break-all">
                             https://drive.google.com/drive/folders/1AbCdEfGhIJkLmNoPqRsTuVwXyZ123456
                         </p>
                         <p>3. Copy only the last part after `/folders/`:</p>
-                        <p class="rounded-lg bg-white px-3 py-2 font-mono text-[11px] text-primary break-all">
+                        <p class="rounded-lg bg-white dark:bg-dark-card px-3 py-2 font-mono text-[11px] text-primary dark:text-dark-primary break-all">
                             1AbCdEfGhIJkLmNoPqRsTuVwXyZ123456
                         </p>
                         <p>4. Paste that value into this field. Do not paste the full Google Drive URL.</p>
@@ -127,8 +127,8 @@
                     @enderror
                 </div>
 
-                <div class="rounded-2xl border border-border bg-surface p-4 text-xs text-secondary space-y-2">
-                    <p class="font-medium text-primary">How it works</p>
+                <div class="rounded-2xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface p-4 text-xs text-secondary dark:text-dark-secondary space-y-2">
+                    <p class="font-medium text-primary dark:text-dark-primary">How it works</p>
                     <p>1. Click `Connect Google Drive` and sign in with your Google account.</p>
                     <p>2. Grant Drive access to the app.</p>
                     <p>3. Choose `Google Drive` as your storage destination.</p>

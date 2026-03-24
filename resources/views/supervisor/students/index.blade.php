@@ -46,7 +46,7 @@
         };
     @endphp
 
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="text-base font-semibold text-primary">{{ $pageTitle }}</h2>
             <p class="mt-0.5 text-xs text-secondary">
@@ -84,44 +84,46 @@
     @endif
 
     <x-card class="mb-4">
-        <form method="GET" action="{{ route('supervisor.students.index') }}" class="flex flex-wrap gap-3 items-end">
+        <form method="GET" action="{{ route('supervisor.students.index') }}" class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
             @if($target)
                 <input type="hidden" name="target" value="{{ $target }}">
             @endif
-            <div class="min-w-[220px] flex-1">
-                <label class="mb-1 block text-xs font-medium text-secondary">Search</label>
+            <div class="w-full min-w-0 flex-1 sm:min-w-[220px]">
+                <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Search</label>
                 <input
                     type="text"
                     name="search"
                     value="{{ request('search') }}"
                     placeholder="{{ $targetLabel ? 'Search by student name...' : 'Search by name or research title...' }}"
-                    class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary placeholder-secondary/50 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30"
+                    class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2.5 sm:py-2 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30"
                 >
             </div>
-            <div class="min-w-[140px]">
-                <label class="mb-1 block text-xs font-medium text-secondary">Programme</label>
-                <select name="programme_id" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30">
-                    <option value="">All Programmes</option>
-                    @foreach($students->pluck('programme')->unique('id')->filter() as $programme)
-                        <option value="{{ $programme->id }}" {{ request('programme_id') == $programme->id ? 'selected' : '' }}>
-                            {{ $programme->code }}
-                        </option>
-                    @endforeach
-                </select>
+            <div class="grid grid-cols-2 gap-3 sm:contents">
+                <div class="sm:min-w-[140px]">
+                    <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Programme</label>
+                    <select name="programme_id" class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2.5 sm:py-2 text-sm text-primary dark:text-dark-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30">
+                        <option value="">All</option>
+                        @foreach($students->pluck('programme')->unique('id')->filter() as $programme)
+                            <option value="{{ $programme->id }}" {{ request('programme_id') == $programme->id ? 'selected' : '' }}>
+                                {{ $programme->code }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="sm:min-w-[130px]">
+                    <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Status</label>
+                    <select name="status" class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2.5 sm:py-2 text-sm text-primary dark:text-dark-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30">
+                        <option value="">All</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="on_hold" {{ request('status') === 'on_hold' ? 'selected' : '' }}>On Hold</option>
+                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
+                    </select>
+                </div>
             </div>
-            <div class="min-w-[130px]">
-                <label class="mb-1 block text-xs font-medium text-secondary">Status</label>
-                <select name="status" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/30">
-                    <option value="">All</option>
-                    <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="on_hold" {{ request('status') === 'on_hold' ? 'selected' : '' }}>On Hold</option>
-                    <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-                </select>
-            </div>
-            <div class="flex gap-2">
-                <x-button type="submit" variant="primary" size="sm">Filter</x-button>
+            <div class="flex w-full gap-2 sm:w-auto">
+                <x-button type="submit" variant="primary" size="sm" class="flex-1 justify-center sm:flex-none">Filter</x-button>
                 @if(request()->hasAny(['search', 'programme_id', 'status']))
-                    <x-button href="{{ route('supervisor.students.index', array_filter(['target' => $target])) }}" variant="secondary" size="sm">Clear</x-button>
+                    <x-button href="{{ route('supervisor.students.index', array_filter(['target' => $target])) }}" variant="secondary" size="sm" class="flex-1 justify-center sm:flex-none">Clear</x-button>
                 @endif
             </div>
         </form>

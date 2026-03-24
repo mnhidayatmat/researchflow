@@ -4,8 +4,8 @@
     <div class="max-w-3xl" x-data="aiSettingsData" x-init="init()">
         {{-- Page header --}}
         <div class="mb-6">
-            <h2 class="text-base font-semibold text-primary">AI Provider Configuration</h2>
-            <p class="text-xs text-secondary mt-0.5">Configure AI providers for automated feedback and suggestions</p>
+            <h2 class="text-base font-semibold text-primary dark:text-dark-primary">AI Provider Configuration</h2>
+            <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">Configure AI providers for automated feedback and suggestions</p>
         </div>
 
         {{-- Info card --}}
@@ -13,12 +13,13 @@
             <svg class="w-5 h-5 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <div class="text-xs text-primary">
+            <div class="text-xs text-primary dark:text-dark-primary">
                 <p class="font-medium mb-1">Get your API keys:</p>
-                <ul class="space-y-0.5 text-secondary">
+                <ul class="space-y-0.5 text-secondary dark:text-dark-secondary">
                     <li>• <strong>OpenAI:</strong> <a href="https://platform.openai.com/api-keys" target="_blank" class="text-info hover:underline">platform.openai.com/api-keys</a></li>
                     <li>• <strong>Google:</strong> <a href="https://console.cloud.google.com/" target="_blank" class="text-info hover:underline">console.cloud.google.com</a></li>
                     <li>• <strong>Anthropic:</strong> <a href="https://console.anthropic.com/" target="_blank" class="text-info hover:underline">console.anthropic.com</a></li>
+                    <li>• <strong>Z.Ai:</strong> <a href="https://z.ai/manage-apikey/apikey-list" target="_blank" class="text-info hover:underline">z.ai/manage-apikey</a> (Models: glm-4.7, glm-5-turbo)</li>
                 </ul>
             </div>
         </div>
@@ -29,9 +30,9 @@
             {{-- Providers list --}}
             <div class="space-y-4 mb-6">
                 <template x-for="(provider, index) in providers" :key="provider.id">
-                    <div class="bg-card rounded-2xl border border-border overflow-hidden" :class="!provider.is_active && 'opacity-60'">
+                    <div class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border overflow-hidden" :class="!provider.is_active && 'opacity-60'">
                         {{-- Provider header --}}
-                        <div class="flex items-center justify-between px-6 py-4 border-b border-border bg-surface/50">
+                        <div class="flex items-center justify-between px-6 py-4 border-b border-border dark:border-dark-border bg-surface/50">
                             <div class="flex items-center gap-3">
                                 {{-- Active toggle --}}
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -42,11 +43,11 @@
                                         x-model="provider.is_active"
                                         class="sr-only peer"
                                     >
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-accent/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-accent/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white dark:bg-dark-card after:border-gray-300 dark:border-dark-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                                 </label>
                                 <div>
-                                    <span class="text-sm font-medium text-primary" x-text="provider.name || provider.slug || 'New Provider'"></span>
-                                    <span class="ml-2 text-xs text-secondary" x-show="provider.is_default">(Default)</span>
+                                    <span class="text-sm font-medium text-primary dark:text-dark-primary" x-text="provider.name || provider.slug || 'New Provider'"></span>
+                                    <span class="ml-2 text-xs text-secondary dark:text-dark-secondary" x-show="provider.is_default">(Default)</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -54,14 +55,14 @@
                                     type="button"
                                     @click="setDefault(index)"
                                     x-show="!provider.is_default"
-                                    class="px-3 py-1.5 text-xs text-secondary border border-border rounded-lg hover:bg-surface transition-colors"
+                                    class="px-3 py-1.5 text-xs text-secondary dark:text-dark-secondary border border-border dark:border-dark-border rounded-lg hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface transition-colors"
                                 >
                                     Set Default
                                 </button>
                                 <button
                                     type="button"
                                     @click="toggleExpand(index)"
-                                    class="p-2 text-secondary hover:text-primary hover:bg-surface rounded-lg transition-colors"
+                                    class="p-2 text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface rounded-lg transition-colors"
                                 >
                                     <svg class="w-4 h-4 transition-transform" :class="provider.expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                 </button>
@@ -69,7 +70,7 @@
                                     type="button"
                                     @click="removeProvider(index)"
                                     x-show="providers.length > 1"
-                                    class="p-2 text-secondary hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    class="p-2 text-secondary dark:text-dark-secondary hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                 >
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
@@ -84,12 +85,12 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 {{-- Provider type/slug --}}
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Provider Type</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Provider Type</label>
                                     <select
                                         :name="`providers[${index}][slug]`"
                                         x-model="provider.slug"
                                         @change="setProviderDefaults(provider)"
-                                        class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-primary focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                                        class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-2.5 text-sm text-primary dark:text-dark-primary focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                     >
                                         <option value="openai">OpenAI</option>
                                         <option value="gemini">Google Gemini</option>
@@ -101,19 +102,19 @@
 
                                 {{-- Name --}}
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Display Name</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Display Name</label>
                                     <input
                                         type="text"
                                         :name="`providers[${index}][name]`"
                                         x-model="provider.name"
                                         placeholder="e.g. GPT-4o Mini"
-                                        class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                                        class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-2.5 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                     >
                                 </div>
 
                                 {{-- API Key --}}
                                 <div class="sm:col-span-2">
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">
                                         API Key <span class="text-red-400">*</span>
                                     </label>
                                     <input
@@ -121,26 +122,26 @@
                                         :name="`providers[${index}][api_key]`"
                                         x-model="provider.api_key"
                                         :placeholder="provider.has_key ? '••••••••••••  (saved)' : 'Enter API key'"
-                                        class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                                        class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-2.5 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                     >
                                 </div>
 
                                 {{-- Model --}}
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Model</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Model</label>
                                     <input
                                         type="text"
                                         :name="`providers[${index}][model]`"
                                         x-model="provider.model"
                                         :placeholder="modelPlaceholder(provider.slug)"
-                                        class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                                        class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-2.5 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                     >
                                 </div>
 
                                 {{-- Temperature --}}
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">
-                                        Temperature <span class="text-secondary font-normal ml-1" x-text="`(${provider.temperature ?? 0.7})`"></span>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">
+                                        Temperature <span class="text-secondary dark:text-dark-secondary font-normal ml-1" x-text="`(${provider.temperature ?? 0.7})`"></span>
                                     </label>
                                     <input
                                         type="range"
@@ -149,27 +150,27 @@
                                         min="0" max="1" step="0.1"
                                         class="w-full accent-amber-500"
                                     >
-                                    <div class="flex justify-between text-[10px] text-secondary mt-1">
+                                    <div class="flex justify-between text-[10px] text-secondary dark:text-dark-secondary mt-1">
                                         <span>Precise</span>
                                         <span>Creative</span>
                                     </div>
                                 </div>
 
-                                {{-- Custom endpoint (for custom providers) --}}
-                                <div class="sm:col-span-2" x-show="provider.slug === 'custom'">
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">API Endpoint URL</label>
+                                {{-- Custom endpoint (for custom/zai providers) --}}
+                                <div class="sm:col-span-2" x-show="provider.slug === 'custom' || provider.slug === 'zai'">
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">API Base URL <span class="font-normal text-tertiary dark:text-dark-tertiary" x-show="provider.slug === 'zai'">(Coding Plan: https://api.z.ai/api/anthropic)</span></label>
                                     <input
                                         type="url"
                                         :name="`providers[${index}][base_url]`"
                                         x-model="provider.base_url"
                                         placeholder="https://api.yourprovider.com/v1/chat/completions"
-                                        class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                                        class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-2.5 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                     >
                                 </div>
 
                                 {{-- Max tokens --}}
                                 <div>
-                                    <label class="block text-xs font-medium text-secondary mb-1.5">Max Tokens</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-1.5">Max Tokens</label>
                                     <input
                                         type="number"
                                         :name="`providers[${index}][max_tokens]`"
@@ -177,24 +178,24 @@
                                         min="100"
                                         max="128000"
                                         placeholder="e.g. 4096"
-                                        class="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm text-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
+                                        class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-2.5 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                     >
                                 </div>
 
                                 {{-- Features --}}
                                 <div class="sm:col-span-2">
-                                    <label class="block text-xs font-medium text-secondary mb-2">Enable For</label>
+                                    <label class="block text-xs font-medium text-secondary dark:text-dark-secondary mb-2">Enable For</label>
                                     <div class="grid grid-cols-3 gap-3">
                                         @foreach(['feedback' => 'AI Feedback', 'summary' => 'Report Summary', 'suggestions' => 'Task Suggestions'] as $feat => $featlabel)
-                                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-surface cursor-pointer transition-colors">
+                                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border dark:border-dark-border hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface cursor-pointer transition-colors">
                                                 <input
                                                     type="checkbox"
                                                     :name="`providers[${index}][features][{{ $feat }}]`"
                                                     value="1"
                                                     :checked="provider.features?.{{ $feat }}"
-                                                    class="rounded border-border text-accent focus:ring-accent/30"
+                                                    class="rounded border-border dark:border-dark-border text-accent focus:ring-accent/30"
                                                 >
-                                                <span class="text-xs text-primary">{{ $featlabel }}</span>
+                                                <span class="text-xs text-primary dark:text-dark-primary">{{ $featlabel }}</span>
                                             </label>
                                         @endforeach
                                     </div>
@@ -209,7 +210,7 @@
             <button
                 type="button"
                 @click.prevent="addProvider()"
-                class="w-full flex items-center justify-center gap-2 py-3 text-sm text-secondary hover:text-accent hover:bg-surface/50 border border-dashed border-border hover:border-accent rounded-xl transition-all cursor-pointer mb-6"
+                class="w-full flex items-center justify-center gap-2 py-3 text-sm text-secondary dark:text-dark-secondary hover:text-accent hover:bg-surface/50 border border-dashed border-border dark:border-dark-border hover:border-accent rounded-xl transition-all cursor-pointer mb-6"
                 style="position: relative; z-index: 10;"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -217,7 +218,7 @@
             </button>
 
             <div class="flex justify-end gap-3">
-                <a href="{{ route('admin.dashboard') }}" class="px-5 py-2.5 text-sm font-medium text-secondary hover:text-primary border border-border rounded-xl transition-all">
+                <a href="{{ route('admin.dashboard') }}" class="px-5 py-2.5 text-sm font-medium text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary dark:text-dark-primary border border-border dark:border-dark-border rounded-xl transition-all">
                     Cancel
                 </a>
                 <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-accent hover:bg-amber-700 rounded-xl transition-all shadow-sm hover:shadow">
@@ -238,7 +239,7 @@
                         openai: { model: 'gpt-4o-mini', name: 'GPT-4o Mini' },
                         gemini: { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
                         anthropic: { model: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-                        zai: { model: 'glm-5-turbo', name: 'Z.Ai' },
+                        zai: { model: 'glm-4.7', name: 'Z.Ai' },
                         custom: { model: '', name: 'Custom Provider' },
                     };
 
@@ -277,7 +278,7 @@
                         openai: { model: 'gpt-4o-mini', name: 'GPT-4o Mini' },
                         gemini: { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
                         anthropic: { model: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-                        zai: { model: 'glm-5-turbo', name: 'Z.Ai' },
+                        zai: { model: 'glm-4.7', name: 'Z.Ai' },
                         custom: { model: '', name: 'Custom Provider' },
                     };
                     if (defaults[provider.slug] && !provider.name) {
@@ -290,7 +291,7 @@
                         openai: 'e.g. gpt-4o-mini',
                         gemini: 'e.g. gemini-2.5-flash',
                         anthropic: 'e.g. claude-3-5-sonnet-20241022',
-                        zai: 'e.g. glm-5-turbo',
+                        zai: 'e.g. glm-4.7, glm-5-turbo',
                         custom: 'Model name or ID',
                     };
                     return map[slug] || 'Model identifier';

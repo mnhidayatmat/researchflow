@@ -25,10 +25,10 @@ $statusSizes = [
 ];
 
 $statusColors = [
-    'online' => 'bg-success border-2 border-white',
-    'offline' => 'bg-secondary border-2 border-white',
-    'away' => 'bg-warning border-2 border-white',
-    'busy' => 'bg-danger border-2 border-white',
+    'online' => 'bg-success dark:bg-dark-success border-2 border-white dark:border-dark-card',
+    'offline' => 'bg-secondary dark:bg-dark-secondary border-2 border-white dark:border-dark-card',
+    'away' => 'bg-warning dark:bg-dark-warning border-2 border-white dark:border-dark-card',
+    'busy' => 'bg-danger dark:bg-dark-danger border-2 border-white dark:border-dark-card',
 ];
 
 $initials = $name ? collect(explode(' ', $name))

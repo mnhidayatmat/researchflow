@@ -189,7 +189,19 @@ class SettingsController extends Controller
                 }
 
                 $provider->fill($modelData);
-                $provider->save();
+
+                try {
+                    $provider->save();
+                } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                    // Existing api_key is corrupt — bypass Eloquent casts with raw update
+                    $rawData = collect($modelData)->except('api_key')->toArray();
+                    $rawData['settings'] = json_encode($rawData['settings'] ?? []);
+                    $rawData['api_key'] = isset($modelData['api_key'])
+                        ? encrypt($modelData['api_key'])
+                        : null;
+                    $rawData['updated_at'] = now();
+                    \DB::table('ai_providers')->where('id', $provider->id)->update($rawData);
+                }
             } else {
                 // Create new provider
                 AiProvider::create($modelData);
@@ -277,7 +289,7 @@ class SettingsController extends Controller
             'openai' => 'gpt-4o-mini',
             'gemini' => 'gemini-2.5-flash',
             'anthropic' => 'claude-3-5-sonnet-20241022',
-            'zai' => 'glm-5-turbo',
+            'zai' => 'glm-4.7',
             'custom' => '',
             default => '',
         };

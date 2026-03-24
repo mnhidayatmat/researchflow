@@ -20,11 +20,11 @@
                 <x-textarea name="challenges" label="Challenges" rows="3">{{ $report->challenges }}</x-textarea>
                 <x-textarea name="next_steps" label="Next Steps" rows="3">{{ $report->next_steps }}</x-textarea>
 
-                <div class="rounded-xl border border-border bg-surface p-4">
+                <div class="rounded-xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface p-4">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-sm font-medium text-primary">Report Attachment</p>
-                            <p class="text-xs text-secondary mt-1">
+                            <p class="text-sm font-medium text-primary dark:text-dark-primary">Report Attachment</p>
+                            <p class="text-xs text-secondary dark:text-dark-secondary mt-1">
                                 @if($storageOwner)
                                     Files will be stored in {{ $storageOwner->name }}'s {{ $usesGoogleDrive ? 'Google Drive' : 'local storage' }}.
                                 @else
@@ -38,18 +38,18 @@
                     </div>
 
                     @if($report->attachment_path)
-                        <div class="mt-3 flex items-center justify-between rounded-xl border border-border bg-white px-4 py-3">
+                        <div class="mt-3 flex items-center justify-between rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3">
                             <div>
-                                <p class="text-sm font-medium text-primary">{{ $report->attachment_original_name }}</p>
-                                <p class="text-xs text-secondary">{{ number_format(($report->attachment_size ?? 0) / 1024, 1) }} KB</p>
+                                <p class="text-sm font-medium text-primary dark:text-dark-primary">{{ $report->attachment_original_name }}</p>
+                                <p class="text-xs text-secondary dark:text-dark-secondary">{{ number_format(($report->attachment_size ?? 0) / 1024, 1) }} KB</p>
                             </div>
                             <a href="{{ route('reports.download-attachment', [$student, $report]) }}" class="text-xs font-medium text-accent hover:underline">Download</a>
                         </div>
                     @endif
 
                     <div class="mt-3">
-                        <input type="file" name="attachment" class="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-primary">
-                        <p class="text-xs text-secondary mt-2">Upload a new file to replace the current attachment.</p>
+                        <input type="file" name="attachment" class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary dark:text-dark-primary">
+                        <p class="text-xs text-secondary dark:text-dark-secondary mt-2">Upload a new file to replace the current attachment.</p>
                         @error('attachment')
                             <p class="text-xs text-danger mt-2">{{ $message }}</p>
                         @enderror

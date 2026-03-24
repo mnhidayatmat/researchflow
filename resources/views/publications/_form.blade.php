@@ -59,14 +59,14 @@
 <div class="mt-8">
     <div class="flex items-center justify-between mb-4">
         <div>
-            <h3 class="text-sm font-semibold text-primary">Rejection Tracking</h3>
-            <p class="text-xs text-secondary mt-1">Store rejection dates and reviewer input for manuscript improvement.</p>
+            <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Rejection Tracking</h3>
+            <p class="text-xs text-secondary dark:text-dark-secondary mt-1">Store rejection dates and reviewer input for manuscript improvement.</p>
         </div>
     </div>
 
     <div class="space-y-5">
         @for($round = 1; $round <= 3; $round++)
-            <div class="rounded-xl border border-border bg-surface/50 p-4">
+            <div class="rounded-xl border border-border dark:border-dark-border bg-surface/50 p-4">
                 <div class="grid gap-4 lg:grid-cols-2">
                     <x-input
                         name="rejected_{{ $round }}_date"

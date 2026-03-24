@@ -38,34 +38,34 @@
         <x-card>
             <div class="space-y-4">
                 <div>
-                    <h3 class="text-sm font-semibold text-primary">Usage Tags</h3>
-                    <p class="mt-0.5 text-xs text-secondary">Mark how this contact can help across grants, papers, and reviewer suggestions.</p>
+                    <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Usage Tags</h3>
+                    <p class="mt-0.5 text-xs text-secondary dark:text-dark-secondary">Mark how this contact can help across grants, papers, and reviewer suggestions.</p>
                 </div>
 
-                <label class="flex items-start gap-3 rounded-xl border border-border bg-surface/60 px-3 py-3">
+                <label class="flex items-start gap-3 rounded-xl border border-border dark:border-dark-border bg-surface/60 px-3 py-3">
                     <input type="hidden" name="suitable_for_grant" value="0">
-                    <input type="checkbox" name="suitable_for_grant" value="1" @checked(old('suitable_for_grant', $collaborator->suitable_for_grant)) class="mt-1 rounded border-gray-300 text-accent focus:ring-accent">
+                    <input type="checkbox" name="suitable_for_grant" value="1" @checked(old('suitable_for_grant', $collaborator->suitable_for_grant)) class="mt-1 rounded border-gray-300 dark:border-dark-border text-accent focus:ring-accent">
                     <div>
-                        <p class="text-sm font-medium text-primary">Grant collaborator</p>
-                        <p class="text-xs text-secondary">Use for research grants, panels, and funding applications.</p>
+                        <p class="text-sm font-medium text-primary dark:text-dark-primary">Grant collaborator</p>
+                        <p class="text-xs text-secondary dark:text-dark-secondary">Use for research grants, panels, and funding applications.</p>
                     </div>
                 </label>
 
-                <label class="flex items-start gap-3 rounded-xl border border-border bg-surface/60 px-3 py-3">
+                <label class="flex items-start gap-3 rounded-xl border border-border dark:border-dark-border bg-surface/60 px-3 py-3">
                     <input type="hidden" name="suitable_for_publication" value="0">
-                    <input type="checkbox" name="suitable_for_publication" value="1" @checked(old('suitable_for_publication', $collaborator->suitable_for_publication)) class="mt-1 rounded border-gray-300 text-accent focus:ring-accent">
+                    <input type="checkbox" name="suitable_for_publication" value="1" @checked(old('suitable_for_publication', $collaborator->suitable_for_publication)) class="mt-1 rounded border-gray-300 dark:border-dark-border text-accent focus:ring-accent">
                     <div>
-                        <p class="text-sm font-medium text-primary">Paper co-researcher</p>
-                        <p class="text-xs text-secondary">Useful for article collaboration, co-authorship, or domain support.</p>
+                        <p class="text-sm font-medium text-primary dark:text-dark-primary">Paper co-researcher</p>
+                        <p class="text-xs text-secondary dark:text-dark-secondary">Useful for article collaboration, co-authorship, or domain support.</p>
                     </div>
                 </label>
 
-                <label class="flex items-start gap-3 rounded-xl border border-border bg-surface/60 px-3 py-3">
+                <label class="flex items-start gap-3 rounded-xl border border-border dark:border-dark-border bg-surface/60 px-3 py-3">
                     <input type="hidden" name="suggested_reviewer" value="0">
-                    <input type="checkbox" name="suggested_reviewer" value="1" @checked(old('suggested_reviewer', $collaborator->suggested_reviewer)) class="mt-1 rounded border-gray-300 text-accent focus:ring-accent">
+                    <input type="checkbox" name="suggested_reviewer" value="1" @checked(old('suggested_reviewer', $collaborator->suggested_reviewer)) class="mt-1 rounded border-gray-300 dark:border-dark-border text-accent focus:ring-accent">
                     <div>
-                        <p class="text-sm font-medium text-primary">Suggested reviewer</p>
-                        <p class="text-xs text-secondary">Keep this record available when journals or grants request reviewer suggestions.</p>
+                        <p class="text-sm font-medium text-primary dark:text-dark-primary">Suggested reviewer</p>
+                        <p class="text-xs text-secondary dark:text-dark-secondary">Keep this record available when journals or grants request reviewer suggestions.</p>
                     </div>
                 </label>
             </div>
@@ -73,9 +73,9 @@
 
         <x-card>
             <div class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">Guidance</h3>
-                <p class="text-xs leading-5 text-secondary">Use one record per person. Category helps filtering, while expertise and field make it easier to shortlist collaborators and reviewers later.</p>
-                <div class="rounded-xl bg-surface px-3 py-3 text-xs text-secondary">
+                <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Guidance</h3>
+                <p class="text-xs leading-5 text-secondary dark:text-dark-secondary">Use one record per person. Category helps filtering, while expertise and field make it easier to shortlist collaborators and reviewers later.</p>
+                <div class="rounded-xl bg-surface dark:bg-dark-surface px-3 py-3 text-xs text-secondary dark:text-dark-secondary">
                     For non-academic contacts, use `University / Organization` for company, agency, or institute name.
                 </div>
             </div>
@@ -83,7 +83,7 @@
     </div>
 </div>
 
-<div class="mt-6 flex items-center justify-end gap-3">
-    <x-button href="{{ route('supervisor.collaborators.index') }}" variant="secondary">Cancel</x-button>
-    <x-button type="submit" variant="primary">{{ $submitLabel }}</x-button>
+<div class="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+    <x-button href="{{ route('supervisor.collaborators.index') }}" variant="secondary" class="w-full justify-center sm:w-auto">Cancel</x-button>
+    <x-button type="submit" variant="primary" class="w-full justify-center sm:w-auto">{{ $submitLabel }}</x-button>
 </div>

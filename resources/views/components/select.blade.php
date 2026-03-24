@@ -18,10 +18,10 @@ $hasError = $error !== null;
 
 <div class="space-y-1.5">
     @if($label)
-        <label for="{{ $selectId }}" class="block text-sm font-medium text-primary">
+        <label for="{{ $selectId }}" class="block text-sm font-medium text-primary dark:text-dark-primary">
             {{ $label }}
             @if($required)
-                <span class="text-danger">*</span>
+                <span class="text-danger dark:text-dark-danger">*</span>
             @endif
         </label>
     @endif
@@ -31,8 +31,8 @@ $hasError = $error !== null;
         name="{{ $name }}"
         @if($disabled) disabled @endif
         {{ $attributes->merge(['class' => 'w-full text-sm rounded-lg border ' .
-            ($hasError ? 'border-danger focus:ring-danger/20 focus:border-danger' : 'border-border focus:ring-accent/20 focus:border-accent') .
-            ' bg-white px-3.5 py-2.5 text-primary focus:outline-none focus:ring-2 transition-all duration-150']) }}
+            ($hasError ? 'border-danger focus:ring-danger/20 focus:border-danger' : 'border-border dark:border-dark-border focus:ring-accent/20 dark:focus:ring-dark-accent/20 focus:border-accent dark:focus:border-dark-accent') .
+            ' bg-white dark:bg-dark-card px-3.5 py-2.5 text-primary dark:text-dark-primary focus:outline-none focus:ring-2 transition-all duration-150']) }}
     >
         @if($placeholder)
             <option value="">{{ $placeholder }}</option>
@@ -49,8 +49,8 @@ $hasError = $error !== null;
     </select>
 
     @if($hasError)
-        <p class="text-xs text-danger">{{ $error }}</p>
+        <p class="text-xs text-danger dark:text-dark-danger">{{ $error }}</p>
     @elseif($hint)
-        <p class="text-xs text-secondary">{{ $hint }}</p>
+        <p class="text-xs text-secondary dark:text-dark-secondary">{{ $hint }}</p>
     @endif
 </div>

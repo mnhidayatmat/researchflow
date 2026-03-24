@@ -1,20 +1,20 @@
 <x-layouts.app title="User Management">
     <x-slot:header>Settings</x-slot:header>
 
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6">
         <div>
-            <h2 class="text-base font-semibold text-primary">User Management</h2>
-            <p class="text-xs text-secondary mt-0.5">Manage all users and their roles</p>
+            <h2 class="text-base font-semibold text-primary dark:text-dark-primary">User Management</h2>
+            <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">Manage all users and their roles</p>
         </div>
         <div class="flex items-center gap-2">
-            <select id="roleFilter" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/20">
+            <select id="roleFilter" class="flex-1 sm:flex-none text-sm border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2.5 sm:py-2 text-primary dark:text-dark-primary focus:outline-none focus:ring-2 focus:ring-accent/20">
                 <option value="">All Roles</option>
                 <option value="admin">Admin</option>
                 <option value="supervisor">Supervisor</option>
                 <option value="cosupervisor">Co-Supervisor</option>
                 <option value="student">Student</option>
             </select>
-            <select id="statusFilter" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/20">
+            <select id="statusFilter" class="flex-1 sm:flex-none text-sm border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2.5 sm:py-2 text-primary dark:text-dark-primary focus:outline-none focus:ring-2 focus:ring-accent/20">
                 <option value="">All Status</option>
                 <option value="active">Active</option>
                 <option value="pending">Pending</option>
@@ -23,35 +23,116 @@
         </div>
     </div>
 
-    <x-card :padding='false'>
+    {{-- Mobile Card List --}}
+    <div class="sm:hidden space-y-3" id="usersMobileList">
+        @forelse($users as $user)
+            <div class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-4 user-card-item" data-role="{{ $user->role }}" data-status="{{ $user->status }}">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-semibold shrink-0">
+                        {{ substr($user->name, 0, 1) }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-sm font-semibold text-primary dark:text-dark-primary truncate">{{ $user->name }}</p>
+                            <x-status-badge :status="$user->status" size="sm" />
+                        </div>
+                        <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5 truncate">{{ $user->email }}</p>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            @if($user->role === 'admin')
+                                <x-badge color="purple">Admin</x-badge>
+                            @elseif($user->role === 'supervisor')
+                                <x-badge color="blue">Supervisor</x-badge>
+                            @elseif($user->role === 'cosupervisor')
+                                <x-badge color="cyan">Co-Supervisor</x-badge>
+                            @else
+                                <x-badge color="gray">{{ ucfirst($user->role) }}</x-badge>
+                            @endif
+                            @if($user->staff_id)
+                                <span class="text-[10px] text-tertiary dark:text-dark-tertiary">Staff: {{ $user->staff_id }}</span>
+                            @elseif($user->matric_number)
+                                <span class="text-[10px] text-tertiary dark:text-dark-tertiary">Matric: {{ $user->matric_number }}</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                @if($user->id !== auth()->id())
+                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border dark:border-dark-border">
+                    <div class="relative flex-1">
+                        <select
+                            class="w-full text-xs border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2 pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none text-primary dark:text-dark-primary"
+                            onchange="changeRole({{ $user->id }}, this)">
+                            <option value="">Change Role</option>
+                            <option value="admin" @if($user->role === 'admin') selected @endif>Admin</option>
+                            <option value="supervisor" @if($user->role === 'supervisor') selected @endif>Supervisor</option>
+                            <option value="cosupervisor" @if($user->role === 'cosupervisor') selected @endif>Co-Supervisor</option>
+                            <option value="student" @if($user->role === 'student') selected @endif>Student</option>
+                        </select>
+                        <svg class="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <div class="relative flex-1">
+                        <select
+                            class="w-full text-xs border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2 pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none text-primary dark:text-dark-primary"
+                            onchange="changeStatus({{ $user->id }}, this)">
+                            <option value="">Change Status</option>
+                            <option value="active" @if($user->status === 'active') selected @endif>Active</option>
+                            <option value="pending" @if($user->status === 'pending') selected @endif>Pending</option>
+                            <option value="inactive" @if($user->status === 'inactive') selected @endif>Inactive</option>
+                        </select>
+                        <svg class="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+                @else
+                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border dark:border-dark-border">
+                    <span class="text-xs text-tertiary dark:text-dark-tertiary">This is your account</span>
+                </div>
+                @endif
+            </div>
+        @empty
+            <div class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-8 text-center text-secondary dark:text-dark-secondary text-sm">
+                No users found.
+            </div>
+        @endforelse
+
+        @if($users->hasPages())
+            <div class="pt-2">{{ $users->withQueryString()->links() }}</div>
+        @endif
+    </div>
+
+    {{-- Desktop Table --}}
+    <x-card :padding='false' class="hidden sm:block">
         <div class="overflow-x-auto">
             <table class="w-full text-sm" id="usersTable">
                 <thead>
-                    <tr class="border-b border-border bg-surface">
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">User</th>
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">Role</th>
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">Department</th>
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">Students</th>
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">Joined</th>
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">Status</th>
-                        <th class="text-left text-xs font-medium text-secondary uppercase tracking-wider px-5 py-3">Actions</th>
+                    <tr class="border-b border-border dark:border-dark-border bg-surface dark:bg-dark-surface">
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">User</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Role</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Department</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Students</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Joined</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Status</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-border">
+                <tbody class="divide-y divide-border dark:divide-dark-border">
                     @forelse($users as $user)
-                        <tr class="hover:bg-surface/60 transition-colors" data-role="{{ $user->role }}" data-status="{{ $user->status }}">
+                        <tr class="hover:bg-surface/60 dark:hover:bg-dark-surface/60 transition-colors" data-role="{{ $user->role }}" data-status="{{ $user->status }}">
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-semibold flex-shrink-0">
                                         {{ substr($user->name, 0, 1) }}
                                     </div>
                                     <div>
-                                        <p class="font-medium text-primary">{{ $user->name }}</p>
-                                        <p class="text-xs text-secondary">{{ $user->email }}</p>
+                                        <p class="font-medium text-primary dark:text-dark-primary">{{ $user->name }}</p>
+                                        <p class="text-xs text-secondary dark:text-dark-secondary">{{ $user->email }}</p>
                                         @if($user->staff_id)
-                                            <p class="text-xs text-gray-400">Staff ID: {{ $user->staff_id }}</p>
+                                            <p class="text-xs text-gray-400 dark:text-dark-tertiary">Staff ID: {{ $user->staff_id }}</p>
                                         @elseif($user->matric_number)
-                                            <p class="text-xs text-gray-400">Matric: {{ $user->matric_number }}</p>
+                                            <p class="text-xs text-gray-400 dark:text-dark-tertiary">Matric: {{ $user->matric_number }}</p>
                                         @endif
                                     </div>
                                 </div>
@@ -67,24 +148,23 @@
                                     <x-badge color="gray">{{ ucfirst($user->role) }}</x-badge>
                                 @endif
                             </td>
-                            <td class="px-5 py-3 text-secondary">{{ $user->department ?? '—' }}</td>
+                            <td class="px-5 py-3 text-secondary dark:text-dark-secondary">{{ $user->department ?? '—' }}</td>
                             <td class="px-5 py-3">
                                 @if(in_array($user->role, ['supervisor', 'cosupervisor']))
-                                    <span class="text-sm text-primary">{{ $user->supervisedStudents->count() }}</span>
+                                    <span class="text-sm text-primary dark:text-dark-primary">{{ $user->supervisedStudents->count() }}</span>
                                 @elseif($user->role === 'student')
-                                    <span class="text-xs text-secondary">Student</span>
+                                    <span class="text-xs text-secondary dark:text-dark-secondary">Student</span>
                                 @else
-                                    <span class="text-xs text-secondary">—</span>
+                                    <span class="text-xs text-secondary dark:text-dark-secondary">—</span>
                                 @endif
                             </td>
-                            <td class="px-5 py-3 text-secondary text-xs">{{ $user->created_at->format('d M Y') }}</td>
+                            <td class="px-5 py-3 text-secondary dark:text-dark-secondary text-xs">{{ $user->created_at->format('d M Y') }}</td>
                             <td class="px-5 py-3"><x-status-badge :status="$user->status" /></td>
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-1">
-                                    {{-- Role Dropdown --}}
                                     <div class="relative">
                                         <select
-                                            class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 pr-6 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none bg-white"
+                                            class="text-xs border border-gray-200 dark:border-dark-border rounded-lg px-2 py-1.5 pr-6 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none bg-white dark:bg-dark-card text-primary dark:text-dark-primary"
                                             onchange="changeRole({{ $user->id }}, this)"
                                             @if($user->id === auth()->id()) disabled @endif>
                                             <option value="">Change Role</option>
@@ -97,11 +177,9 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </div>
-
-                                    {{-- Status Dropdown --}}
                                     <div class="relative">
                                         <select
-                                            class="text-xs border border-gray-200 rounded-lg px-2 py-1.5 pr-6 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none bg-white"
+                                            class="text-xs border border-gray-200 dark:border-dark-border rounded-lg px-2 py-1.5 pr-6 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none bg-white dark:bg-dark-card text-primary dark:text-dark-primary"
                                             onchange="changeStatus({{ $user->id }}, this)"
                                             @if($user->id === auth()->id()) disabled @endif>
                                             <option value="">Change Status</option>
@@ -118,7 +196,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-8 text-center text-secondary text-sm">No users found.</td>
+                            <td colspan="7" class="px-5 py-8 text-center text-secondary dark:text-dark-secondary text-sm">No users found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -126,7 +204,7 @@
         </div>
 
         @if($users->hasPages())
-            <div class="px-5 py-3 border-t border-border">
+            <div class="px-5 py-3 border-t border-border dark:border-dark-border">
                 {{ $users->withQueryString()->links() }}
             </div>
         @endif
@@ -199,23 +277,32 @@
             }
         }
 
-        // Filter functionality
+        // Filter functionality - works for both mobile and desktop
         document.getElementById('roleFilter').addEventListener('change', filterTable);
         document.getElementById('statusFilter').addEventListener('change', filterTable);
 
         function filterTable() {
             const roleValue = document.getElementById('roleFilter').value;
             const statusValue = document.getElementById('statusFilter').value;
-            const rows = document.querySelectorAll('#usersTable tbody tr');
 
+            // Desktop table rows
+            const rows = document.querySelectorAll('#usersTable tbody tr');
             rows.forEach(row => {
                 const rowRole = row.dataset.role;
                 const rowStatus = row.dataset.status;
-
                 const roleMatch = !roleValue || rowRole === roleValue;
                 const statusMatch = !statusValue || rowStatus === statusValue;
-
                 row.style.display = (roleMatch && statusMatch) ? '' : 'none';
+            });
+
+            // Mobile cards
+            const cards = document.querySelectorAll('.user-card-item');
+            cards.forEach(card => {
+                const cardRole = card.dataset.role;
+                const cardStatus = card.dataset.status;
+                const roleMatch = !roleValue || cardRole === roleValue;
+                const statusMatch = !statusValue || cardStatus === statusValue;
+                card.style.display = (roleMatch && statusMatch) ? '' : 'none';
             });
         }
     </script>

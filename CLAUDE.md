@@ -908,7 +908,7 @@ All user actions are tracked through:
 
 ### Overview
 
-The AI layer provides a provider-agnostic interface for AI-powered features including chat, document analysis, task suggestions, and deadline risk detection. It supports multiple AI providers (OpenAI, Google Gemini, Anthropic) with RAG (Retrieval-Augmented Generation) capabilities.
+The AI layer provides a provider-agnostic interface for AI-powered features including chat, document analysis, task suggestions, and deadline risk detection. It supports multiple AI providers (OpenAI, Google Gemini, Anthropic, Z.AI) with RAG (Retrieval-Augmented Generation) capabilities.
 
 ### Service Architecture (`app/Services/Ai/`)
 
@@ -919,6 +919,7 @@ Ai/
 ├── OpenAiProvider.php          # OpenAI/GPT-compatible implementation
 ├── GeminiProvider.php          # Google Gemini implementation
 ├── AnthropicProvider.php       # Claude/Anthropic implementation
+├── ZAiProvider.php             # Z.AI implementation (dual-mode: Anthropic & OpenAI compatible)
 ├── AiServiceFactory.php        # Provider instantiation and caching
 ├── AiChatService.php           # Chat operations with context
 ├── AiRagService.php            # Document retrieval with embeddings
@@ -933,12 +934,62 @@ Ai/
 ### Provider Configuration
 
 AI providers are stored in the `ai_providers` table with:
-- `slug` - Provider identifier (openai, gemini, anthropic, custom)
+- `slug` - Provider identifier (openai, gemini, anthropic, zai, custom)
 - `api_key` - Encrypted API key
-- `model` - Model name (e.g., gpt-4o-mini, gemini-pro, claude-3-5-sonnet)
+- `model` - Model name (e.g., gpt-4o-mini, gemini-pro, claude-3-5-sonnet, glm-4.7)
 - `base_url` - Custom API endpoint (for self-hosted/custom providers)
 - `is_active` / `is_default` - Provider selection flags
 - `settings` - JSON configuration (features, embedding_model, etc.)
+
+### Z.AI Provider Configuration
+
+Z.AI (`ZAiProvider.php`) supports **two API modes**, auto-detected from the `base_url`:
+
+| Plan | Base URL | API Format | Auth Header |
+|------|----------|------------|-------------|
+| **GLM Coding Plan** (default) | `https://api.z.ai/api/anthropic` | Anthropic Messages API | `x-api-key: {key}` |
+| Standard API Plan | `https://api.z.ai/api/paas/v4` | OpenAI-compatible | `Authorization: Bearer {key}` |
+
+**Current setup:** GLM Coding Max-Quarterly Plan using Anthropic endpoint with `glm-4.7`.
+
+**To change the AI provider via Admin UI:**
+1. Go to **Admin > Settings > AI**
+2. Select provider type **Z.Ai**
+3. Enter your API key from [z.ai/manage-apikey](https://z.ai/manage-apikey/apikey-list)
+4. Set model (e.g., `glm-4.7`, `glm-4.5-flash`)
+5. Set Base URL:
+   - Coding Plan: `https://api.z.ai/api/anthropic` (default)
+   - Standard Plan: `https://api.z.ai/api/paas/v4`
+6. Toggle **Active**, set as **Default**, and save
+
+**To change via database (tinker):**
+```bash
+php artisan tinker --execute="
+\$p = \App\Models\AiProvider::where('slug', 'zai')->first();
+\$p->update([
+    'model' => 'glm-4.7',
+    'base_url' => 'https://api.z.ai/api/anthropic',
+]);
+"
+```
+
+**Available Z.AI Models:**
+
+| Model | Type | Notes |
+|-------|------|-------|
+| `glm-4.7` | Text | Latest flagship, recommended |
+| `glm-4.5-flash` | Text | Fastest, works on free tier |
+| `glm-5-turbo` | Text | High performance |
+| `glm-5` | Text | Most capable |
+| `glm-4.6v` | Vision | Supports images |
+| `embedding-2` | Embedding | 1024 dimensions, for RAG |
+
+**Key implementation details:**
+- SSL verification disabled for development (`withoutVerifying()`)
+- HTTP timeout: 90 seconds
+- PHP `set_time_limit(120)` in chat controller for slow responses
+- Web search supported via `tools` parameter (OpenAI mode only)
+- Embeddings use the `paas/v4` endpoint regardless of chat mode
 
 ### AI Features API
 

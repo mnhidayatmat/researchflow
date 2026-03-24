@@ -7,16 +7,16 @@
 @php
 $variants = [
     'pills' => [
-        'container' => 'bg-surface rounded-lg p-1 -space-x-1',
+        'container' => 'bg-surface dark:bg-dark-surface rounded-lg p-1 -space-x-1',
         'tab' => 'rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150',
-        'active' => 'bg-white text-primary shadow-soft',
-        'inactive' => 'text-secondary hover:text-primary hover:bg-white/50',
+        'active' => 'bg-white dark:bg-dark-card text-primary dark:text-dark-primary shadow-soft dark:shadow-dark-soft',
+        'inactive' => 'text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary hover:bg-white/50 dark:hover:bg-dark-card/50',
     ],
     'underline' => [
-        'container' => 'border-b border-border',
+        'container' => 'border-b border-border dark:border-dark-border',
         'tab' => 'px-4 py-3 text-sm font-medium border-b-2 transition-all duration-150',
-        'active' => 'border-accent text-accent',
-        'inactive' => 'border-transparent text-secondary hover:text-primary',
+        'active' => 'border-accent dark:border-dark-accent text-accent dark:text-dark-accent',
+        'inactive' => 'border-transparent text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary',
     ],
 ];
 

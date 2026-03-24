@@ -39,39 +39,39 @@
             }">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 class="text-sm font-semibold text-primary">Submission Checklist</h3>
-                        <p class="mt-0.5 text-xs text-secondary">Track what is ready before funding submission.</p>
+                        <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Submission Checklist</h3>
+                        <p class="mt-0.5 text-xs text-secondary dark:text-dark-secondary">Track what is ready before funding submission.</p>
                     </div>
-                    <button type="button" @click="addItem()" class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-primary hover:bg-surface">Add Item</button>
+                    <button type="button" @click="addItem()" class="rounded-lg border border-border dark:border-dark-border px-3 py-1.5 text-xs font-medium text-primary dark:text-dark-primary hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface">Add Item</button>
                 </div>
 
                 <div class="space-y-3">
                     <template x-for="(item, index) in items" :key="index">
-                        <div class="rounded-2xl border border-border bg-surface/60 p-3">
+                        <div class="rounded-2xl border border-border dark:border-dark-border bg-surface/60 p-3">
                             <div class="flex items-start gap-3">
                                 <input type="hidden" :name="`checklist_items[${index}][is_completed]`" value="0">
-                                <input :name="`checklist_items[${index}][is_completed]`" x-model="item.is_completed" value="1" type="checkbox" class="mt-1 rounded border-gray-300 text-accent focus:ring-accent">
+                                <input :name="`checklist_items[${index}][is_completed]`" x-model="item.is_completed" value="1" type="checkbox" class="mt-1 rounded border-gray-300 dark:border-dark-border text-accent focus:ring-accent">
                                 <div class="min-w-0 flex-1 space-y-2">
-                                    <input :name="`checklist_items[${index}][title]`" x-model="item.title" type="text" placeholder="Checklist item" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none">
-                                    <textarea :name="`checklist_items[${index}][notes]`" x-model="item.notes" rows="2" placeholder="Optional notes" class="w-full rounded-lg border border-border bg-white px-3 py-2 text-xs focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"></textarea>
+                                    <input :name="`checklist_items[${index}][title]`" x-model="item.title" type="text" placeholder="Checklist item" class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none">
+                                    <textarea :name="`checklist_items[${index}][notes]`" x-model="item.notes" rows="2" placeholder="Optional notes" class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-xs focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"></textarea>
                                 </div>
-                                <button type="button" @click="removeItem(index)" class="text-xs text-secondary hover:text-red-600">Remove</button>
+                                <button type="button" @click="removeItem(index)" class="text-xs text-secondary dark:text-dark-secondary hover:text-red-600">Remove</button>
                             </div>
                         </div>
                     </template>
                 </div>
 
                 <template x-if="items.length === 0">
-                    <p class="rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-secondary">No checklist items yet.</p>
+                    <p class="rounded-xl border border-dashed border-border dark:border-dark-border px-3 py-6 text-center text-xs text-secondary dark:text-dark-secondary">No checklist items yet.</p>
                 </template>
             </div>
         </x-card>
 
         <x-card>
             <div class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">Guidance</h3>
-                <p class="text-xs leading-5 text-secondary">Use this module to track each grant call, its submission timeline, status, and readiness checklist in one place.</p>
-                <div class="rounded-xl bg-surface px-3 py-3 text-xs text-secondary">
+                <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Guidance</h3>
+                <p class="text-xs leading-5 text-secondary dark:text-dark-secondary">Use this module to track each grant call, its submission timeline, status, and readiness checklist in one place.</p>
+                <div class="rounded-xl bg-surface dark:bg-dark-surface px-3 py-3 text-xs text-secondary dark:text-dark-secondary">
                     Recommended stages: `Draft`, `Waiting to open`, `Preparing`, `Submitted`, `Under Review`, `Awarded`, `Rejected`.
                 </div>
             </div>
@@ -79,7 +79,7 @@
     </div>
 </div>
 
-<div class="mt-6 flex items-center justify-end gap-3">
-    <x-button href="{{ route('supervisor.grants.index') }}" variant="secondary">Cancel</x-button>
-    <x-button type="submit" variant="primary">{{ $submitLabel }}</x-button>
+<div class="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+    <x-button href="{{ route('supervisor.grants.index') }}" variant="secondary" class="w-full justify-center sm:w-auto">Cancel</x-button>
+    <x-button type="submit" variant="primary" class="w-full justify-center sm:w-auto">{{ $submitLabel }}</x-button>
 </div>

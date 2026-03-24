@@ -20,8 +20,8 @@ $icons = [
 ];
 $svgPath = $icons[$icon] ?? $icons['circle'];
 $classes = $active
-    ? 'bg-accent/10 text-accent'
-    : 'text-secondary hover:bg-gray-50 hover:text-primary';
+    ? 'bg-accent/10 dark:bg-dark-accent/15 text-accent dark:text-dark-accent'
+    : 'text-secondary dark:text-dark-secondary hover:bg-gray-50 dark:hover:bg-dark-surface hover:text-primary dark:hover:text-dark-primary';
 @endphp
 
 <a href="{{ $href }}" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] font-medium transition-colors {{ $classes }}">

@@ -96,17 +96,32 @@
         .no-transition *, .no-transition *::before, .no-transition *::after {
             transition: none !important;
         }
+
+        @media (max-width: 639px) {
+            .mobile-safe-px {
+                padding-left: max(1rem, env(safe-area-inset-left));
+                padding-right: max(1rem, env(safe-area-inset-right));
+            }
+        }
+
+        /* Bottom nav safe area spacing on mobile */
+        @media (max-width: 1023px) {
+            .mobile-bottom-spacing {
+                padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+            }
+        }
     </style>
     @stack('styles')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-surface dark:bg-dark-bg text-primary dark:text-dark-primary font-sans">
-    <div class="min-h-full" x-data="{
+    <div class="min-h-full overflow-x-hidden" x-data="{
         sidebarOpen: false,
         sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true'
     }" x-init="
         $watch('sidebarCollapsed', val => localStorage.setItem('sidebarCollapsed', val));
         $el.addEventListener('sidebar-toggled', e => { sidebarCollapsed = e.detail.collapsed; });
+        $el.addEventListener('close-mobile-sidebar', () => { sidebarOpen = false; });
     ">
         {{-- Mobile sidebar backdrop --}}
         <div x-show="sidebarOpen" x-cloak
@@ -116,7 +131,7 @@
              x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 lg:hidden">
             <div class="fixed inset-0 bg-primary/20 dark:bg-dark-primary/20 backdrop-blur-sm" @click="sidebarOpen = false"></div>
-            <div class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-dark-card shadow-2xl"
+            <div class="fixed inset-y-0 left-0 w-[calc(100vw-2.5rem)] max-w-72 bg-white dark:bg-dark-card shadow-2xl"
                  x-transition:enter="transition-transform ease-out duration-200"
                  x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
                  x-transition:leave="transition-transform ease-in duration-150"
@@ -137,7 +152,7 @@
             @include('layouts.topbar')
 
             {{-- Flash notifications --}}
-            <div class="px-4 sm:px-6 lg:px-8 pt-4 space-y-2">
+            <div class="mobile-safe-px px-4 pt-4 space-y-2 sm:px-6 lg:px-8">
                 @if(session('success'))
                     <div x-data="{ show: true }" x-show="show"
                          x-transition:enter="transition ease-out duration-200"
@@ -205,10 +220,15 @@
             </div>
 
             {{-- Page content --}}
-            <main class="px-4 sm:px-6 lg:px-8 py-6">
+            <main class="mobile-safe-px px-4 py-6 sm:px-6 lg:px-8 mobile-bottom-spacing">
                 {{ $slot }}
             </main>
         </div>
+
+        {{-- Mobile Bottom Navigation --}}
+        @auth
+            @include('layouts.bottom-nav')
+        @endauth
     </div>
 
     <script>

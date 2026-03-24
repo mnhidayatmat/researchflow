@@ -7,18 +7,26 @@
 
 {{-- Enhanced topbar with improved visual hierarchy --}}
 <div class="sticky top-0 z-30 bg-white/80 dark:bg-dark-card/80 backdrop-blur-md border-b border-border dark:border-dark-border @if($isRoleSwitched) border-t-4 border-t-accent @endif">
-    <div class="flex items-center justify-between h-14 px-4 sm:px-6 lg:px-8">
+    <div class="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         {{-- Left side --}}
-        <div class="flex items-center gap-4">
-            <button @click="$parent.sidebarOpen = true" class="lg:hidden -ml-2 p-2 text-secondary hover:text-primary dark:text-dark-secondary dark:hover:text-dark-primary rounded-lg hover:bg-surface dark:hover:bg-dark-surface transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-            </button>
+        <div class="flex min-w-0 items-center gap-4">
+            {{-- Mobile: Show logo + page title instead of hamburger (bottom nav handles navigation) --}}
+            <div class="lg:hidden flex items-center gap-2.5 -ml-1">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-amber-600 flex items-center justify-center shrink-0">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                </div>
+                @if(isset($header))
+                    <span class="truncate text-sm font-semibold text-primary dark:text-dark-primary">{{ $header }}</span>
+                @else
+                    <span class="text-sm font-semibold text-primary dark:text-dark-primary">ResearchFlow</span>
+                @endif
+            </div>
 
             @if(isset($header))
-                <nav class="hidden sm:flex items-center gap-2 text-sm">
-                    <span class="text-primary dark:text-dark-primary font-medium">{{ $header }}</span>
+                <nav class="hidden lg:flex items-center gap-2 text-sm">
+                    <span class="truncate text-primary dark:text-dark-primary font-medium">{{ $header }}</span>
                 </nav>
             @endif
 
@@ -38,12 +46,12 @@
         </div>
 
         {{-- Right side --}}
-        <div class="flex items-center gap-1 sm:gap-2">
+        <div class="ml-auto flex flex-wrap items-center justify-end gap-1 sm:gap-2">
             {{-- Role Switcher (Admin only) --}}
             @if(auth()->check() && auth()->user()->role === 'admin')
                 <div x-data="{ open: false }" class="relative">
                     <button @click="open = !open" @click.outside="open = false"
-                            class="flex items-center gap-2 px-3 py-1.5 text-sm rounded-xl border border-border hover:border-accent/30 hover:bg-surface transition-all @if($isRoleSwitched) bg-accent/5 border-accent/30 @endif">
+                            class="flex max-w-full items-center gap-2 px-3 py-1.5 text-sm rounded-xl border border-border hover:border-accent/30 hover:bg-surface transition-all @if($isRoleSwitched) bg-accent/5 border-accent/30 @endif">
                         @if($isRoleSwitched)
                             <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
                             <span class="text-secondary hover:text-primary">{{ ucfirst($effectiveRole) }}</span>
@@ -63,7 +71,7 @@
                          x-transition:leave="transition ease-in duration-100"
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
-                         class="absolute right-0 top-12 w-48 bg-white dark:bg-dark-card rounded-xl shadow-medium dark:shadow-dark-medium border border-border dark:border-dark-border overflow-hidden z-50">
+                         class="absolute right-0 top-12 z-50 w-48 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-white shadow-medium dark:border-dark-border dark:bg-dark-card dark:shadow-dark-medium">
                         <div class="p-2">
                             {{-- Admin Role --}}
                             <form method="POST" action="{{ route('admin.switch-role-reset') }}" class="block">
@@ -169,7 +177,7 @@
                      x-transition:leave="transition ease-in duration-100"
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
-                     class="absolute right-8 top-14 w-80 bg-white dark:bg-dark-card rounded-xl shadow-medium dark:shadow-dark-medium border border-border dark:border-dark-border p-2 z-50">
+                     class="absolute right-0 top-14 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-white p-2 shadow-medium dark:border-dark-border dark:bg-dark-card dark:shadow-dark-medium">
                     <input type="text" placeholder="Search anything..." class="w-full px-3 py-2 text-sm border-0 bg-surface dark:bg-dark-surface text-primary dark:text-dark-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 dark:focus:ring-dark-accent/20">
                     <div class="mt-2 px-2 text-xs text-tertiary dark:text-dark-tertiary flex items-center justify-between">
                         <span>Use</span>
@@ -198,7 +206,7 @@
                      x-transition:leave="transition ease-in duration-100"
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
-                     class="absolute right-0 top-12 w-80 bg-white dark:bg-dark-card rounded-xl shadow-medium dark:shadow-dark-medium border border-border dark:border-dark-border overflow-hidden z-50">
+                     class="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-white shadow-medium dark:border-dark-border dark:bg-dark-card dark:shadow-dark-medium">
                     <div class="px-4 py-3 border-b border-border dark:border-dark-border">
                         <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Notifications</h3>
                     </div>
@@ -240,7 +248,7 @@
 
             {{-- User menu --}}
             <div x-data="{ open: false }" class="relative">
-                <button @click="open = !open" @click.outside="open = false"
+                    <button @click="open = !open" @click.outside="open = false"
                         class="flex items-center gap-2 -mr-1 p-1.5 text-secondary hover:text-primary dark:text-dark-secondary dark:hover:text-dark-primary rounded-xl hover:bg-surface dark:hover:bg-dark-surface transition-colors">
                     <div class="w-7 h-7 rounded-full bg-gradient-to-br from-accent/10 to-amber-100 dark:from-dark-accent/20 dark:to-dark-accent/10 text-accent dark:text-dark-accent flex items-center justify-center text-xs font-semibold border border-accent/10 dark:border-dark-accent/20">
                         {{ substr(auth()->user()->name, 0, 1) }}
@@ -257,7 +265,7 @@
                      x-transition:leave="transition ease-in duration-100"
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
-                     class="absolute right-0 top-12 w-56 bg-white dark:bg-dark-card rounded-xl shadow-medium dark:shadow-dark-medium border border-border dark:border-dark-border overflow-hidden z-50">
+                     class="absolute right-0 top-12 z-50 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-white shadow-medium dark:border-dark-border dark:bg-dark-card dark:shadow-dark-medium">
                     <div class="px-4 py-3 border-b border-border dark:border-dark-border bg-surface/50 dark:bg-dark-surface/50">
                         <p class="text-sm font-semibold text-primary dark:text-dark-primary">{{ auth()->user()->name }}</p>
                         <p class="text-xs text-secondary dark:text-dark-secondary truncate">{{ auth()->user()->email }}</p>

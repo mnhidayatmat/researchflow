@@ -4,7 +4,7 @@
     <div class="max-w-5xl mx-auto">
         <div class="flex items-center justify-between mb-6">
             <div>
-                <p class="text-sm text-secondary">{{ $student->user->name }}'s journal submission tracker</p>
+                <p class="text-sm text-secondary dark:text-dark-secondary">{{ $student->user->name }}'s journal submission tracker</p>
             </div>
         </div>
 

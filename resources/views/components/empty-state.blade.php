@@ -10,22 +10,16 @@ $defaultIcon = 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2
 @endphp
 
 <div class="flex flex-col items-center justify-center py-16 px-4 text-center">
-    <div class="w-16 h-16 rounded-2xl bg-surface flex items-center justify-center mb-4">
-        @if($icon)
-            <svg class="w-8 h-8 text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="{{ $icon }}"/>
-            </svg>
-        @else
-            <svg class="w-8 h-8 text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="{{ $defaultIcon }}"/>
-            </svg>
-        @endif
+    <div class="w-16 h-16 rounded-2xl bg-surface dark:bg-dark-surface flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-tertiary dark:text-dark-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="{{ $icon ?? $defaultIcon }}"/>
+        </svg>
     </div>
 
-    <h3 class="text-base font-semibold text-primary">{{ $title }}</h3>
+    <h3 class="text-base font-semibold text-primary dark:text-dark-primary">{{ $title }}</h3>
 
     @if($description)
-        <p class="mt-1 text-sm text-secondary max-w-sm">{{ $description }}</p>
+        <p class="mt-1 text-sm text-secondary dark:text-dark-secondary max-w-sm">{{ $description }}</p>
     @endif
 
     @if($action)

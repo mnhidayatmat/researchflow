@@ -2,39 +2,39 @@
     <x-slot:header>Report Detail</x-slot:header>
 
     <div class="max-w-3xl">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h2 class="text-lg font-semibold">{{ $report->title }}</h2>
-                <p class="text-xs text-secondary">{{ $report->type_label }} &middot; {{ $report->created_at->format('d M Y') }}</p>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-5 sm:mb-6">
+            <div class="min-w-0">
+                <h2 class="text-base sm:text-lg font-semibold text-primary dark:text-dark-primary">{{ $report->title }}</h2>
+                <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">{{ $report->type_label }} &middot; {{ $report->created_at->format('d M Y') }}</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
                 <x-status-badge :status="$report->status" />
                 @if(in_array($report->status, ['draft', 'revision_needed']) && auth()->id() === $student->user_id)
-                    <x-button href="{{ route('reports.edit', [$student, $report]) }}" variant="secondary" size="sm">Edit</x-button>
+                    <x-button href="{{ route('reports.edit', [$student, $report]) }}" variant="secondary" size="sm" class="flex-1 justify-center sm:flex-none">Edit</x-button>
                 @endif
             </div>
         </div>
 
         <div class="space-y-4">
             <x-card title="Content">
-                <div class="text-sm text-secondary leading-relaxed whitespace-pre-wrap">{{ $report->content }}</div>
+                <div class="text-sm text-secondary dark:text-dark-secondary leading-relaxed whitespace-pre-wrap">{{ $report->content }}</div>
             </x-card>
 
             @if($report->achievements)
                 <x-card title="Key Achievements">
-                    <div class="text-sm text-secondary leading-relaxed whitespace-pre-wrap">{{ $report->achievements }}</div>
+                    <div class="text-sm text-secondary dark:text-dark-secondary leading-relaxed whitespace-pre-wrap">{{ $report->achievements }}</div>
                 </x-card>
             @endif
 
             @if($report->challenges)
                 <x-card title="Challenges">
-                    <div class="text-sm text-secondary leading-relaxed whitespace-pre-wrap">{{ $report->challenges }}</div>
+                    <div class="text-sm text-secondary dark:text-dark-secondary leading-relaxed whitespace-pre-wrap">{{ $report->challenges }}</div>
                 </x-card>
             @endif
 
             @if($report->next_steps)
                 <x-card title="Next Steps">
-                    <div class="text-sm text-secondary leading-relaxed whitespace-pre-wrap">{{ $report->next_steps }}</div>
+                    <div class="text-sm text-secondary dark:text-dark-secondary leading-relaxed whitespace-pre-wrap">{{ $report->next_steps }}</div>
                 </x-card>
             @endif
 
@@ -42,8 +42,8 @@
                 <x-card title="Attachment">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-sm font-medium text-primary">{{ $report->attachment_original_name }}</p>
-                            <p class="text-xs text-secondary mt-1">
+                            <p class="text-sm font-medium text-primary dark:text-dark-primary">{{ $report->attachment_original_name }}</p>
+                            <p class="text-xs text-secondary dark:text-dark-secondary mt-1">
                                 {{ number_format(($report->attachment_size ?? 0) / 1024, 1) }} KB
                                 @if($report->attachmentStorageOwner)
                                     &middot; Stored in {{ $report->attachmentStorageOwner->name }}'s {{ $report->attachment_disk === 'google_drive' ? 'Google Drive' : 'local storage' }}

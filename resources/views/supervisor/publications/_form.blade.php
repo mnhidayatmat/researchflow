@@ -70,13 +70,13 @@
 
 <div class="mt-8">
     <div class="mb-4">
-        <h3 class="text-sm font-semibold text-primary">Rejection Tracking</h3>
-        <p class="mt-1 text-xs text-secondary">Store rejection dates and reviewer comments for each submission round.</p>
+        <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Rejection Tracking</h3>
+        <p class="mt-1 text-xs text-secondary dark:text-dark-secondary">Store rejection dates and reviewer comments for each submission round.</p>
     </div>
 
     <div class="space-y-5">
         @for($round = 1; $round <= 3; $round++)
-            <div class="rounded-xl border border-border bg-surface/50 p-4">
+            <div class="rounded-xl border border-border dark:border-dark-border bg-surface/50 p-4">
                 <div class="grid gap-4 lg:grid-cols-2">
                     <x-input
                         name="rejected_{{ $round }}_date"

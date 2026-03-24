@@ -141,7 +141,7 @@
                                     <span class="absolute inset-0 bg-rose-400 rounded-full animate-ping"></span>
                                     <span class="relative bg-rose-500 rounded-full"></span>
                                 </span>
-                                You have {{ $stats['pending_reviews }} item{{ $stats['pending_reviews'] !== 1 ? 's' : '' }} awaiting your review
+                                You have {{ $stats['pending_reviews'] }} item{{ $stats['pending_reviews'] !== 1 ? 's' : '' }} awaiting your review
                             </span>
                             @else
                             <span class="text-emerald-600">You're all caught up!</span>
@@ -246,7 +246,7 @@
                         <a href="{{ route('supervisor.students.show', $s) }}" class="flex items-center gap-5 p-5 hover:bg-sage-50/50 transition-colors group accent-line pl-6">
                             <div class="relative">
                                 <div class="w-13 h-13 rounded-xl bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center text-sm font-semibold text-teal-700 w-13">
-                                    {{ $s->user->name[0] }}{{ $s->user->name.split(' ')[1][0] ?? '' }}
+                                    {{ $s->user->name[0] }}{{ explode(' ', trim($s->user->name))[1][0] ?? '' }}
                                 </div>
                                 <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white {{ $s->status === 'active' ? 'bg-emerald-400' : 'bg-sage-300' }}"></span>
                             </div>

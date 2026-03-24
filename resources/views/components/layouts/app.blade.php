@@ -10,6 +10,10 @@
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+                        sans: ['"DM Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+                    },
                     colors: {
                         surface: '#F7F7F5',
                         card: '#FFFFFF',
@@ -18,6 +22,36 @@
                         secondary: '#6B7280',
                         accent: '#D97706',
                         'accent-light': '#FEF3C7',
+                        ink: '#1a1a2e',
+                        paper: '#faf9f7',
+                        cream: '#f5f3ef',
+                        sage: {
+                            50: '#f7f9f7',
+                            100: '#e8ede9',
+                            200: '#d5e0d8',
+                            300: '#b8c9b9',
+                            400: '#9aab9b',
+                            500: '#7d8a7e',
+                            600: '#5a6a5c',
+                        },
+                        teal: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                        },
+                        rose: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            200: '#fecdd3',
+                            300: '#fda4af',
+                            400: '#fb7185',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                        },
                     }
                 }
             }

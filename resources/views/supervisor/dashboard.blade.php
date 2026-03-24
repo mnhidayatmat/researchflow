@@ -1,43 +1,7 @@
-<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supervisor Dashboard - ResearchFlow</title>
-
-    <!-- Fonts -->
+@push('styles')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        serif: ['"Playfair Display"', 'Georgia', 'serif'],
-                        sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        ink: '#1a1a2e',
-                        paper: '#faf9f7',
-                        cream: '#f5f3ef',
-                        sage: {
-                            50: '#f7f9f7', 100: '#e8ede9', 200: '#d5e0d8', 300: '#b8c9b9', 400: '#9aab9b', 500: '#7d8a7e', 600: '#5a6a5c',
-                        },
-                        teal: {
-                            50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488',
-                        },
-                        rose: {
-                            50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 300: '#fda4af', 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
         body {
             background: linear-gradient(135deg, #faf9f7 0%, #f5f3ef 100%);
@@ -47,14 +11,12 @@
 
         .font-serif { font-family: 'Playfair Display', Georgia, serif; }
 
-        /* Grain overlay */
         .grain-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            pointer-events: none; opacity: 0.008; z-index: 9999;
+            pointer-events: none; opacity: 0.008; z-index: 10;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
         }
 
-        /* Animations */
         @keyframes fade-up {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -77,7 +39,6 @@
             animation: pulse-ring 2s ease-out infinite;
         }
 
-        /* Card hover */
         .card-hover {
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -86,12 +47,10 @@
             box-shadow: 0 25px 50px -12px rgba(26, 26, 46, 0.15);
         }
 
-        /* Progress bar animation */
         .progress-animated {
             transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Accent line */
         .accent-line::before {
             content: '';
             position: absolute;
@@ -100,7 +59,6 @@
             background: linear-gradient(180deg, #14b8a6, #5eead4);
         }
 
-        /* Background pattern */
         .bg-pattern {
             background-image: radial-gradient(circle at 20% 50%, rgba(20, 184, 166, 0.03) 0%, transparent 50%),
                               radial-gradient(circle at 80% 20%, rgba(26, 26, 46, 0.02) 0%, transparent 50%);
@@ -111,21 +69,15 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e8ede9; border-radius: 3px; }
     </style>
-</head>
-<body class="min-h-screen">
+@endpush
+
+<x-layouts.app title="Supervisor Dashboard" :header="'Supervisor Dashboard'">
     <div class="grain-overlay"></div>
-
-    @include('layouts.sidebar')
-    @include('layouts.topbar')
-
-    <!-- Main Content -->
-    <main class="lg:pl-64 pt-16">
-        <div class="max-w-7xl mx-auto px-6 py-8 bg-pattern">
+    <div class="max-w-7xl mx-auto px-6 py-8 bg-pattern relative">
             <!-- Welcome Header -->
             <header class="mb-10 fade-up">
                 <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -409,7 +361,5 @@
                 </div>
             </div>
             @endif
-        </div>
-    </main>
-</body>
-</html>
+    </div>
+</x-layouts.app>

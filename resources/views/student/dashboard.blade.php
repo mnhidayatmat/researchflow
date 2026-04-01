@@ -22,7 +22,7 @@
                     </svg>
                 </div>
                 <div class="mt-3 sm:mt-4">
-                    <p class="text-base sm:text-lg font-bold text-primary dark:text-dark-primary">{{ $student->programme->code }}</p>
+                    <p class="text-base sm:text-lg font-bold text-primary dark:text-dark-primary">{{ $student->programme?->code ?? $student->programme_name ?? 'N/A' }}</p>
                     <p class="text-[10px] sm:text-xs text-secondary dark:text-dark-secondary mt-0.5">Programme</p>
                 </div>
             </div>

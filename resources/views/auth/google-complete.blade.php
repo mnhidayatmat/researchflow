@@ -113,12 +113,16 @@
             const studentFields = document.getElementById('studentFields');
             const supervisorFields = document.getElementById('supervisorFields');
 
+            const optionalFields = ['cosupervisor_email', 'matric_number'];
+
             roleInputs.forEach(input => {
                 input.addEventListener('change', function() {
                     if (this.value === 'student') {
                         studentFields.classList.remove('hidden');
                         supervisorFields.classList.add('hidden');
-                        studentFields.querySelectorAll('input, select').forEach(el => el.required = true);
+                        studentFields.querySelectorAll('input, select').forEach(el => {
+                            el.required = !optionalFields.includes(el.name);
+                        });
                         supervisorFields.querySelectorAll('input, select').forEach(el => el.required = false);
                     } else {
                         studentFields.classList.add('hidden');
@@ -129,7 +133,9 @@
                 });
             });
 
-            studentFields.querySelectorAll('input, select').forEach(el => el.required = true);
+            studentFields.querySelectorAll('input, select').forEach(el => {
+                el.required = !optionalFields.includes(el.name);
+            });
         });
     </script>
 </x-layouts.guest>

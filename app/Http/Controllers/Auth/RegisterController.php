@@ -102,13 +102,15 @@ class RegisterController extends Controller
             $student = $user->student()->create([
                 'programme_name'  => $validated['programme_name'],
                 'supervisor_id'   => $supervisor->id,
-                'cosupervisor_id' => $cosupervisor->id,
+                'cosupervisor_id' => $cosupervisor?->id,
                 'status'          => 'pending',
             ]);
 
             // Send approval request emails to supervisor and co-supervisor
             $this->sendApprovalRequest($student, $supervisor, 'supervisor');
-            $this->sendApprovalRequest($student, $cosupervisor, 'cosupervisor');
+            if ($cosupervisor) {
+                $this->sendApprovalRequest($student, $cosupervisor, 'cosupervisor');
+            }
         }
 
         $this->emailVerificationController->sendVerificationEmail($user);

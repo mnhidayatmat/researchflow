@@ -163,12 +163,16 @@ class GoogleAuthController extends Controller
             $student = $user->student()->create([
                 'programme_name'  => $validated['programme_name'],
                 'supervisor_id'   => $supervisor->id,
-                'cosupervisor_id' => $cosupervisor->id,
+                'cosupervisor_id' => $cosupervisor?->id,
                 'status'          => 'pending',
             ]);
 
             $brevo = app(BrevoTransactionalEmailService::class);
-            foreach ([['user' => $supervisor, 'role' => 'supervisor'], ['user' => $cosupervisor, 'role' => 'cosupervisor']] as $item) {
+            $approvalRecipients = [['user' => $supervisor, 'role' => 'supervisor']];
+            if ($cosupervisor) {
+                $approvalRecipients[] = ['user' => $cosupervisor, 'role' => 'cosupervisor'];
+            }
+            foreach ($approvalRecipients as $item) {
                 $approveUrl = URL::temporarySignedRoute('supervisor.student.approve', now()->addDays(7), ['student' => $student->id, 'role' => $item['role']]);
                 $denyUrl    = URL::temporarySignedRoute('supervisor.student.deny', now()->addDays(7), ['student' => $student->id, 'role' => $item['role']]);
                 $roleLabel  = $item['role'] === 'supervisor' ? 'Supervisor' : 'Co-Supervisor';

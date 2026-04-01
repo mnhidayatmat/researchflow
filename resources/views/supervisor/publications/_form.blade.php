@@ -23,7 +23,7 @@
                 ->values()
                 ->map(fn($r) => (int) $r)
                 ->all()
-        ) ?: [],
+        ),
         get maxRounds() { return 3; },
         get canAdd() { return this.rejections.length < this.maxRounds; },
         addRound() {

@@ -129,6 +129,58 @@
         </form>
     </x-card>
 
+    @if($pendingApprovals->count() > 0)
+    <div class="bg-card dark:bg-dark-card rounded-2xl border border-warning/40 overflow-hidden mb-6">
+        <div class="px-4 sm:px-6 py-4 sm:py-5 border-b border-warning/20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Pending Student Approvals</h3>
+                    <p class="text-[10px] text-secondary dark:text-dark-secondary mt-0.5">Students awaiting your approval to join your supervision</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/10 text-warning text-xs font-semibold">
+                <div class="w-1.5 h-1.5 rounded-full bg-warning animate-pulse"></div>
+                {{ $pendingApprovals->count() }}
+            </div>
+        </div>
+        <div class="divide-y divide-border dark:divide-dark-border">
+            @foreach($pendingApprovals as $pending)
+            @php
+                $isMainSv = $pending->supervisor_id === auth()->id();
+                $roleLabel = $isMainSv ? 'Supervisor' : 'Co-Supervisor';
+                $approveUrl = URL::temporarySignedRoute('supervisor.student.approve', now()->addDays(7), ['student' => $pending->id, 'role' => $isMainSv ? 'supervisor' : 'cosupervisor']);
+                $denyUrl    = URL::temporarySignedRoute('supervisor.student.deny',   now()->addDays(7), ['student' => $pending->id, 'role' => $isMainSv ? 'supervisor' : 'cosupervisor']);
+            @endphp
+            <div class="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+                <div class="relative shrink-0">
+                    <x-avatar :name="$pending->user->name" size="md" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-primary dark:text-dark-primary truncate">{{ $pending->user->name }}</p>
+                    <p class="text-xs text-secondary dark:text-dark-secondary">{{ $pending->programme_name ?? '—' }}</p>
+                    <span class="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full bg-warning/10 text-warning mt-1">{{ $roleLabel }}</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <a href="{{ $approveUrl }}"
+                       class="px-3 py-1.5 rounded-lg bg-success/10 text-success text-xs font-semibold hover:bg-success/20 transition-colors">
+                        Approve
+                    </a>
+                    <a href="{{ $denyUrl }}"
+                       class="px-3 py-1.5 rounded-lg bg-surface dark:bg-dark-surface text-secondary dark:text-dark-secondary text-xs font-medium hover:bg-border dark:hover:bg-dark-border transition-colors">
+                        Decline
+                    </a>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     @if($students->isEmpty())
         <x-card>
             <div class="py-12 text-center text-secondary">
@@ -162,7 +214,7 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-semibold text-primary transition-colors group-hover:text-accent">{{ $student->user->name }}</p>
                                     <div class="mt-1 flex items-center gap-2 text-xs text-secondary">
-                                        <span class="truncate">{{ $student->programme->code ?? ($student->programme->name ?? 'No programme') }}</span>
+                                        <span class="truncate">{{ $student->programme?->code ?? ($student->programme_name ?? 'No programme') }}</span>
                                         <span class="text-border">•</span>
                                         <span class="font-mono">{{ $student->user->matric_number ?? 'No matric' }}</span>
                                     </div>
@@ -203,7 +255,7 @@
                             <div class="mb-4 space-y-2">
                                 <div>
                                     <p class="text-[10px] font-medium uppercase tracking-wide text-secondary">Programme</p>
-                                    <p class="mt-0.5 text-xs text-primary">{{ $student->programme->name ?? '—' }}</p>
+                                    <p class="mt-0.5 text-xs text-primary">{{ $student->programme?->name ?? ($student->programme_name ?? '—') }}</p>
                                 </div>
                                 @if($student->research_title)
                                     <div>

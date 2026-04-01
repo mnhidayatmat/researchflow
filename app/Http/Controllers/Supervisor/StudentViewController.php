@@ -13,7 +13,21 @@ class StudentViewController extends Controller
             ->with(['user', 'programme'])
             ->paginate(15);
 
-        return view('supervisor.students.index', compact('students'));
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $pendingApprovals = Student::with('user')
+            ->where('status', 'pending')
+            ->where(function ($q) use ($user) {
+                $q->where(function ($q2) use ($user) {
+                    $q2->where('supervisor_id', $user->id)
+                       ->whereNull('supervisor_approved_at');
+                })->orWhere(function ($q2) use ($user) {
+                    $q2->where('cosupervisor_id', $user->id)
+                       ->whereNull('cosupervisor_approved_at');
+                });
+            })
+            ->get();
+
+        return view('supervisor.students.index', compact('students', 'pendingApprovals'));
     }
 
     public function show(Student $student)

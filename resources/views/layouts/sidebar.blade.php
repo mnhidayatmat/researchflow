@@ -93,6 +93,7 @@
             ['route' => ['reports.index', $studentId], 'icon' => 'file-text', 'label' => 'Reports'],
             ['route' => ['meetings.index', $studentId], 'icon' => 'calendar', 'label' => 'Meetings'],
             ['route' => ['publications.index', $studentId], 'icon' => 'journal', 'label' => 'Publications'],
+            ['route' => ['literature.index', $studentId], 'icon' => 'table', 'label' => 'Lit. Matrix'],
             ['route' => ['files.index', $studentId], 'icon' => 'archive', 'label' => 'Vault'],
         ];
     }
@@ -116,6 +117,7 @@
         'briefcase' => 'M9 6V4a3 3 0 013-3h0a3 3 0 013 3v2m-9 0h10a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h0z',
         'journal' => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
         'user-plus' => 'M18 9a3 3 0 100-6 3 3 0 000 6zm-8 11a4 4 0 014-4h4a4 4 0 014 4v1H10v-1zm-6-7h4m-2-2v4',
+        'table' => 'M3 10h18M3 14h18M10 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z',
     ];
 @endphp
 
@@ -162,6 +164,8 @@
                                 $isActive = request()->routeIs('supervisor.publications.*');
                             } elseif ($routeName === 'supervisor.collaborators.index') {
                                 $isActive = request()->routeIs('supervisor.collaborators.*');
+                            } elseif ($routeName === 'literature.index') {
+                                $isActive = request()->routeIs('literature.*');
                             } else {
                                 $isActive = request()->routeIs($routeName . '*');
                             }

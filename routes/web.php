@@ -21,6 +21,7 @@ use App\Http\Controllers\Student;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TimelineController;
 use App\Http\Controllers\AiChatPageController;
+use App\Http\Controllers\LiteratureMatrixController;
 use App\Http\Controllers\UserStorageController;
 use App\Http\Controllers\UserSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -155,6 +156,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/publications/{publicationTrack}/edit', [PublicationTrackController::class, 'edit'])->name('publications.edit');
     Route::put('/students/{student}/publications/{publicationTrack}', [PublicationTrackController::class, 'update'])->name('publications.update');
     Route::delete('/students/{student}/publications/{publicationTrack}', [PublicationTrackController::class, 'destroy'])->name('publications.destroy');
+
+    // Literature Matrix
+    Route::get('/students/{student}/literature', [LiteratureMatrixController::class, 'index'])->name('literature.index');
+    Route::post('/students/{student}/literature', [LiteratureMatrixController::class, 'store'])->name('literature.store');
+    Route::put('/students/{student}/literature/{entry}', [LiteratureMatrixController::class, 'update'])->name('literature.update');
+    Route::delete('/students/{student}/literature/{entry}', [LiteratureMatrixController::class, 'destroy'])->name('literature.destroy');
+    Route::post('/students/{student}/literature/reorder', [LiteratureMatrixController::class, 'reorder'])->name('literature.reorder');
+    Route::post('/students/{student}/literature/config', [LiteratureMatrixController::class, 'updateConfig'])->name('literature.config');
+    Route::get('/students/{student}/literature/export', [LiteratureMatrixController::class, 'export'])->name('literature.export');
 
     // Files
     Route::get('/students/{student}/files', [FileController::class, 'index'])->name('files.index');

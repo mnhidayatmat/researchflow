@@ -98,6 +98,7 @@ class GoogleAuthController extends Controller
             $rules['supervisor_email']   = 'required|email';
             $rules['cosupervisor_email'] = 'required|email|different:supervisor_email';
         } else {
+            $rules['title']      = 'required|string|max:50';
             $rules['staff_id']   = 'required|string|unique:users,staff_id';
             $rules['department'] = 'required|string|max:255';
             $rules['faculty']    = 'required|string|max:255';
@@ -148,6 +149,7 @@ class GoogleAuthController extends Controller
         if ($role === 'student') {
             $userData['matric_number'] = $validated['matric_number'] ?? null;
         } else {
+            $userData['title']      = $validated['title'];
             $userData['staff_id']   = $validated['staff_id'];
             $userData['department'] = $validated['department'];
             $userData['faculty']    = $validated['faculty'];

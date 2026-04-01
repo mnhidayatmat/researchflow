@@ -80,6 +80,21 @@
 
             <!-- Supervisor Fields -->
             <div id="supervisorFields" class="space-y-4 hidden">
+                <div class="space-y-1.5">
+                    <label class="block text-sm font-medium text-gray-700">Title <span class="text-red-500">*</span></label>
+                    <div class="grid grid-cols-3 gap-2">
+                        @foreach(['Dr.' => 'Dr.', 'Ir.' => 'Ir.', 'Ts.' => 'Ts.', 'Prof. Madya' => 'Prof. Madya', 'Prof.' => 'Prof.', 'Mr.' => 'Mr.', 'Mrs.' => 'Mrs.', 'Ms.' => 'Ms.'] as $value => $label)
+                        <label class="relative flex cursor-pointer">
+                            <input type="radio" name="title" value="{{ $value }}" class="peer sr-only"
+                                {{ old('title') === $value ? 'checked' : '' }}>
+                            <div class="w-full rounded-lg border-2 border-gray-200 px-2 py-2 text-center text-sm font-medium transition-all peer-checked:border-accent peer-checked:bg-accent/5 peer-checked:text-accent hover:border-gray-300 cursor-pointer">
+                                {{ $label }}
+                            </div>
+                        </label>
+                        @endforeach
+                    </div>
+                    @error('title') <p class="text-sm text-red-500">{{ $message }}</p> @enderror
+                </div>
                 <x-input name="staff_id" label="Staff ID" :value="old('staff_id')" />
                 <x-input name="department" label="Department" :value="old('department')" />
                 <x-input name="faculty" label="Faculty" :value="old('faculty')" />

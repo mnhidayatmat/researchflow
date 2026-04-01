@@ -77,7 +77,7 @@
                 <x-input name="matric_number" label="Matric Number" />
                 <x-input name="programme_name" label="Programme" placeholder="e.g. Master of Computer Science" :value="old('programme_name')" />
                 <x-input name="supervisor_email" type="email" label="Supervisor Email" placeholder="supervisor@university.edu" />
-                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email" placeholder="cosupervisor@university.edu" />
+                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email (Optional)" placeholder="cosupervisor@university.edu" />
             </div>
 
             <!-- Supervisor Fields -->

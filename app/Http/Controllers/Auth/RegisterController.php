@@ -39,7 +39,7 @@ class RegisterController extends Controller
             $rules['matric_number']      = 'nullable|string|unique:users,matric_number';
             $rules['programme_name']     = 'required|string|max:255';
             $rules['supervisor_email']   = 'required|email';
-            $rules['cosupervisor_email'] = 'required|email|different:supervisor_email';
+            $rules['cosupervisor_email'] = 'nullable|email|different:supervisor_email';
         } else {
             $rules['title']      = 'required|string|max:50';
             $rules['staff_id']   = 'required|string|unique:users,staff_id';
@@ -56,15 +56,17 @@ class RegisterController extends Controller
                 ->where('email', $validated['supervisor_email'])
                 ->first();
 
-            $cosupervisor = User::whereIn('role', ['supervisor', 'cosupervisor'])
-                ->where('email', $validated['cosupervisor_email'])
-                ->first();
+            if (!empty($validated['cosupervisor_email'])) {
+                $cosupervisor = User::whereIn('role', ['supervisor', 'cosupervisor'])
+                    ->where('email', $validated['cosupervisor_email'])
+                    ->first();
+            }
 
             $errors = [];
             if (!$supervisor) {
                 $errors['supervisor_email'] = 'We could not find a supervisor account with that email address.';
             }
-            if (!$cosupervisor) {
+            if (!empty($validated['cosupervisor_email']) && !$cosupervisor) {
                 $errors['cosupervisor_email'] = 'We could not find a co-supervisor account with that email address.';
             }
             if ($supervisor && $cosupervisor && $supervisor->is($cosupervisor)) {

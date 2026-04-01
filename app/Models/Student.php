@@ -13,7 +13,8 @@ class Student extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'user_id', 'programme_id', 'supervisor_id', 'cosupervisor_id',
+        'user_id', 'programme_id', 'programme_name', 'supervisor_id', 'cosupervisor_id',
+        'supervisor_approved_at', 'cosupervisor_approved_at',
         'research_title', 'research_abstract', 'intake', 'start_date',
         'expected_completion', 'actual_completion', 'status', 'overall_progress',
     ];
@@ -24,6 +25,8 @@ class Student extends Model
             'start_date' => 'date',
             'expected_completion' => 'date',
             'actual_completion' => 'date',
+            'supervisor_approved_at' => 'datetime',
+            'cosupervisor_approved_at' => 'datetime',
         ];
     }
 

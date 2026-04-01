@@ -29,6 +29,36 @@ class BrevoTransactionalEmailService
         }
     }
 
+    public function sendSupervisorApprovalRequest(
+        string $supervisorEmail,
+        string $supervisorName,
+        string $studentName,
+        string $programmeName,
+        string $roleLabel,
+        string $approveUrl,
+        string $denyUrl,
+    ): void {
+        $this->send([
+            'sender' => [
+                'name'  => config('services.brevo.sender_name'),
+                'email' => config('services.brevo.sender_email'),
+            ],
+            'to' => [[
+                'email' => $supervisorEmail,
+                'name'  => $supervisorName,
+            ]],
+            'subject' => "Student supervision request — {$studentName}",
+            'htmlContent' => view('emails.supervisor.approval-request', [
+                'supervisorName' => $supervisorName,
+                'studentName'    => $studentName,
+                'programmeName'  => $programmeName,
+                'roleLabel'      => $roleLabel,
+                'approveUrl'     => $approveUrl,
+                'denyUrl'        => $denyUrl,
+            ])->render(),
+        ]);
+    }
+
     public function sendEmailVerification(string $recipientEmail, string $recipientName, string $verificationUrl): void
     {
         $this->send([

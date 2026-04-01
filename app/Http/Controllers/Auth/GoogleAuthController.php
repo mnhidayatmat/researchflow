@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Programme;
 use App\Models\User;
+use App\Services\BrevoTransactionalEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
 use Laravel\Socialite\Facades\Socialite;
 
 class GoogleAuthController extends Controller
@@ -71,9 +72,8 @@ class GoogleAuthController extends Controller
         }
 
         $googleUser = $request->session()->get('google_user');
-        $programmes = Programme::where('is_active', true)->orderBy('sort_order')->get();
 
-        return view('auth.google-complete', compact('googleUser', 'programmes'));
+        return view('auth.google-complete', compact('googleUser'));
     }
 
     public function complete(Request $request)
@@ -89,12 +89,12 @@ class GoogleAuthController extends Controller
             'role'            => 'required|in:student,supervisor',
             'name'            => 'required|string|max:255',
             'university_name' => 'required|string|max:255',
-            'phone'           => 'nullable|string',
+            'phone'           => ['nullable', 'regex:/^\+?[0-9\s\-\(\)]{7,20}$/'],
         ];
 
         if ($role === 'student') {
             $rules['matric_number']      = 'nullable|string|unique:users,matric_number';
-            $rules['programme_id']       = 'required|exists:programmes,id';
+            $rules['programme_name']     = 'required|string|max:255';
             $rules['supervisor_email']   = 'required|email';
             $rules['cosupervisor_email'] = 'required|email|different:supervisor_email';
         } else {
@@ -138,7 +138,7 @@ class GoogleAuthController extends Controller
             'google_avatar'   => $googleUser['avatar'],
             'name'            => $validated['name'],
             'email'           => $googleUser['email'],
-            'password'        => null,
+            'password'        => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
             'role'            => $role === 'supervisor' ? 'supervisor' : 'student',
             'phone'           => $validated['phone'] ?? null,
             'university_name' => $validated['university_name'],
@@ -158,12 +158,22 @@ class GoogleAuthController extends Controller
         $user = User::create($userData);
 
         if ($role === 'student') {
-            $user->student()->create([
-                'programme_id'    => $validated['programme_id'],
+            $student = $user->student()->create([
+                'programme_name'  => $validated['programme_name'],
                 'supervisor_id'   => $supervisor->id,
                 'cosupervisor_id' => $cosupervisor->id,
                 'status'          => 'pending',
             ]);
+
+            $brevo = app(BrevoTransactionalEmailService::class);
+            foreach ([['user' => $supervisor, 'role' => 'supervisor'], ['user' => $cosupervisor, 'role' => 'cosupervisor']] as $item) {
+                $approveUrl = URL::temporarySignedRoute('supervisor.student.approve', now()->addDays(7), ['student' => $student->id, 'role' => $item['role']]);
+                $denyUrl    = URL::temporarySignedRoute('supervisor.student.deny', now()->addDays(7), ['student' => $student->id, 'role' => $item['role']]);
+                $roleLabel  = $item['role'] === 'supervisor' ? 'Supervisor' : 'Co-Supervisor';
+                try {
+                    $brevo->sendSupervisorApprovalRequest($item['user']->email, $item['user']->name, $student->user->name, $student->programme_name, $roleLabel, $approveUrl, $denyUrl);
+                } catch (\Throwable) {}
+            }
         }
 
         $request->session()->forget('google_user');

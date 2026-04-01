@@ -4,52 +4,51 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Auth\EmailVerificationController;
-use App\Models\Programme;
 use App\Models\User;
+use App\Services\BrevoTransactionalEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
 
 class RegisterController extends Controller
 {
-    public function __construct(private EmailVerificationController $emailVerificationController)
-    {
-    }
+    public function __construct(
+        private EmailVerificationController $emailVerificationController,
+        private BrevoTransactionalEmailService $brevo,
+    ) {}
 
     public function showRegister()
     {
-        $programmes = Programme::where('is_active', true)->orderBy('sort_order')->get();
-        return view('auth.register', compact('programmes'));
+        return view('auth.register');
     }
 
     public function register(Request $request)
     {
         $role = $request->input('role', 'student');
 
-        // Base validation rules
         $rules = [
-            'role' => 'required|in:student,supervisor',
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:8|confirmed',
-            'phone' => 'nullable|string',
+            'role'            => 'required|in:student,supervisor',
+            'name'            => 'required|string|max:255',
+            'email'           => 'required|email|unique:users',
+            'password'        => 'required|min:8|confirmed',
+            'phone'           => ['nullable', 'regex:/^\+?[0-9\s\-\(\)]{7,20}$/'],
             'university_name' => 'required|string|max:255',
         ];
 
-        // Role-specific validation
         if ($role === 'student') {
-            $rules['matric_number'] = 'nullable|string|unique:users,matric_number';
-            $rules['programme_id'] = 'required|exists:programmes,id';
-            $rules['supervisor_email'] = 'required|email';
+            $rules['matric_number']      = 'nullable|string|unique:users,matric_number';
+            $rules['programme_name']     = 'required|string|max:255';
+            $rules['supervisor_email']   = 'required|email';
             $rules['cosupervisor_email'] = 'required|email|different:supervisor_email';
         } else {
-            $rules['title'] = 'required|string|max:50';
-            $rules['staff_id'] = 'required|string|unique:users,staff_id';
+            $rules['title']      = 'required|string|max:50';
+            $rules['staff_id']   = 'required|string|unique:users,staff_id';
             $rules['department'] = 'required|string|max:255';
-            $rules['faculty'] = 'required|string|max:255';
+            $rules['faculty']    = 'required|string|max:255';
         }
 
         $validated = $request->validate($rules);
-        $supervisor = null;
+        $supervisor   = null;
         $cosupervisor = null;
 
         if ($role === 'student') {
@@ -62,60 +61,89 @@ class RegisterController extends Controller
                 ->first();
 
             $errors = [];
-
             if (!$supervisor) {
                 $errors['supervisor_email'] = 'We could not find a supervisor account with that email address.';
             }
-
             if (!$cosupervisor) {
                 $errors['cosupervisor_email'] = 'We could not find a co-supervisor account with that email address.';
             }
-
             if ($supervisor && $cosupervisor && $supervisor->is($cosupervisor)) {
                 $errors['cosupervisor_email'] = 'Supervisor and co-supervisor must be different users.';
             }
-
             if ($errors) {
                 return back()->withErrors($errors)->withInput();
             }
         }
 
-        // Create user
         $userData = [
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => $role === 'supervisor' ? 'supervisor' : 'student',
-            'phone' => $validated['phone'] ?? null,
+            'name'            => $validated['name'],
+            'email'           => $validated['email'],
+            'password'        => Hash::make($validated['password']),
+            'role'            => $role === 'supervisor' ? 'supervisor' : 'student',
+            'phone'           => $validated['phone'] ?? null,
             'university_name' => $validated['university_name'],
-            'status' => 'active',
+            'status'          => 'active',
         ];
 
         if ($role === 'student') {
             $userData['matric_number'] = $validated['matric_number'] ?? null;
         } else {
-            $userData['title'] = $validated['title'];
-            $userData['staff_id'] = $validated['staff_id'];
+            $userData['title']      = $validated['title'];
+            $userData['staff_id']   = $validated['staff_id'];
             $userData['department'] = $validated['department'];
-            $userData['faculty'] = $validated['faculty'];
+            $userData['faculty']    = $validated['faculty'];
         }
 
         $user = User::create($userData);
 
-        // Create student profile if registering as student
         if ($role === 'student') {
-            $user->student()->create([
-                'programme_id' => $validated['programme_id'],
-                'supervisor_id' => $supervisor->id,
+            $student = $user->student()->create([
+                'programme_name'  => $validated['programme_name'],
+                'supervisor_id'   => $supervisor->id,
                 'cosupervisor_id' => $cosupervisor->id,
-                'status' => 'pending',
+                'status'          => 'pending',
             ]);
+
+            // Send approval request emails to supervisor and co-supervisor
+            $this->sendApprovalRequest($student, $supervisor, 'supervisor');
+            $this->sendApprovalRequest($student, $cosupervisor, 'cosupervisor');
         }
 
         $this->emailVerificationController->sendVerificationEmail($user);
 
         return redirect()
             ->route('verification.notice', ['email' => $user->email])
-            ->with('success', 'Registration submitted. Please verify your email to continue.');
+            ->with('success', 'Registration submitted. Please verify your email to continue. Your supervisor has also been notified to approve your request.');
+    }
+
+    private function sendApprovalRequest($student, User $supervisor, string $role): void
+    {
+        $approveUrl = URL::temporarySignedRoute(
+            'supervisor.student.approve',
+            now()->addDays(7),
+            ['student' => $student->id, 'role' => $role]
+        );
+
+        $denyUrl = URL::temporarySignedRoute(
+            'supervisor.student.deny',
+            now()->addDays(7),
+            ['student' => $student->id, 'role' => $role]
+        );
+
+        $roleLabel = $role === 'supervisor' ? 'Supervisor' : 'Co-Supervisor';
+
+        try {
+            $this->brevo->sendSupervisorApprovalRequest(
+                supervisorEmail: $supervisor->email,
+                supervisorName:  $supervisor->name,
+                studentName:     $student->user->name,
+                programmeName:   $student->programme_name,
+                roleLabel:       $roleLabel,
+                approveUrl:      $approveUrl,
+                denyUrl:         $denyUrl,
+            );
+        } catch (\Throwable) {
+            // Email failure should not block registration
+        }
     }
 }

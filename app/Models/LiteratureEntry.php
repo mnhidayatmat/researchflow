@@ -22,6 +22,7 @@ class LiteratureEntry extends Model
         'relevance',
         'keywords',
         'notes',
+        'custom_fields',
         'sort_order',
     ];
 
@@ -30,6 +31,7 @@ class LiteratureEntry extends Model
         return [
             'year' => 'integer',
             'sort_order' => 'integer',
+            'custom_fields' => 'array',
         ];
     }
 

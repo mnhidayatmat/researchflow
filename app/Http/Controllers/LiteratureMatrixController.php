@@ -7,6 +7,8 @@ use App\Models\LiteratureMatrixConfig;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -41,6 +43,12 @@ class LiteratureMatrixController extends Controller
         );
     }
 
+    private const DEFAULT_FIELDS = [
+        'author', 'year', 'title', 'journal', 'doi_url',
+        'research_objective', 'methodology', 'dataset',
+        'findings', 'limitations', 'relevance', 'keywords', 'notes',
+    ];
+
     public function index(int $student)
     {
         $student = $this->getStudent($student);
@@ -73,6 +81,8 @@ class LiteratureMatrixController extends Controller
             'relevance'          => 'nullable|string',
             'keywords'           => 'nullable|string|max:500',
             'notes'              => 'nullable|string',
+            'custom_fields'      => 'nullable|array',
+            'custom_fields.*'    => 'nullable|string|max:5000',
         ]);
 
         $max = LiteratureEntry::where('student_id', $student->id)->max('sort_order') ?? -1;
@@ -103,6 +113,8 @@ class LiteratureMatrixController extends Controller
             'relevance'          => 'nullable|string',
             'keywords'           => 'nullable|string|max:500',
             'notes'              => 'nullable|string',
+            'custom_fields'      => 'nullable|array',
+            'custom_fields.*'    => 'nullable|string|max:5000',
         ]);
 
         $entry->update($data);
@@ -141,17 +153,98 @@ class LiteratureMatrixController extends Controller
         $student = $this->getStudent($student);
 
         $request->validate([
-            'columns'             => 'required|array',
-            'columns.*.key'       => 'required|string',
-            'columns.*.label'     => 'required|string|max:100',
-            'columns.*.visible'   => 'required|boolean',
-            'columns.*.sort_order'=> 'required|integer',
+            'columns'              => 'required|array',
+            'columns.*.key'        => 'required|string',
+            'columns.*.label'      => 'required|string|max:100',
+            'columns.*.visible'    => 'required|boolean',
+            'columns.*.sort_order' => 'required|integer',
+            'columns.*.custom'     => 'sometimes|boolean',
         ]);
 
         $config = $this->getConfig($student);
         $config->update(['columns' => $request->columns]);
 
         return response()->json(['ok' => true]);
+    }
+
+    // ── Import ───────────────────────────────────────────────────────────────
+
+    public function importPreview(Request $request, int $student)
+    {
+        $student = $this->getStudent($student);
+        $request->validate(['file' => 'required|file|mimes:xlsx,xls,csv|max:5120']);
+
+        $spreadsheet = IOFactory::load($request->file('file')->getPathname());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true);
+
+        $headers = array_shift($rows) ?: [];
+        $preview = array_slice($rows, 0, 5);
+        $totalRows = count($rows);
+
+        $path = $request->file('file')->store('literature-imports', 'local');
+
+        return response()->json([
+            'headers'   => $headers,
+            'preview'   => $preview,
+            'totalRows' => $totalRows,
+            'filePath'  => $path,
+        ]);
+    }
+
+    public function import(Request $request, int $student)
+    {
+        $student = $this->getStudent($student);
+
+        $request->validate([
+            'filePath' => 'required|string',
+            'mapping'  => 'required|array',
+        ]);
+
+        $filePath = $request->input('filePath');
+        abort_unless(Storage::disk('local')->exists($filePath), 422, 'Uploaded file not found.');
+
+        $fullPath = Storage::disk('local')->path($filePath);
+        $spreadsheet = IOFactory::load($fullPath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray(null, true, true, true);
+
+        $headers = array_shift($rows);
+        $mapping = $request->input('mapping');
+        $maxSort = LiteratureEntry::where('student_id', $student->id)->max('sort_order') ?? -1;
+
+        $created = [];
+
+        foreach ($rows as $row) {
+            $data = ['student_id' => $student->id, 'sort_order' => ++$maxSort];
+            $customFields = [];
+
+            foreach ($mapping as $fileCol => $entryField) {
+                if (!$entryField || $entryField === 'skip') continue;
+                $value = trim((string) ($row[$fileCol] ?? ''));
+                if ($value === '') continue;
+
+                if (str_starts_with($entryField, 'custom_')) {
+                    $customFields[$entryField] = $value;
+                } elseif ($entryField === 'year') {
+                    $data['year'] = (int) $value;
+                } else {
+                    $data[$entryField] = $value;
+                }
+            }
+
+            if (!empty($customFields)) {
+                $data['custom_fields'] = $customFields;
+            }
+
+            if (empty($data['title'] ?? '')) continue;
+
+            $created[] = LiteratureEntry::create($data);
+        }
+
+        Storage::disk('local')->delete($filePath);
+
+        return response()->json(['entries' => $created, 'count' => count($created)]);
     }
 
     // ── Excel export ──────────────────────────────────────────────────────────
@@ -174,7 +267,6 @@ class LiteratureMatrixController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Literature Matrix');
 
-        // Header row
         $col = 1;
         foreach ($visibleColumns as $column) {
             $cell = $sheet->getCellByColumnAndRow($col, 1);
@@ -190,12 +282,15 @@ class LiteratureMatrixController extends Controller
             $col++;
         }
 
-        // Data rows
         $row = 2;
         foreach ($entries as $entry) {
             $col = 1;
             foreach ($visibleColumns as $column) {
-                $value = $entry->{$column['key']} ?? '';
+                $isCustom = !empty($column['custom']);
+                $value = $isCustom
+                    ? ($entry->custom_fields[$column['key']] ?? '')
+                    : ($entry->{$column['key']} ?? '');
+
                 $sheet->getCellByColumnAndRow($col, $row)->setValue($value);
 
                 $sheet->getStyleByColumnAndRow($col, $row)->applyFromArray([
@@ -208,13 +303,10 @@ class LiteratureMatrixController extends Controller
             $row++;
         }
 
-        // Auto-size columns (cap at 50)
         for ($c = 1; $c <= $visibleColumns->count(); $c++) {
             $sheet->getColumnDimensionByColumn($c)->setWidth(min(50, 20));
         }
         $sheet->getRowDimension(1)->setRowHeight(25);
-
-        // Freeze header row
         $sheet->freezePane('A2');
 
         $filename = 'literature-matrix-' . now()->format('Y-m-d') . '.xlsx';

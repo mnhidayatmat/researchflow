@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\PublicationTrackController;
@@ -21,6 +22,12 @@ use App\Http\Controllers\AiChatPageController;
 use App\Http\Controllers\UserStorageController;
 use App\Http\Controllers\UserSettingsController;
 use Illuminate\Support\Facades\Route;
+
+// Google OAuth routes (outside guest middleware — callback must be accessible)
+Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+Route::get('/auth/google/complete', [GoogleAuthController::class, 'showComplete'])->name('auth.google.complete');
+Route::post('/auth/google/complete', [GoogleAuthController::class, 'complete'])->name('auth.google.complete.post');
 
 // Guest routes
 Route::middleware('guest')->group(function () {

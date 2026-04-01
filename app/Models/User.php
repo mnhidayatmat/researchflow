@@ -27,7 +27,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
     protected $fillable = [
         'name', 'email', 'password', 'role', 'staff_id', 'matric_number',
         'phone', 'avatar', 'department', 'faculty', 'university_name', 'status', 'bio',
-        'theme',
+        'theme', 'google_id', 'google_avatar',
     ];
 
     protected $hidden = [

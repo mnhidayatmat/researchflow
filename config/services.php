@@ -51,4 +51,10 @@ return [
         'require_premium' => env('COWORK_REQUIRE_PREMIUM', env('APP_ENV') === 'production'),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
+
 ];

@@ -176,7 +176,7 @@
                                     <p class="text-sm font-medium text-primary dark:text-dark-primary group-hover:text-accent transition-colors truncate">{{ $s->user->name }}</p>
                                     <x-status-badge :status="$s->status" size="sm" />
                                 </div>
-                                <p class="text-xs text-secondary dark:text-dark-secondary truncate">{{ $s->programme->name }}</p>
+                                <p class="text-xs text-secondary dark:text-dark-secondary truncate">{{ $s->programme?->name ?? $s->programme_name ?? 'No programme' }}</p>
                             </div>
                             <div class="flex items-center gap-3 shrink-0">
                                 <div class="hidden sm:block text-right">

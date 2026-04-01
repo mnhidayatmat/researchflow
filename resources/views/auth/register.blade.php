@@ -75,9 +75,9 @@
             <!-- Student Fields -->
             <div id="studentFields" class="space-y-4">
                 <x-input name="matric_number" label="Matric Number" />
-                <x-select name="programme_id" label="Programme" :options="$programmes->pluck('name', 'id')->toArray()" />
-                <x-input name="supervisor_email" type="email" label="Supervisor Email" />
-                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email" />
+                <x-input name="programme_name" label="Programme" placeholder="e.g. Master of Computer Science" :value="old('programme_name')" />
+                <x-input name="supervisor_email" type="email" label="Supervisor Email" placeholder="supervisor@university.edu" />
+                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email" placeholder="cosupervisor@university.edu" />
             </div>
 
             <!-- Supervisor Fields -->
@@ -88,7 +88,10 @@
                 <x-input name="faculty" label="Faculty" />
             </div>
 
-            <x-input name="phone" label="Phone" />
+            <div>
+                <x-input name="phone" label="Phone" placeholder="+601X-XXXXXXXX" :value="old('phone')" />
+                <p class="text-[11px] text-gray-400 mt-1">Format: +[country code][number], e.g. +60123456789</p>
+            </div>
 
             <x-input name="password" type="password" label="Password" required />
             <x-input name="password_confirmation" type="password" label="Confirm Password" required />

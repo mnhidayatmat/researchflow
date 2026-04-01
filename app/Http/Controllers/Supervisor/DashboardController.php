@@ -26,6 +26,23 @@ class DashboardController extends Controller
             ->where('status', 'active')
             ->get();
 
+        // Students pending this supervisor's approval
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $pendingApprovals = \App\Models\Student::with('user')
+            ->where('status', 'pending')
+            ->where(function ($q) use ($user) {
+                $q->where(function ($q2) use ($user) {
+                    $q2->where('supervisor_id', $user->id)
+                       ->whereNull('supervisor_approved_at');
+                })->orWhere(function ($q2) use ($user) {
+                    $q2->where('cosupervisor_id', $user->id)
+                       ->whereNull('cosupervisor_approved_at');
+                });
+            })
+            ->get();
+
+        $stats['pending_approvals'] = $pendingApprovals->count();
+
         $pendingReports = ProgressReport::with('student.user')
             ->whereIn('student_id', $studentIds)
             ->where('status', 'submitted')
@@ -37,6 +54,6 @@ class DashboardController extends Controller
             ->where('status', 'waiting_review')
             ->latest()->take(5)->get();
 
-        return view('supervisor.dashboard', compact('stats', 'students', 'pendingReports', 'tasksForReview'));
+        return view('supervisor.dashboard', compact('stats', 'students', 'pendingReports', 'tasksForReview', 'pendingApprovals'));
     }
 }

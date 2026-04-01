@@ -73,9 +73,9 @@
             <!-- Student Fields -->
             <div id="studentFields" class="space-y-4">
                 <x-input name="matric_number" label="Matric Number" :value="old('matric_number')" />
-                <x-select name="programme_id" label="Programme" :options="$programmes->pluck('name', 'id')->toArray()" />
-                <x-input name="supervisor_email" type="email" label="Supervisor Email" :value="old('supervisor_email')" />
-                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email" :value="old('cosupervisor_email')" />
+                <x-input name="programme_name" label="Programme" placeholder="e.g. Master of Computer Science" :value="old('programme_name')" />
+                <x-input name="supervisor_email" type="email" label="Supervisor Email" placeholder="supervisor@university.edu" :value="old('supervisor_email')" />
+                <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email" placeholder="cosupervisor@university.edu" :value="old('cosupervisor_email')" />
             </div>
 
             <!-- Supervisor Fields -->
@@ -86,7 +86,10 @@
                 <x-input name="faculty" label="Faculty" :value="old('faculty')" />
             </div>
 
-            <x-input name="phone" label="Phone" :value="old('phone')" />
+            <div>
+                <x-input name="phone" label="Phone" placeholder="+601X-XXXXXXXX" :value="old('phone')" />
+                <p class="text-[11px] text-gray-400 mt-1">Format: +[country code][number], e.g. +60123456789</p>
+            </div>
 
             @if($errors->any())
                 <div class="text-sm text-red-500 space-y-1">

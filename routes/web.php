@@ -13,6 +13,7 @@ use App\Http\Controllers\PublicationTrackController;
 use App\Http\Controllers\ProgressReportController;
 use App\Http\Controllers\Supervisor\CollaboratorController;
 use App\Http\Controllers\Supervisor\PublicationController;
+use App\Http\Controllers\Supervisor\StudentApprovalController;
 use App\Http\Controllers\Supervisor;
 use App\Http\Controllers\Supervisor\GrantController;
 use App\Http\Controllers\Student;
@@ -22,6 +23,10 @@ use App\Http\Controllers\AiChatPageController;
 use App\Http\Controllers\UserStorageController;
 use App\Http\Controllers\UserSettingsController;
 use Illuminate\Support\Facades\Route;
+
+// Supervisor student approval routes — signed URLs, no auth required (sent via email)
+Route::get('/supervisor/approve/{student}', [StudentApprovalController::class, 'approve'])->name('supervisor.student.approve');
+Route::get('/supervisor/deny/{student}', [StudentApprovalController::class, 'deny'])->name('supervisor.student.deny');
 
 // Google OAuth routes (outside guest middleware — callback must be accessible)
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');

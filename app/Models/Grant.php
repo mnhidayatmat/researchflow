@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Grant extends Model
 {
+    public const STAGES = [
+        'draft'          => 'Draft',
+        'waiting_open'   => 'Waiting to Open',
+        'preparing'      => 'Preparing',
+        'submitted'      => 'Submitted',
+        'under_review'   => 'Under Review',
+        'awarded'        => 'Awarded',
+        'rejected'       => 'Rejected',
+    ];
+
     protected $fillable = [
         'user_id',
         'proposal_title',
@@ -42,6 +52,11 @@ class Grant extends Model
     public function checklistItems(): HasMany
     {
         return $this->hasMany(GrantChecklistItem::class)->orderBy('sort_order');
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(GrantDocument::class)->latest();
     }
 
     public function getChecklistCompletionAttribute(): int

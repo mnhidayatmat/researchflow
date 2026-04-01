@@ -56,8 +56,9 @@ class GrantController extends Controller
         ]);
 
         $checklistItems = $this->defaultChecklistItems();
+        $stages = Grant::STAGES;
 
-        return view('supervisor.grants.create', compact('grant', 'checklistItems'));
+        return view('supervisor.grants.create', compact('grant', 'checklistItems', 'stages'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -79,7 +80,7 @@ class GrantController extends Controller
     public function show(Grant $grant): View
     {
         $grant = $this->ownedGrant($grant);
-        $grant->load('checklistItems');
+        $grant->load('checklistItems', 'documents');
 
         return view('supervisor.grants.show', compact('grant'));
     }
@@ -87,7 +88,7 @@ class GrantController extends Controller
     public function edit(Grant $grant): View
     {
         $grant = $this->ownedGrant($grant);
-        $grant->load('checklistItems');
+        $grant->load('checklistItems', 'documents');
 
         $checklistItems = $grant->checklistItems->map(fn ($item) => [
             'title' => $item->title,
@@ -99,7 +100,9 @@ class GrantController extends Controller
             $checklistItems = $this->defaultChecklistItems();
         }
 
-        return view('supervisor.grants.edit', compact('grant', 'checklistItems'));
+        $stages = Grant::STAGES;
+
+        return view('supervisor.grants.edit', compact('grant', 'checklistItems', 'stages'));
     }
 
     public function update(Request $request, Grant $grant): RedirectResponse
@@ -134,7 +137,7 @@ class GrantController extends Controller
             'duration' => 'nullable|string|max:100',
             'scope' => 'required|in:international,national',
             'amount' => 'nullable|numeric|min:0',
-            'stage' => 'required|string|max:100',
+            'stage' => ['required', \Illuminate\Validation\Rule::in(array_keys(Grant::STAGES))],
             'submission_date' => 'nullable|date',
             'deadline' => 'nullable|date',
             'announcement_date' => 'nullable|date',

@@ -16,6 +16,7 @@ use App\Http\Controllers\Supervisor\PublicationController;
 use App\Http\Controllers\Supervisor\StudentApprovalController;
 use App\Http\Controllers\Supervisor;
 use App\Http\Controllers\Supervisor\GrantController;
+use App\Http\Controllers\Supervisor\GrantDocumentController;
 use App\Http\Controllers\Student;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TimelineController;
@@ -97,6 +98,9 @@ Route::prefix('supervisor')->name('supervisor.')->middleware(['auth', 'role:supe
     Route::get('/students', [Supervisor\StudentViewController::class, 'index'])->name('students.index');
     Route::get('/students/{student}', [Supervisor\StudentViewController::class, 'show'])->name('students.show');
     Route::resource('grants', GrantController::class);
+    Route::post('grants/{grant}/documents', [GrantDocumentController::class, 'store'])->name('grants.documents.store');
+    Route::delete('grants/{grant}/documents/{document}', [GrantDocumentController::class, 'destroy'])->name('grants.documents.destroy');
+    Route::get('grants/{grant}/documents/{document}/download', [GrantDocumentController::class, 'download'])->name('grants.documents.download');
     Route::resource('collaborators', CollaboratorController::class);
     Route::resource('publications', PublicationController::class)->except('show');
     Route::get('/storage', [UserStorageController::class, 'edit'])->name('storage.edit');

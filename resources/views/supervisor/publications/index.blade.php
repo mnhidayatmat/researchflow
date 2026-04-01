@@ -103,6 +103,23 @@
                         <td class="px-5 py-4 text-sm text-secondary dark:text-dark-secondary">{{ $publications->firstItem() + $index }}</td>
                         <td class="px-5 py-4 align-top">
                             <p class="font-medium text-primary dark:text-dark-primary">{{ $publication->title }}</p>
+                            @if($publication->user_id !== auth()->id())
+                                <span class="inline-flex items-center gap-1 mt-1 rounded-full bg-info/10 px-2 py-0.5 text-[10px] font-medium text-info">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    Co-Author · by {{ $publication->user->name }}
+                                </span>
+                            @endif
+                            @if($publication->authors->count() > 0)
+                                <div class="mt-1.5 flex flex-wrap gap-1">
+                                    @foreach($publication->authors as $author)
+                                        <span title="{{ collect([$author->department, $author->institution])->filter()->implode(', ') ?: 'No affiliation' }}"
+                                              class="inline-flex items-center gap-1 rounded-full bg-surface dark:bg-dark-surface border border-border dark:border-dark-border px-2 py-0.5 text-[10px] text-secondary dark:text-dark-secondary">
+                                            <svg class="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                            {{ $author->name }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
                         </td>
                         <td class="px-5 py-4 align-top text-sm text-primary dark:text-dark-primary">{{ $publication->journal }}</td>
                         <td class="px-5 py-4 align-top text-sm text-primary dark:text-dark-primary">{{ $publication->journal_index_label }}</td>
@@ -129,6 +146,7 @@
                             </td>
                         @endfor
                         <td class="px-5 py-4 align-top">
+                            @if($publication->user_id === auth()->id())
                             <div class="flex items-center justify-end gap-2">
                                 <x-button href="{{ route('supervisor.publications.edit', $publication) }}" variant="secondary" size="sm">Edit</x-button>
                                 <form method="POST" action="{{ route('supervisor.publications.destroy', $publication) }}" onsubmit="return confirm('Delete this publication record?');">
@@ -137,6 +155,9 @@
                                     <x-button type="submit" variant="danger" size="sm">Delete</x-button>
                                 </form>
                             </div>
+                            @else
+                            <span class="text-xs text-tertiary dark:text-dark-tertiary">View only</span>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

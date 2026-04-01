@@ -1,6 +1,22 @@
 <div
     x-data="{
         journalIndex: '{{ old('journal_index', $publication->journal_index) }}',
+        authors: @js(
+            collect(old('authors', $publication->authors?->map(fn($a) => [
+                'name'        => $a->name,
+                'email'       => $a->email,
+                'department'  => $a->department,
+                'institution' => $a->institution,
+            ])->all()) ?? [])
+                ->values()
+                ->all()
+        ),
+        addAuthor() {
+            this.authors.push({ name: '', email: '', department: '', institution: '' });
+        },
+        removeAuthor(index) {
+            this.authors.splice(index, 1);
+        },
         rejections: @js(
             collect(range(1, 3))
                 ->filter(fn($r) => old("rejected_{$r}_date") || optional($publication->{"rejected_{$r}_date"})->format('Y-m-d') || old("rejected_{$r}_reviewer_input") || $publication->{"rejected_{$r}_reviewer_input"})
@@ -95,6 +111,103 @@
         type="date"
         :value="old('submission_date', optional($publication->submission_date)->format('Y-m-d'))"
     />
+
+    {{-- Authors --}}
+    <div class="lg:col-span-2 mt-4">
+        <div class="mb-4 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-primary dark:text-dark-primary">Authors</h3>
+                <p class="mt-0.5 text-xs text-secondary dark:text-dark-secondary">Add co-authors with their affiliation details. Authors with matching emails will see this publication in their list.</p>
+            </div>
+            <button
+                type="button"
+                @click="addAuthor()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-info/10 text-info hover:bg-info/20 transition-colors"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Author
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <template x-if="authors.length === 0">
+                <div class="rounded-xl border border-dashed border-border dark:border-dark-border py-8 text-center">
+                    <svg class="w-8 h-8 text-tertiary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="text-xs text-tertiary">No authors added. Click <strong>Add Author</strong> to add co-authors.</p>
+                </div>
+            </template>
+
+            <template x-for="(author, index) in authors" :key="index">
+                <div class="rounded-xl border border-border dark:border-dark-border bg-surface/50 dark:bg-dark-surface/50 p-4">
+                    <div class="mb-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-info/10 text-info text-xs font-bold" x-text="index + 1"></span>
+                            <span class="text-sm font-medium text-primary dark:text-dark-primary">Author</span>
+                        </div>
+                        <button
+                            type="button"
+                            @click="removeAuthor(index)"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-danger hover:bg-danger/10 transition-colors"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Remove
+                        </button>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Full Name <span class="text-danger">*</span></label>
+                            <input
+                                type="text"
+                                :name="`authors[${index}][name]`"
+                                x-model="author.name"
+                                placeholder="e.g. Dr. Ahmad bin Ali"
+                                class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Email</label>
+                            <input
+                                type="email"
+                                :name="`authors[${index}][email]`"
+                                x-model="author.email"
+                                placeholder="author@university.edu"
+                                class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+                            >
+                            <p class="mt-0.5 text-[10px] text-tertiary">Matching users will see this publication automatically.</p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Department</label>
+                            <input
+                                type="text"
+                                :name="`authors[${index}][department]`"
+                                x-model="author.department"
+                                placeholder="e.g. Computer Science"
+                                class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+                            >
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium text-secondary dark:text-dark-secondary">Institution / Affiliation</label>
+                            <input
+                                type="text"
+                                :name="`authors[${index}][institution]`"
+                                x-model="author.institution"
+                                placeholder="e.g. Universiti Teknologi Malaysia"
+                                class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
 
     {{-- Rejection Tracking --}}
     <div class="lg:col-span-2 mt-4">

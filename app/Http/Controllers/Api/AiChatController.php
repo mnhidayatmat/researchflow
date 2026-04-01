@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AiContextFile;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
 use App\Models\AiProject;
@@ -12,6 +13,7 @@ use App\Services\Ai\AiServiceFactory;
 use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AiChatController extends Controller
 {
@@ -63,30 +65,86 @@ class AiChatController extends Controller
         ]);
     }
 
+    public function conversations(Request $request)
+    {
+        $conversations = AiConversation::where('user_id', Auth::id())
+            ->withCount('messages')
+            ->latest('updated_at')
+            ->limit(100)
+            ->get()
+            ->map(fn (AiConversation $c) => $this->serializeConversation($c));
+
+        return response()->json($conversations);
+    }
+
+    public function uploadContextFile(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'max:20480', 'mimes:pdf,doc,docx,txt,md,csv,xls,xlsx,ppt,pptx,jpg,jpeg,png'],
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->store('ai-context/' . Auth::id(), 'local');
+
+        $record = AiContextFile::create([
+            'user_id'       => Auth::id(),
+            'original_name' => $file->getClientOriginalName(),
+            'path'          => $path,
+            'size'          => $file->getSize(),
+            'mime_type'     => $file->getMimeType(),
+        ]);
+
+        return response()->json([
+            'id'            => $record->id,
+            'original_name' => $record->original_name,
+            'size'          => $record->size,
+            'formatted_size' => $record->formatted_size,
+        ], 201);
+    }
+
+    public function deleteContextFile(Request $request, AiContextFile $contextFile)
+    {
+        abort_unless($contextFile->user_id === Auth::id(), 403);
+        Storage::disk('local')->delete($contextFile->path);
+        $contextFile->delete();
+        return response()->json(['success' => true]);
+    }
+
     public function createConversation(Request $request)
     {
         $validated = $request->validate([
-            'project_id' => 'required|exists:ai_projects,id',
+            'project_id' => 'nullable|exists:ai_projects,id',
             'title' => 'nullable|string|max:255',
             'student_id' => 'nullable|exists:students,id',
             'scope' => 'nullable|in:general,student,planning,proposal,analysis,writing,cowork',
             'context_files' => 'nullable|array',
             'context_files.*' => 'integer|exists:files,id',
+            'ai_context_files' => 'nullable|array',
+            'ai_context_files.*' => 'integer|exists:ai_context_files,id',
             'metadata' => 'nullable|array',
         ]);
 
-        $project = AiProject::whereKey($validated['project_id'])
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        if (!empty($validated['project_id'])) {
+            $project = AiProject::whereKey($validated['project_id'])
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
+        } else {
+            $project = AiProject::firstOrCreate(
+                ['user_id' => Auth::id(), 'name' => 'General'],
+                ['user_id' => Auth::id(), 'name' => 'General']
+            );
+        }
 
         $conversation = AiConversation::create([
-            'user_id' => Auth::id(),
-            'project_id' => $project->id,
-            'title' => $validated['title'] ?? 'New Chat',
-            'student_id' => $validated['student_id'] ?? $project->student_id,
-            'scope' => $validated['scope'] ?? 'general',
-            'context_files' => $validated['context_files'] ?? [],
-            'metadata' => $validated['metadata'] ?? [],
+            'user_id'          => Auth::id(),
+            'project_id'       => $project->id,
+            'title'            => $validated['title'] ?? 'New Chat',
+            'student_id'       => $validated['student_id'] ?? null,
+            'scope'            => $validated['scope'] ?? 'general',
+            'context_files'    => $validated['context_files'] ?? [],
+            'metadata'         => array_merge($validated['metadata'] ?? [], [
+                'ai_context_files' => $validated['ai_context_files'] ?? [],
+            ]),
         ]);
 
         $project->touch();
@@ -145,16 +203,27 @@ class AiChatController extends Controller
         }
 
         $validated = $request->validate([
-            'message' => 'required|string',
-            'use_rag' => 'nullable|boolean',
-            'use_web_search' => 'nullable|boolean',
-            'context_files' => 'nullable|array',
-            'context_files.*' => 'integer|exists:files,id',
+            'message'           => 'required|string',
+            'use_rag'           => 'nullable|boolean',
+            'use_web_search'    => 'nullable|boolean',
+            'context_files'     => 'nullable|array',
+            'context_files.*'   => 'integer|exists:files,id',
+            'ai_context_files'  => 'nullable|array',
+            'ai_context_files.*'=> 'integer|exists:ai_context_files,id',
         ]);
 
         if (array_key_exists('context_files', $validated)) {
             $conversation->update([
                 'context_files' => $validated['context_files'] ?? [],
+            ]);
+        }
+
+        // Persist AI context file IDs in conversation metadata
+        if (!empty($validated['ai_context_files'])) {
+            $conversation->update([
+                'metadata' => array_merge($conversation->metadata ?? [], [
+                    'ai_context_files' => $validated['ai_context_files'],
+                ]),
             ]);
         }
 
@@ -168,22 +237,46 @@ class AiChatController extends Controller
 
         AiMessage::create([
             'ai_conversation_id' => $conversation->id,
-            'role' => 'user',
+            'role'    => 'user',
             'content' => $validated['message'],
         ]);
 
         $messages = $conversation->messages()
             ->orderBy('created_at')
             ->get()
-            ->map(function ($msg) {
-                return [
-                    'role' => $msg->role,
-                    'content' => $msg->content,
-                ];
-            })
+            ->map(fn ($msg) => ['role' => $msg->role, 'content' => $msg->content])
             ->toArray();
 
         $systemPrompt = $this->getSystemPrompt($conversation->scope, $conversation->student_id);
+
+        // Inject uploaded context file content into system prompt
+        $aiContextFileIds = $validated['ai_context_files']
+            ?? $conversation->metadata['ai_context_files']
+            ?? [];
+
+        if (!empty($aiContextFileIds)) {
+            $contextFiles = AiContextFile::whereIn('id', $aiContextFileIds)
+                ->where('user_id', Auth::id())
+                ->get();
+
+            $fileContext = '';
+            foreach ($contextFiles as $ctxFile) {
+                if (!Storage::disk('local')->exists($ctxFile->path)) {
+                    continue;
+                }
+                // Only inject text-readable files
+                $ext = strtolower(pathinfo($ctxFile->original_name, PATHINFO_EXTENSION));
+                if (in_array($ext, ['txt', 'md', 'csv', 'html'])) {
+                    $content = Storage::disk('local')->get($ctxFile->path);
+                    $content = mb_substr($content, 0, 8000); // cap per file
+                    $fileContext .= "\n\n--- Document: {$ctxFile->original_name} ---\n{$content}";
+                }
+            }
+
+            if ($fileContext) {
+                $systemPrompt .= "\n\nThe user has provided the following documents as context:{$fileContext}";
+            }
+        }
 
         try {
             set_time_limit(120);
@@ -476,17 +569,19 @@ class AiChatController extends Controller
 
     protected function serializeConversation(AiConversation $conversation): array
     {
+        $metadata = $conversation->metadata ?? [];
         return [
-            'id' => $conversation->id,
-            'project_id' => $conversation->project_id,
-            'title' => $conversation->title ?? 'New Chat',
-            'scope' => $conversation->scope,
-            'student_id' => $conversation->student_id,
-            'context_files' => $conversation->context_files ?? [],
-            'metadata' => $conversation->metadata ?? [],
-            'created_at' => $conversation->created_at->toISOString(),
-            'updated_at' => $conversation->updated_at->toISOString(),
-            'messages_count' => $conversation->messages_count ?? $conversation->messages()->count(),
+            'id'               => $conversation->id,
+            'project_id'       => $conversation->project_id,
+            'title'            => $conversation->title ?? 'New Chat',
+            'scope'            => $conversation->scope,
+            'student_id'       => $conversation->student_id,
+            'context_files'    => $conversation->context_files ?? [],
+            'ai_context_files' => $metadata['ai_context_files'] ?? [],
+            'metadata'         => $metadata,
+            'created_at'       => $conversation->created_at->toISOString(),
+            'updated_at'       => $conversation->updated_at->toISOString(),
+            'messages_count'   => $conversation->messages_count ?? $conversation->messages()->count(),
         ];
     }
 

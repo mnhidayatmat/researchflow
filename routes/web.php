@@ -187,6 +187,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/students/{student}/milestones', [TaskApiController::class, 'milestones']);
 
         // AI Chat API
+        Route::get('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'conversations']);
+        Route::post('/ai/context-files', [\App\Http\Controllers\Api\AiChatController::class, 'uploadContextFile']);
+        Route::delete('/ai/context-files/{contextFile}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteContextFile']);
         Route::get('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'projects']);
         Route::post('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'createProject']);
         Route::delete('/ai/projects/{project}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteProject']);

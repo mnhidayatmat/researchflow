@@ -238,8 +238,7 @@
                             placeholder="Ask anything… or attach a document above"
                             class="w-full resize-none rounded-xl border border-border dark:border-dark-border bg-surface dark:bg-dark-surface px-4 py-2.5 pr-12 text-sm text-primary dark:text-dark-primary placeholder-tertiary dark:placeholder-dark-tertiary focus:border-accent dark:focus:border-dark-accent focus:ring-1 focus:ring-accent/30 outline-none transition-all max-h-40 overflow-y-auto scrollbar-thin"
                             :disabled="loading"
-                            @keydown.enter.exact.prevent="send()"
-                            @keydown.shift.enter="$event.stopPropagation()"
+                            @keydown.enter="if(!$event.shiftKey){ $event.preventDefault(); send(); }"
                             @input="autoResize($el)"
                         ></textarea>
                         <button

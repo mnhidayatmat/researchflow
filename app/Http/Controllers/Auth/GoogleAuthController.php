@@ -130,6 +130,18 @@ class GoogleAuthController extends Controller
             }
         }
 
+        // Check if user with this email already exists
+        $existingUser = User::withTrashed()->where('email', $googleUser['email'])->first();
+        if ($existingUser) {
+            $request->session()->forget('google_user');
+            if ($existingUser->trashed()) {
+                return redirect()->route('login')
+                    ->with('error', 'An account with this email exists but has been deactivated. Please contact the administrator.');
+            }
+            return redirect()->route('login')
+                ->with('error', 'An account with this email already exists. Please log in instead.');
+        }
+
         $userData = [
             'google_id'       => $googleUser['id'],
             'google_avatar'   => $googleUser['avatar'],

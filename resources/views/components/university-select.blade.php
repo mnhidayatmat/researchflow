@@ -105,7 +105,7 @@
         class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors
                {{ $fieldError ? 'border-danger bg-danger/5' : 'border-border dark:border-dark-border bg-white dark:bg-dark-card text-primary dark:text-dark-primary' }}"
     >
-        <option value="" disabled>{{ $placeholder }}</option>
+        <option value="" disabled hidden>{{ $placeholder }}</option>
 
         @foreach($groups as $group => $unis)
             <optgroup label="{{ $group }}">

@@ -264,11 +264,10 @@ class AiChatController extends Controller
                 if (!Storage::disk('local')->exists($ctxFile->path)) {
                     continue;
                 }
-                // Only inject text-readable files
-                $ext = strtolower(pathinfo($ctxFile->original_name, PATHINFO_EXTENSION));
-                if (in_array($ext, ['txt', 'md', 'csv', 'html'])) {
-                    $content = Storage::disk('local')->get($ctxFile->path);
-                    $content = mb_substr($content, 0, 8000); // cap per file
+
+                $content = $this->extractFileContent($ctxFile);
+                if ($content) {
+                    $content = mb_substr($content, 0, 12000); // cap per file
                     $fileContext .= "\n\n--- Document: {$ctxFile->original_name} ---\n{$content}";
                 }
             }
@@ -658,5 +657,96 @@ class AiChatController extends Controller
         }
 
         return implode("\n", $lines);
+    }
+
+    protected function extractFileContent(AiContextFile $ctxFile): ?string
+    {
+        $fullPath = Storage::disk('local')->path($ctxFile->path);
+        $ext = strtolower(pathinfo($ctxFile->original_name, PATHINFO_EXTENSION));
+
+        try {
+            // Plain text files
+            if (in_array($ext, ['txt', 'md', 'csv', 'html'])) {
+                return Storage::disk('local')->get($ctxFile->path);
+            }
+
+            // PDF
+            if ($ext === 'pdf') {
+                $parser = new \Smalot\PdfParser\Parser();
+                $pdf = $parser->parseFile($fullPath);
+                return $pdf->getText();
+            }
+
+            // DOCX — extract text from XML inside the ZIP
+            if ($ext === 'docx') {
+                $zip = new \ZipArchive();
+                if ($zip->open($fullPath) === true) {
+                    $xml = $zip->getFromName('word/document.xml');
+                    $zip->close();
+                    if ($xml) {
+                        // Strip XML tags, keep text content
+                        $text = strip_tags(str_replace('<', ' <', $xml));
+                        return preg_replace('/\s+/', ' ', trim($text));
+                    }
+                }
+                return null;
+            }
+
+            // DOC (older format) — basic text extraction
+            if ($ext === 'doc') {
+                $content = file_get_contents($fullPath);
+                // Extract readable ASCII text from binary .doc
+                $text = '';
+                $len = strlen($content);
+                for ($i = 0; $i < $len; $i++) {
+                    $ord = ord($content[$i]);
+                    if ($ord >= 32 && $ord <= 126 || $ord === 10 || $ord === 13 || $ord === 9) {
+                        $text .= $content[$i];
+                    }
+                }
+                $text = preg_replace('/\s+/', ' ', trim($text));
+                return strlen($text) > 100 ? $text : null;
+            }
+
+            // Excel (xlsx, xls)
+            if (in_array($ext, ['xlsx', 'xls'])) {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($fullPath);
+                $text = '';
+                foreach ($spreadsheet->getAllSheets() as $sheet) {
+                    foreach ($sheet->toArray(null, true, true, true) as $row) {
+                        $rowText = implode(' | ', array_filter(array_map('trim', array_map('strval', $row))));
+                        if ($rowText) {
+                            $text .= $rowText . "\n";
+                        }
+                    }
+                }
+                return $text ?: null;
+            }
+
+            // PowerPoint (pptx)
+            if ($ext === 'pptx') {
+                $zip = new \ZipArchive();
+                if ($zip->open($fullPath) === true) {
+                    $text = '';
+                    for ($i = 1; $i <= 200; $i++) {
+                        $slideXml = $zip->getFromName("ppt/slides/slide{$i}.xml");
+                        if (!$slideXml) break;
+                        $slideText = strip_tags(str_replace('<', ' <', $slideXml));
+                        $slideText = preg_replace('/\s+/', ' ', trim($slideText));
+                        if ($slideText) {
+                            $text .= "--- Slide {$i} ---\n{$slideText}\n\n";
+                        }
+                    }
+                    $zip->close();
+                    return $text ?: null;
+                }
+                return null;
+            }
+        } catch (\Throwable $e) {
+            \Log::warning("AI context file extraction failed for {$ctxFile->original_name}: {$e->getMessage()}");
+            return null;
+        }
+
+        return null;
     }
 }

@@ -33,12 +33,12 @@ class RegisterController extends Controller
             'email'           => 'required|email|unique:users',
             'password'        => 'required|min:8|confirmed',
             'phone'           => ['nullable', 'regex:/^\+?[0-9\s\-\(\)]{7,20}$/'],
-            'university_name' => 'required|string|max:255',
+            'university_name' => 'nullable|string|max:255',
         ];
 
         if ($role === 'student') {
             $rules['matric_number']           = 'nullable|string|unique:users,matric_number';
-            $rules['student_category']        = 'required|in:fyp,master,phd,other';
+            $rules['student_category']        = 'nullable|in:fyp,master,phd,other';
             $rules['student_category_other']  = 'required_if:student_category,other|nullable|string|max:255';
             $rules['programme_name']          = 'required|string|max:255';
             $rules['supervisor_email']        = 'required|email';
@@ -96,9 +96,9 @@ class RegisterController extends Controller
         $user = User::create($userData);
 
         if ($role === 'student') {
-            $category = $validated['student_category'] === 'other'
-                ? $validated['student_category_other']
-                : $validated['student_category'];
+            $category = ($validated['student_category'] ?? null) === 'other'
+                ? ($validated['student_category_other'] ?? null)
+                : ($validated['student_category'] ?? null);
 
             $student = $user->student()->create([
                 'programme_name'    => $validated['programme_name'],

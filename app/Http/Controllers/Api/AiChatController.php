@@ -663,18 +663,46 @@ class AiChatController extends Controller
     {
         $fullPath = Storage::disk('local')->path($ctxFile->path);
         $ext = strtolower(pathinfo($ctxFile->original_name, PATHINFO_EXTENSION));
+        $maxChars = 12000;
 
         try {
             // Plain text files
             if (in_array($ext, ['txt', 'md', 'csv', 'html'])) {
-                return Storage::disk('local')->get($ctxFile->path);
+                return mb_substr(Storage::disk('local')->get($ctxFile->path), 0, $maxChars);
             }
 
-            // PDF
+            // PDF — page-by-page extraction with memory guard
             if ($ext === 'pdf') {
+                $fileSize = filesize($fullPath);
+                // Skip files over 15MB to avoid memory exhaustion
+                if ($fileSize > 15 * 1024 * 1024) {
+                    \Log::info("AI context: skipping large PDF ({$ctxFile->original_name}, " . round($fileSize / 1024 / 1024, 1) . "MB)");
+                    return "[Document too large for inline analysis. File: {$ctxFile->original_name}, Size: " . round($fileSize / 1024 / 1024, 1) . "MB]";
+                }
+
                 $parser = new \Smalot\PdfParser\Parser();
                 $pdf = $parser->parseFile($fullPath);
-                return $pdf->getText();
+                $pages = $pdf->getPages();
+                $text = '';
+
+                foreach ($pages as $i => $page) {
+                    $pageText = $page->getText();
+                    $text .= $pageText . "\n";
+                    // Stop once we have enough text
+                    if (mb_strlen($text) >= $maxChars) {
+                        $text = mb_substr($text, 0, $maxChars);
+                        $remaining = count($pages) - $i - 1;
+                        if ($remaining > 0) {
+                            $text .= "\n[... {$remaining} more page(s) truncated]";
+                        }
+                        break;
+                    }
+                }
+
+                // Free memory immediately
+                unset($pdf, $pages, $parser);
+
+                return $text ?: null;
             }
 
             // DOCX — extract text from XML inside the ZIP
@@ -684,9 +712,8 @@ class AiChatController extends Controller
                     $xml = $zip->getFromName('word/document.xml');
                     $zip->close();
                     if ($xml) {
-                        // Strip XML tags, keep text content
                         $text = strip_tags(str_replace('<', ' <', $xml));
-                        return preg_replace('/\s+/', ' ', trim($text));
+                        return mb_substr(preg_replace('/\s+/', ' ', trim($text)), 0, $maxChars);
                     }
                 }
                 return null;
@@ -694,16 +721,20 @@ class AiChatController extends Controller
 
             // DOC (older format) — basic text extraction
             if ($ext === 'doc') {
+                // Skip large .doc files
+                if (filesize($fullPath) > 10 * 1024 * 1024) {
+                    return "[Document too large for inline analysis: {$ctxFile->original_name}]";
+                }
                 $content = file_get_contents($fullPath);
-                // Extract readable ASCII text from binary .doc
                 $text = '';
                 $len = strlen($content);
-                for ($i = 0; $i < $len; $i++) {
+                for ($i = 0; $i < $len && strlen($text) < $maxChars; $i++) {
                     $ord = ord($content[$i]);
                     if ($ord >= 32 && $ord <= 126 || $ord === 10 || $ord === 13 || $ord === 9) {
                         $text .= $content[$i];
                     }
                 }
+                unset($content);
                 $text = preg_replace('/\s+/', ' ', trim($text));
                 return strlen($text) > 100 ? $text : null;
             }
@@ -718,8 +749,10 @@ class AiChatController extends Controller
                         if ($rowText) {
                             $text .= $rowText . "\n";
                         }
+                        if (mb_strlen($text) >= $maxChars) break 2;
                     }
                 }
+                unset($spreadsheet);
                 return $text ?: null;
             }
 
@@ -736,6 +769,7 @@ class AiChatController extends Controller
                         if ($slideText) {
                             $text .= "--- Slide {$i} ---\n{$slideText}\n\n";
                         }
+                        if (mb_strlen($text) >= $maxChars) break;
                     }
                     $zip->close();
                     return $text ?: null;
@@ -744,7 +778,7 @@ class AiChatController extends Controller
             }
         } catch (\Throwable $e) {
             \Log::warning("AI context file extraction failed for {$ctxFile->original_name}: {$e->getMessage()}");
-            return null;
+            return "[Could not extract text from {$ctxFile->original_name}: {$e->getMessage()}]";
         }
 
         return null;

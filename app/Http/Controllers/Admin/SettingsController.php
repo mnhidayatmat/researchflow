@@ -216,6 +216,86 @@ class SettingsController extends Controller
         return back()->with('success', 'AI providers updated.');
     }
 
+    public function testAi(Request $request)
+    {
+        $providerId = $request->input('provider_id');
+
+        $provider = AiProvider::find($providerId);
+        if (!$provider) {
+            return response()->json(['success' => false, 'message' => 'Provider not found in database.'], 404);
+        }
+
+        // Gather diagnostic info
+        $diag = [
+            'id'         => $provider->id,
+            'slug'       => $provider->slug,
+            'model'      => $provider->model,
+            'base_url'   => $provider->base_url,
+            'is_active'  => $provider->is_active,
+            'is_default' => $provider->is_default,
+        ];
+
+        // Check API key
+        try {
+            $apiKey = $provider->api_key;
+            $diag['has_key'] = !empty($apiKey);
+            $diag['key_preview'] = $apiKey ? substr($apiKey, 0, 8) . '...' . substr($apiKey, -4) : '(empty)';
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot decrypt API key: ' . $e->getMessage(),
+                'diagnostic' => $diag,
+            ]);
+        }
+
+        if (empty($apiKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'API key is empty. Please enter and save your API key first.',
+                'diagnostic' => $diag,
+            ]);
+        }
+
+        // Try to create provider and make a test call
+        try {
+            $aiProvider = \App\Services\Ai\AiServiceFactory::getBySlug($provider->slug);
+
+            if (!$aiProvider) {
+                // Provider not active — try creating directly
+                $providerClass = match ($provider->slug) {
+                    'openai' => \App\Services\Ai\OpenAiProvider::class,
+                    'gemini' => \App\Services\Ai\GeminiProvider::class,
+                    'anthropic' => \App\Services\Ai\AnthropicProvider::class,
+                    'zai' => \App\Services\Ai\ZAiProvider::class,
+                    default => \App\Services\Ai\OpenAiProvider::class,
+                };
+
+                $aiProvider = $providerClass::fromConfig([
+                    'api_key'   => $apiKey,
+                    'model'     => $provider->model,
+                    'base_url'  => $provider->base_url,
+                ]);
+            }
+
+            $response = $aiProvider->chat([
+                ['role' => 'user', 'content' => 'Reply with exactly: CONNECTION_OK'],
+            ], ['max_tokens' => 20]);
+
+            return response()->json([
+                'success'    => true,
+                'message'    => 'Connection successful!',
+                'response'   => substr($response, 0, 200),
+                'diagnostic' => $diag,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success'    => false,
+                'message'    => $e->getMessage(),
+                'diagnostic' => $diag,
+            ]);
+        }
+    }
+
     public function users()
     {
         $users = \App\Models\User::with('supervisedStudents')

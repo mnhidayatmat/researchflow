@@ -88,6 +88,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/settings/storage/test', [UserStorageController::class, 'test'])->name('settings.storage.test');
     Route::get('/settings/ai', [Admin\SettingsController::class, 'ai'])->name('settings.ai');
     Route::post('/settings/ai', [Admin\SettingsController::class, 'updateAi'])->name('settings.ai.update');
+    Route::post('/settings/ai/test', [Admin\SettingsController::class, 'testAi'])->name('settings.ai.test');
     Route::get('/settings/users', [Admin\SettingsController::class, 'users'])->name('settings.users');
     Route::put('/settings/users/{user}/role', [Admin\SettingsController::class, 'updateRole'])->name('settings.users.role');
     Route::put('/settings/users/{user}/status', [Admin\SettingsController::class, 'updateStatus'])->name('settings.users.status');

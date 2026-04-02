@@ -227,6 +227,23 @@
                                         @endforeach
                                     </div>
                                 </div>
+
+                                {{-- Test Connection --}}
+                                <div class="sm:col-span-2 pt-2 border-t border-border dark:border-dark-border">
+                                    <button type="button"
+                                            @click="testProvider(provider, index)"
+                                            :disabled="provider._testing"
+                                            class="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-xl border border-border dark:border-dark-border text-secondary dark:text-dark-secondary hover:bg-surface dark:hover:bg-dark-surface disabled:opacity-50 transition-all">
+                                        <svg x-show="!provider._testing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                        <svg x-show="provider._testing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                        <span x-text="provider._testing ? 'Testing...' : 'Test Connection'"></span>
+                                    </button>
+                                    <div x-show="provider._testResult" class="mt-2 p-3 rounded-xl text-xs" x-cloak
+                                         :class="provider._testSuccess ? 'bg-success/10 text-success border border-success/20' : 'bg-danger/10 text-danger border border-danger/20'">
+                                        <p class="font-medium" x-text="provider._testResult"></p>
+                                        <p x-show="provider._testDiag" class="mt-1 text-[10px] opacity-80 font-mono" x-text="provider._testDiag"></p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -326,6 +343,35 @@
                         custom: 'Model name or ID',
                     };
                     return map[slug] || 'Model identifier';
+                },
+                async testProvider(provider, index) {
+                    if (!provider.id) {
+                        provider._testResult = 'Please save this provider first before testing.';
+                        provider._testSuccess = false;
+                        provider._testDiag = null;
+                        return;
+                    }
+                    provider._testing = true;
+                    provider._testResult = null;
+                    provider._testDiag = null;
+                    try {
+                        const res = await fetch('{{ route("admin.settings.ai.test") }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                            body: JSON.stringify({ provider_id: provider.id }),
+                        });
+                        const data = await res.json();
+                        provider._testSuccess = data.success;
+                        provider._testResult = data.message + (data.response ? ' — Response: ' + data.response : '');
+                        if (data.diagnostic) {
+                            provider._testDiag = `slug=${data.diagnostic.slug} model=${data.diagnostic.model} base_url=${data.diagnostic.base_url || '(default)'} active=${data.diagnostic.is_active} default=${data.diagnostic.is_default} has_key=${data.diagnostic.has_key}`;
+                        }
+                    } catch (e) {
+                        provider._testSuccess = false;
+                        provider._testResult = 'Request failed: ' + e.message;
+                    } finally {
+                        provider._testing = false;
+                    }
                 },
                 init() {
                     if (!Array.isArray(this.providers) || this.providers.length === 0) {

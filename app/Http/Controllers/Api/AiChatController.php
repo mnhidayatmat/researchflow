@@ -671,36 +671,43 @@ class AiChatController extends Controller
                 return mb_substr(Storage::disk('local')->get($ctxFile->path), 0, $maxChars);
             }
 
-            // PDF — use pdftotext CLI (memory-safe), fallback to PHP parser for small files
+            // PDF extraction
             if ($ext === 'pdf') {
-                // Try pdftotext first (poppler-utils) — processes externally, no PHP memory issue
-                $pdftotext = collect(['/usr/bin/pdftotext', '/usr/local/bin/pdftotext'])
-                    ->first(fn ($p) => is_file($p));
+                // Use storage path for temp files (open_basedir safe)
+                $storageTmp = storage_path('app/private/tmp');
+                if (!is_dir($storageTmp)) {
+                    mkdir($storageTmp, 0755, true);
+                }
 
-                if ($pdftotext) {
-                    $tmpOut = tempnam(sys_get_temp_dir(), 'pdf_');
-                    $escaped = escapeshellarg($fullPath);
-                    $escapedOut = escapeshellarg($tmpOut);
-                    exec("{$pdftotext} -layout -l 30 {$escaped} {$escapedOut} 2>/dev/null", $out, $code);
+                // Try pdftotext CLI first (poppler-utils) — no PHP memory impact
+                $tmpOut = $storageTmp . '/pdf_' . uniqid() . '.txt';
+                $escaped = escapeshellarg($fullPath);
+                $escapedOut = escapeshellarg($tmpOut);
+                // Use shell to find pdftotext without is_file (blocked by open_basedir)
+                exec("pdftotext -layout -l 30 {$escaped} {$escapedOut} 2>&1", $out, $code);
 
-                    if ($code === 0 && file_exists($tmpOut)) {
-                        $text = file_get_contents($tmpOut);
-                        @unlink($tmpOut);
-                        return mb_substr(trim($text), 0, $maxChars) ?: null;
-                    }
+                if ($code === 0 && file_exists($tmpOut) && filesize($tmpOut) > 0) {
+                    $text = file_get_contents($tmpOut);
                     @unlink($tmpOut);
+                    return mb_substr(trim($text), 0, $maxChars) ?: null;
+                }
+                @unlink($tmpOut);
+
+                // Fallback: PHP parser with temporary memory bump
+                $fileSize = filesize($fullPath);
+                if ($fileSize > 8 * 1024 * 1024) {
+                    return "[PDF too large (" . round($fileSize / 1024 / 1024, 1) . "MB). Please install poppler-utils: sudo apt install poppler-utils]";
                 }
 
-                // Fallback: PHP parser only for files under 5MB
-                $fileSize = filesize($fullPath);
-                if ($fileSize > 5 * 1024 * 1024) {
-                    return "[PDF too large to parse in-memory (" . round($fileSize / 1024 / 1024, 1) . "MB). Install poppler-utils on the server for large PDF support: sudo apt install poppler-utils]";
-                }
+                $prevLimit = ini_get('memory_limit');
+                ini_set('memory_limit', '512M');
 
                 $parser = new \Smalot\PdfParser\Parser();
                 $pdf = $parser->parseFile($fullPath);
                 $text = mb_substr($pdf->getText(), 0, $maxChars);
                 unset($pdf, $parser);
+
+                ini_set('memory_limit', $prevLimit);
 
                 return $text ?: null;
             }

@@ -68,7 +68,7 @@
             </div>
 
             <x-input name="name" label="Full Name" required :value="$googleUser['name']" />
-            <x-input name="university_name" label="University Name" required :value="old('university_name')" />
+            <x-university-select name="university_name" label="University Name" :required="true" :value="old('university_name')" />
 
             <!-- Student Fields -->
             <div id="studentFields" class="space-y-4">

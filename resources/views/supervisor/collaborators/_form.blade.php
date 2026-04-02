@@ -17,7 +17,7 @@
                     :value="old('category_other', $collaborator->category_other)"
                     placeholder="Please specify"
                 />
-                <x-input name="institution_name" label="University / Organization" :value="old('institution_name', $collaborator->institution_name)" required />
+                <x-university-select name="institution_name" label="University / Organization" :required="true" :value="old('institution_name', $collaborator->institution_name)" placeholder="Select university / organization..." />
                 <x-input name="department" label="Department" :value="old('department', $collaborator->department)" />
                 <x-input name="faculty" label="Faculty" :value="old('faculty', $collaborator->faculty)" />
                 <x-input name="position_title" label="Position / Title" :value="old('position_title', $collaborator->position_title)" placeholder="Professor, R&D Lead, Consultant..." />

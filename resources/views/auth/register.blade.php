@@ -70,7 +70,7 @@
 
             <x-input name="name" label="Full Name" required />
             <x-input name="email" type="email" label="Email" required />
-            <x-input name="university_name" label="University Name" required />
+            <x-university-select name="university_name" label="University Name" :required="true" />
 
             <!-- Student Fields -->
             <div id="studentFields" class="space-y-4">

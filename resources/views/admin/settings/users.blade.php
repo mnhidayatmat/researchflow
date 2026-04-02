@@ -102,6 +102,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
+                    <button onclick="deleteUser({{ $user->id }}, '{{ addslashes($user->name) }}')"
+                            class="p-2 rounded-lg text-secondary dark:text-dark-secondary hover:text-danger hover:bg-danger/10 transition-colors"
+                            title="Delete user">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
                 </div>
                 @else
                 <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border dark:border-dark-border">
@@ -231,6 +238,15 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </div>
+                                    @if($user->id !== auth()->id())
+                                    <button onclick="deleteUser({{ $user->id }}, '{{ addslashes($user->name) }}')"
+                                            class="p-1.5 rounded-lg text-secondary dark:text-dark-secondary hover:text-danger hover:bg-danger/10 transition-colors"
+                                            title="Delete user">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -346,6 +362,27 @@
                     select.disabled = false;
                 });
             }
+        }
+
+        function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete "${userName}"? This action cannot be undone.`)) return;
+
+            fetch(`/admin/settings/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Failed to delete user');
+                }
+            })
+            .catch(() => alert('Error deleting user'));
         }
 
         // Filter functionality - works for both mobile and desktop

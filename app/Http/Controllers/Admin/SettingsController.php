@@ -353,6 +353,27 @@ class SettingsController extends Controller
         return back()->with('success', $message);
     }
 
+    public function destroyUser(Request $request, \App\Models\User $user)
+    {
+        if ($user->id === auth()->id()) {
+            $msg = 'You cannot delete your own account.';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $msg], 403)
+                : back()->with('error', $msg);
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        $message = "User \"{$name}\" has been deleted.";
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
     public function updatePlan(Request $request, \App\Models\User $user)
     {
         $validated = $request->validate([

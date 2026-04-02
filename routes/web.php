@@ -93,6 +93,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::put('/settings/users/{user}/role', [Admin\SettingsController::class, 'updateRole'])->name('settings.users.role');
     Route::put('/settings/users/{user}/status', [Admin\SettingsController::class, 'updateStatus'])->name('settings.users.status');
     Route::put('/settings/users/{user}/plan', [Admin\SettingsController::class, 'updatePlan'])->name('settings.users.plan');
+    Route::delete('/settings/users/{user}', [Admin\SettingsController::class, 'destroyUser'])->name('settings.users.destroy');
 });
 
 // Supervisor routes

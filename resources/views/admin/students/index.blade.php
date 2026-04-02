@@ -65,14 +65,14 @@
             <a href="{{ route('admin.students.show', $student) }}" class="block bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border p-4 active:bg-surface dark:active:bg-dark-surface transition-colors">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full bg-accent/10 text-accent flex items-center justify-center text-sm font-semibold shrink-0">
-                        {{ substr($student->user->name, 0, 1) }}
+                        {{ substr($student->user?->name ?? '?', 0, 1) }}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between gap-2">
-                            <p class="text-sm font-semibold text-primary dark:text-dark-primary truncate">{{ $student->user->name }}</p>
+                            <p class="text-sm font-semibold text-primary dark:text-dark-primary truncate">{{ $student->user?->name ?? 'Deleted User' }}</p>
                             <x-status-badge :status="$student->status" size="sm" />
                         </div>
-                        <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">{{ $student->programme->code ?? '—' }} · {{ $student->user->matric_number ?? 'No matric' }}</p>
+                        <p class="text-xs text-secondary dark:text-dark-secondary mt-0.5">{{ $student->programme?->code ?? '—' }} · {{ $student->user?->matric_number ?? 'No matric' }}</p>
                         @if($student->research_title)
                         <p class="text-xs text-tertiary dark:text-dark-tertiary mt-1 line-clamp-1">{{ $student->research_title }}</p>
                         @endif
@@ -131,19 +131,19 @@
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                                        {{ substr($student->user->name, 0, 1) }}
+                                        {{ substr($student->user?->name ?? '?', 0, 1) }}
                                     </div>
                                     <div>
                                         <a href="{{ route('admin.students.show', $student) }}" class="font-medium text-primary dark:text-dark-primary hover:text-accent transition-colors">
-                                            {{ $student->user->name }}
+                                            {{ $student->user?->name ?? 'Deleted User' }}
                                         </a>
                                         <p class="text-xs text-secondary dark:text-dark-secondary truncate max-w-[200px]">{{ $student->research_title ?? 'No title set' }}</p>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-5 py-3 text-secondary dark:text-dark-secondary font-mono text-xs">{{ $student->user->matric_number ?? '—' }}</td>
+                            <td class="px-5 py-3 text-secondary dark:text-dark-secondary font-mono text-xs">{{ $student->user?->matric_number ?? '—' }}</td>
                             <td class="px-5 py-3">
-                                <span class="text-secondary dark:text-dark-secondary">{{ $student->programme->code ?? '—' }}</span>
+                                <span class="text-secondary dark:text-dark-secondary">{{ $student->programme?->code ?? '—' }}</span>
                             </td>
                             <td class="px-5 py-3 text-secondary dark:text-dark-secondary">{{ $student->supervisor?->name ?? '—' }}</td>
                             <td class="px-5 py-3"><x-status-badge :status="$student->status" /></td>

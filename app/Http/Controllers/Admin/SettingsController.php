@@ -363,6 +363,12 @@ class SettingsController extends Controller
         }
 
         $name = $user->name;
+
+        // Cascade: delete related student/supervisor records
+        if ($user->student) {
+            $user->student->delete();
+        }
+
         $user->delete();
 
         $message = "User \"{$name}\" has been deleted.";

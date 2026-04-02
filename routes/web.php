@@ -92,6 +92,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('/settings/users', [Admin\SettingsController::class, 'users'])->name('settings.users');
     Route::put('/settings/users/{user}/role', [Admin\SettingsController::class, 'updateRole'])->name('settings.users.role');
     Route::put('/settings/users/{user}/status', [Admin\SettingsController::class, 'updateStatus'])->name('settings.users.status');
+    Route::put('/settings/users/{user}/plan', [Admin\SettingsController::class, 'updatePlan'])->name('settings.users.plan');
 });
 
 // Supervisor routes
@@ -181,9 +182,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/students/{student}/folders/{folder}', [FileController::class, 'deleteFolder'])->name('folders.delete');
     Route::delete('/students/{student}/files/{file}', [FileController::class, 'destroy'])->name('files.destroy');
 
-    // AI Chat
-    Route::get('/ai/chat', [AiChatPageController::class, 'index'])->name('ai.chat');
-    Route::get('/ai/chat/student/{student}', [AiChatPageController::class, 'studentContext'])->name('ai.chat.student');
+    // AI Chat (Pro plan only)
+    Route::get('/ai/upgrade', fn () => view('ai.upgrade'))->name('ai.upgrade');
+    Route::middleware('pro')->group(function () {
+        Route::get('/ai/chat', [AiChatPageController::class, 'index'])->name('ai.chat');
+        Route::get('/ai/chat/student/{student}', [AiChatPageController::class, 'studentContext'])->name('ai.chat.student');
+    });
 
     // User Settings
     Route::post('/settings/theme', [UserSettingsController::class, 'updateTheme'])->name('settings.theme');
@@ -200,21 +204,23 @@ Route::middleware('auth')->group(function () {
         Route::post('/students/{student}/tasks/activity', [TaskApiController::class, 'storeActivity']);
         Route::get('/students/{student}/milestones', [TaskApiController::class, 'milestones']);
 
-        // AI Chat API
-        Route::get('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'conversations']);
-        Route::post('/ai/context-files', [\App\Http\Controllers\Api\AiChatController::class, 'uploadContextFile']);
-        Route::delete('/ai/context-files/{contextFile}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteContextFile']);
-        Route::get('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'projects']);
-        Route::post('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'createProject']);
-        Route::delete('/ai/projects/{project}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteProject']);
-        Route::post('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'createConversation']);
-        Route::get('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'messages']);
-        Route::get('/ai/cowork/directories', [\App\Http\Controllers\Api\AiChatController::class, 'browseCoworkDirectories']);
-        Route::post('/ai/conversations/{conversation}/cowork-plan', [\App\Http\Controllers\Api\AiChatController::class, 'coworkPlan']);
-        Route::post('/ai/conversations/{conversation}/cowork-complete', [\App\Http\Controllers\Api\AiChatController::class, 'coworkComplete']);
-        Route::post('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'sendMessage']);
-        Route::post('/ai/conversations/{conversation}/cowork', [\App\Http\Controllers\Api\AiChatController::class, 'coworkMessage']);
-        Route::delete('/ai/conversations/{conversation}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteConversation']);
+        // AI Chat API (Pro plan only)
+        Route::middleware('pro')->group(function () {
+            Route::get('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'conversations']);
+            Route::post('/ai/context-files', [\App\Http\Controllers\Api\AiChatController::class, 'uploadContextFile']);
+            Route::delete('/ai/context-files/{contextFile}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteContextFile']);
+            Route::get('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'projects']);
+            Route::post('/ai/projects', [\App\Http\Controllers\Api\AiChatController::class, 'createProject']);
+            Route::delete('/ai/projects/{project}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteProject']);
+            Route::post('/ai/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'createConversation']);
+            Route::get('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'messages']);
+            Route::get('/ai/cowork/directories', [\App\Http\Controllers\Api\AiChatController::class, 'browseCoworkDirectories']);
+            Route::post('/ai/conversations/{conversation}/cowork-plan', [\App\Http\Controllers\Api\AiChatController::class, 'coworkPlan']);
+            Route::post('/ai/conversations/{conversation}/cowork-complete', [\App\Http\Controllers\Api\AiChatController::class, 'coworkComplete']);
+            Route::post('/ai/conversations/{conversation}/messages', [\App\Http\Controllers\Api\AiChatController::class, 'sendMessage']);
+            Route::post('/ai/conversations/{conversation}/cowork', [\App\Http\Controllers\Api\AiChatController::class, 'coworkMessage']);
+            Route::delete('/ai/conversations/{conversation}', [\App\Http\Controllers\Api\AiChatController::class, 'deleteConversation']);
+        });
 
         // Files API
         Route::get('/students/{student}/files', [\App\Http\Controllers\Api\FileApiController::class, 'index']);

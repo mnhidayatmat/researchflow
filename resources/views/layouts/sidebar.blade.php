@@ -171,13 +171,23 @@
                             }
                         @endphp
 
-                        <a href="{{ $itemRoute }}" @click="if (window.innerWidth < 1024) { $dispatch('close-mobile-sidebar'); }"
+                        @php
+                            $isAiLink = $routeName === 'ai.chat';
+                            $userIsPro = auth()->user()->isPro();
+                            $navHref = ($isAiLink && !$userIsPro) ? route('ai.upgrade') : $itemRoute;
+                        @endphp
+                        <a href="{{ $navHref }}" @click="if (window.innerWidth < 1024) { $dispatch('close-mobile-sidebar'); }"
                            class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
                                   {{ $isActive ? 'bg-accent/10 text-accent dark:bg-accent/20 dark:text-dark-accent' : 'text-secondary dark:text-dark-secondary hover:text-primary dark:hover:text-dark-primary hover:bg-surface/50 dark:hover:bg-dark-surface/50' }}">
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="{{ $icons[$item['icon']] ?? '' }}"/>
                             </svg>
-                            <span x-show="!sidebarCollapsed" x-transition.opacity.duration.200ms class="text-sm font-medium">{{ $item['label'] }}</span>
+                            <span x-show="!sidebarCollapsed" x-transition.opacity.duration.200ms class="text-sm font-medium flex items-center gap-1.5">
+                                {{ $item['label'] }}
+                                @if($isAiLink && !$userIsPro)
+                                    <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded-full bg-accent/15 text-accent leading-none">Pro</span>
+                                @endif
+                            </span>
                         </a>
                     @endforeach
                 </div>

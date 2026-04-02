@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'audit' => \App\Http\Middleware\AuditActivity::class,
+            'pro' => \App\Http\Middleware\RequireProPlan::class,
         ]);
 
         // Enable session authentication for API routes

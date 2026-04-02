@@ -47,6 +47,11 @@
                             @else
                                 <x-badge color="gray">{{ ucfirst($user->role) }}</x-badge>
                             @endif
+                            @if($user->isPro())
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded-full bg-accent/15 text-accent leading-none">Pro</span>
+                            @else
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded-full bg-gray-100 dark:bg-dark-surface text-tertiary dark:text-dark-tertiary leading-none">Free</span>
+                            @endif
                             @if($user->staff_id)
                                 <span class="text-[10px] text-tertiary dark:text-dark-tertiary">Staff: {{ $user->staff_id }}</span>
                             @elseif($user->matric_number)
@@ -57,8 +62,8 @@
                 </div>
 
                 @if($user->id !== auth()->id())
-                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border dark:border-dark-border">
-                    <div class="relative flex-1">
+                <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border dark:border-dark-border flex-wrap">
+                    <div class="relative flex-1 min-w-[120px]">
                         <select
                             class="w-full text-xs border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2 pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none text-primary dark:text-dark-primary"
                             onchange="changeRole({{ $user->id }}, this)">
@@ -72,7 +77,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
-                    <div class="relative flex-1">
+                    <div class="relative flex-1 min-w-[120px]">
                         <select
                             class="w-full text-xs border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2 pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none text-primary dark:text-dark-primary"
                             onchange="changeStatus({{ $user->id }}, this)">
@@ -80,6 +85,18 @@
                             <option value="active" @if($user->status === 'active') selected @endif>Active</option>
                             <option value="pending" @if($user->status === 'pending') selected @endif>Pending</option>
                             <option value="inactive" @if($user->status === 'inactive') selected @endif>Inactive</option>
+                        </select>
+                        <svg class="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <div class="relative flex-1 min-w-[100px]">
+                        <select
+                            class="w-full text-xs border border-border dark:border-dark-border bg-white dark:bg-dark-card rounded-lg px-3 py-2 pr-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none text-primary dark:text-dark-primary"
+                            onchange="changePlan({{ $user->id }}, this)"
+                            @if($user->role === 'admin') disabled @endif>
+                            <option value="free" @if(($user->plan ?? 'free') === 'free') selected @endif>Free</option>
+                            <option value="pro" @if(($user->plan ?? 'free') === 'pro') selected @endif>Pro</option>
                         </select>
                         <svg class="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -111,6 +128,7 @@
                     <tr class="border-b border-border dark:border-dark-border bg-surface dark:bg-dark-surface">
                         <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">User</th>
                         <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Role</th>
+                        <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Plan</th>
                         <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Department</th>
                         <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Students</th>
                         <th class="text-left text-xs font-medium text-secondary dark:text-dark-secondary uppercase tracking-wider px-5 py-3">Joined</th>
@@ -146,6 +164,16 @@
                                     <x-badge color="cyan">Co-Supervisor</x-badge>
                                 @else
                                     <x-badge color="gray">{{ ucfirst($user->role) }}</x-badge>
+                                @endif
+                            </td>
+                            <td class="px-5 py-3">
+                                @if($user->isPro())
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-accent/15 text-accent">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+                                        Pro
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-gray-100 dark:bg-dark-surface text-tertiary dark:text-dark-tertiary">Free</span>
                                 @endif
                             </td>
                             <td class="px-5 py-3 text-secondary dark:text-dark-secondary">{{ $user->department ?? '—' }}</td>
@@ -191,12 +219,24 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </div>
+                                    <div class="relative">
+                                        <select
+                                            class="text-xs border border-gray-200 dark:border-dark-border rounded-lg px-2 py-1.5 pr-6 cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none bg-white dark:bg-dark-card text-primary dark:text-dark-primary"
+                                            onchange="changePlan({{ $user->id }}, this)"
+                                            @if($user->role === 'admin') disabled title="Admins always have Pro access" @endif>
+                                            <option value="free" @if(($user->plan ?? 'free') === 'free') selected @endif>Free</option>
+                                            <option value="pro" @if(($user->plan ?? 'free') === 'pro') selected @endif>Pro</option>
+                                        </select>
+                                        <svg class="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-8 text-center text-secondary dark:text-dark-secondary text-sm">No users found.</td>
+                            <td colspan="8" class="px-5 py-8 text-center text-secondary dark:text-dark-secondary text-sm">No users found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -274,6 +314,37 @@
                 });
             } else {
                 select.value = '';
+            }
+        }
+
+        function changePlan(userId, select) {
+            const newPlan = select.value;
+            if (!newPlan) return;
+
+            if (confirm(`Change this user's plan to "${newPlan.toUpperCase()}"?`)) {
+                select.disabled = true;
+
+                fetch(`/admin/settings/users/${userId}/plan`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ plan: newPlan })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success || data.message) {
+                        location.reload();
+                    } else {
+                        alert('Failed to update plan');
+                        select.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating plan');
+                    select.disabled = false;
+                });
             }
         }
 

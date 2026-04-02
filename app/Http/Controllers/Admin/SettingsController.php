@@ -353,6 +353,23 @@ class SettingsController extends Controller
         return back()->with('success', $message);
     }
 
+    public function updatePlan(Request $request, \App\Models\User $user)
+    {
+        $validated = $request->validate([
+            'plan' => 'required|in:free,pro',
+        ]);
+
+        $user->update(['plan' => $validated['plan']]);
+
+        $message = "User plan changed to {$validated['plan']}.";
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
     protected function getDefaultProviderName(string $slug): string
     {
         return match($slug) {

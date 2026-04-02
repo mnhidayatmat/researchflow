@@ -26,9 +26,14 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
     protected $fillable = [
         'name', 'email', 'password', 'role', 'staff_id', 'matric_number',
-        'phone', 'avatar', 'department', 'faculty', 'university_name', 'status', 'bio',
+        'phone', 'avatar', 'department', 'faculty', 'university_name', 'status', 'plan', 'bio',
         'theme', 'google_id', 'google_avatar', 'title',
     ];
+
+    public function isPro(): bool
+    {
+        return $this->plan === 'pro' || $this->role === 'admin';
+    }
 
     protected $hidden = [
         'password', 'remember_token',

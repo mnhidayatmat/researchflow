@@ -83,11 +83,8 @@
 @endphp
 
 <div
-    x-data="{
-        sel: {{ Js::from($initSelect) }},
-        other: {{ Js::from($initOther) }},
-        get finalVal() { return this.sel === '__other__' ? this.other : this.sel; }
-    }"
+    x-data="{ sel: {{ Js::from($initSelect) }}, other: {{ Js::from($initOther) }} }"
+    x-effect="$refs.uniVal.value = (sel === '__other__') ? other : sel"
     class="space-y-1.5"
 >
     {{-- Label --}}
@@ -96,7 +93,7 @@
     </label>
 
     {{-- Hidden input that submits the real value --}}
-    <input type="hidden" name="{{ $fieldName }}" :value="finalVal" @if($isRequired) x-bind:required="!finalVal" @endif>
+    <input type="hidden" name="{{ $fieldName }}" x-ref="uniVal" value="{{ $currentVal }}">
 
     {{-- Select --}}
     <select

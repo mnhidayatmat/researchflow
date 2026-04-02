@@ -122,13 +122,18 @@
 
     {{-- "Other" free-text input --}}
     <div x-show="sel === '__other__'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" style="display:none">
-        <input
-            type="text"
-            x-model="other"
-            :required="sel === '__other__'"
-            placeholder="Please enter your university / institution name"
-            class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary placeholder-tertiary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-colors"
-        >
+        <div class="mt-1.5">
+            <label class="block text-sm font-medium text-primary dark:text-dark-primary mb-1">
+                Please specify university / institution name @if($isRequired)<span class="text-red-500">*</span>@endif
+            </label>
+            <input
+                type="text"
+                x-model="other"
+                :required="sel === '__other__'"
+                placeholder="e.g. University of Oxford"
+                class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 dark:placeholder-dark-secondary/50 focus:border-accent dark:focus:border-dark-accent focus:ring-1 focus:ring-accent/30 dark:focus:ring-dark-accent/30 outline-none transition-colors"
+            >
+        </div>
     </div>
 
     @if($fieldError)

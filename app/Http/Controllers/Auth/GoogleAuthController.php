@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Student;
 use App\Models\User;
 use App\Services\BrevoTransactionalEmailService;
 use Illuminate\Http\Request;
@@ -120,18 +121,10 @@ class GoogleAuthController extends Controller
                     ->first();
             }
 
-            $errors = [];
-            if (!$supervisor) {
-                $errors['supervisor_email'] = 'We could not find a supervisor account with that email address.';
-            }
-            if (!empty($validated['cosupervisor_email']) && !$cosupervisor) {
-                $errors['cosupervisor_email'] = 'We could not find a co-supervisor account with that email address.';
-            }
             if ($supervisor && $cosupervisor && $supervisor->is($cosupervisor)) {
-                $errors['cosupervisor_email'] = 'Supervisor and co-supervisor must be different users.';
-            }
-            if ($errors) {
-                return back()->withErrors($errors)->withInput();
+                return back()->withErrors([
+                    'cosupervisor_email' => 'Supervisor and co-supervisor must be different users.',
+                ])->withInput();
             }
         }
 
@@ -161,14 +154,19 @@ class GoogleAuthController extends Controller
 
         if ($role === 'student') {
             $student = $user->student()->create([
-                'programme_name'  => $validated['programme_name'],
-                'supervisor_id'   => $supervisor->id,
-                'cosupervisor_id' => $cosupervisor?->id,
-                'status'          => 'pending',
+                'programme_name'    => $validated['programme_name'],
+                'supervisor_id'     => $supervisor?->id,
+                'cosupervisor_id'   => $cosupervisor?->id,
+                'supervisor_email'  => $validated['supervisor_email'],
+                'cosupervisor_email' => $validated['cosupervisor_email'] ?? null,
+                'status'            => 'pending',
             ]);
 
             $brevo = app(BrevoTransactionalEmailService::class);
-            $approvalRecipients = [['user' => $supervisor, 'role' => 'supervisor']];
+            $approvalRecipients = [];
+            if ($supervisor) {
+                $approvalRecipients[] = ['user' => $supervisor, 'role' => 'supervisor'];
+            }
             if ($cosupervisor) {
                 $approvalRecipients[] = ['user' => $cosupervisor, 'role' => 'cosupervisor'];
             }
@@ -182,12 +180,49 @@ class GoogleAuthController extends Controller
             }
         }
 
+        if ($role === 'supervisor') {
+            $this->linkPendingStudents($user);
+        }
+
         $request->session()->forget('google_user');
 
         Auth::login($user, true);
         $request->session()->regenerate();
 
         return redirect($this->redirectPath($user));
+    }
+
+    private function linkPendingStudents(User $supervisor): void
+    {
+        $brevo = app(BrevoTransactionalEmailService::class);
+
+        // Link as primary supervisor
+        $students = Student::whereNull('supervisor_id')
+            ->where('supervisor_email', $supervisor->email)
+            ->get();
+
+        foreach ($students as $student) {
+            $student->update(['supervisor_id' => $supervisor->id]);
+            $approveUrl = URL::temporarySignedRoute('supervisor.student.approve', now()->addDays(7), ['student' => $student->id, 'role' => 'supervisor']);
+            $denyUrl    = URL::temporarySignedRoute('supervisor.student.deny', now()->addDays(7), ['student' => $student->id, 'role' => 'supervisor']);
+            try {
+                $brevo->sendSupervisorApprovalRequest($supervisor->email, $supervisor->name, $student->user->name, $student->programme_name, 'Supervisor', $approveUrl, $denyUrl);
+            } catch (\Throwable) {}
+        }
+
+        // Link as co-supervisor
+        $coStudents = Student::whereNull('cosupervisor_id')
+            ->where('cosupervisor_email', $supervisor->email)
+            ->get();
+
+        foreach ($coStudents as $student) {
+            $student->update(['cosupervisor_id' => $supervisor->id]);
+            $approveUrl = URL::temporarySignedRoute('supervisor.student.approve', now()->addDays(7), ['student' => $student->id, 'role' => 'cosupervisor']);
+            $denyUrl    = URL::temporarySignedRoute('supervisor.student.deny', now()->addDays(7), ['student' => $student->id, 'role' => 'cosupervisor']);
+            try {
+                $brevo->sendSupervisorApprovalRequest($supervisor->email, $supervisor->name, $student->user->name, $student->programme_name, 'Co-Supervisor', $approveUrl, $denyUrl);
+            } catch (\Throwable) {}
+        }
     }
 
     private function redirectPath(User $user): string

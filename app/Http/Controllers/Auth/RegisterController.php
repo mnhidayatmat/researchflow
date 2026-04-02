@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Models\Student;
 use App\Models\User;
 use App\Services\BrevoTransactionalEmailService;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ class RegisterController extends Controller
         $cosupervisor = null;
 
         if ($role === 'student') {
+            // Look up supervisor/cosupervisor but don't block registration if not found
             $supervisor = User::whereIn('role', ['supervisor', 'cosupervisor'])
                 ->where('email', $validated['supervisor_email'])
                 ->first();
@@ -62,18 +64,11 @@ class RegisterController extends Controller
                     ->first();
             }
 
-            $errors = [];
-            if (!$supervisor) {
-                $errors['supervisor_email'] = 'We could not find a supervisor account with that email address.';
-            }
-            if (!empty($validated['cosupervisor_email']) && !$cosupervisor) {
-                $errors['cosupervisor_email'] = 'We could not find a co-supervisor account with that email address.';
-            }
+            // Only validate that SV and co-SV are different if both exist
             if ($supervisor && $cosupervisor && $supervisor->is($cosupervisor)) {
-                $errors['cosupervisor_email'] = 'Supervisor and co-supervisor must be different users.';
-            }
-            if ($errors) {
-                return back()->withErrors($errors)->withInput();
+                return back()->withErrors([
+                    'cosupervisor_email' => 'Supervisor and co-supervisor must be different users.',
+                ])->withInput();
             }
         }
 
@@ -100,17 +95,25 @@ class RegisterController extends Controller
 
         if ($role === 'student') {
             $student = $user->student()->create([
-                'programme_name'  => $validated['programme_name'],
-                'supervisor_id'   => $supervisor->id,
-                'cosupervisor_id' => $cosupervisor?->id,
-                'status'          => 'pending',
+                'programme_name'    => $validated['programme_name'],
+                'supervisor_id'     => $supervisor?->id,
+                'cosupervisor_id'   => $cosupervisor?->id,
+                'supervisor_email'  => $validated['supervisor_email'],
+                'cosupervisor_email' => $validated['cosupervisor_email'] ?? null,
+                'status'            => 'pending',
             ]);
 
-            // Send approval request emails to supervisor and co-supervisor
-            $this->sendApprovalRequest($student, $supervisor, 'supervisor');
+            // Send approval request emails only if supervisor/cosupervisor accounts exist
+            if ($supervisor) {
+                $this->sendApprovalRequest($student, $supervisor, 'supervisor');
+            }
             if ($cosupervisor) {
                 $this->sendApprovalRequest($student, $cosupervisor, 'cosupervisor');
             }
+        }
+
+        if ($role === 'supervisor') {
+            $this->linkPendingStudents($user);
         }
 
         $this->emailVerificationController->sendVerificationEmail($user);
@@ -148,6 +151,29 @@ class RegisterController extends Controller
             );
         } catch (\Throwable) {
             // Email failure should not block registration
+        }
+    }
+
+    private function linkPendingStudents(User $supervisor): void
+    {
+        // Link as primary supervisor
+        $students = Student::whereNull('supervisor_id')
+            ->where('supervisor_email', $supervisor->email)
+            ->get();
+
+        foreach ($students as $student) {
+            $student->update(['supervisor_id' => $supervisor->id]);
+            $this->sendApprovalRequest($student, $supervisor, 'supervisor');
+        }
+
+        // Link as co-supervisor
+        $coStudents = Student::whereNull('cosupervisor_id')
+            ->where('cosupervisor_email', $supervisor->email)
+            ->get();
+
+        foreach ($coStudents as $student) {
+            $student->update(['cosupervisor_id' => $supervisor->id]);
+            $this->sendApprovalRequest($student, $supervisor, 'cosupervisor');
         }
     }
 }

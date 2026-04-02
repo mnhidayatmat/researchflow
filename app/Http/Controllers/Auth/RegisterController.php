@@ -37,7 +37,7 @@ class RegisterController extends Controller
         ];
 
         if ($role === 'student') {
-            $rules['matric_number']           = 'nullable|string|unique:users,matric_number';
+            $rules['matric_number']           = 'nullable|string|max:255';
             $rules['student_category']        = 'nullable|in:fyp,master,phd,other';
             $rules['student_category_other']  = 'required_if:student_category,other|nullable|string|max:255';
             $rules['programme_name']          = 'required|string|max:255';

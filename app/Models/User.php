@@ -75,8 +75,10 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
     public function allStudents()
     {
-        return Student::where('supervisor_id', $this->id)
-            ->orWhere('cosupervisor_id', $this->id);
+        return Student::where(function ($q) {
+            $q->where('supervisor_id', $this->id)
+              ->orWhere('cosupervisor_id', $this->id);
+        });
     }
 
     public function meetings(): HasMany

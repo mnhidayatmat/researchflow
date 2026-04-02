@@ -75,6 +75,12 @@
             <!-- Student Fields -->
             <div id="studentFields" class="space-y-4">
                 <x-input name="matric_number" label="Matric Number" />
+                <x-select name="student_category" label="Student Category" required
+                    :options="['fyp' => 'Final Year Project (FYP)', 'master' => 'Master', 'phd' => 'PhD', 'other' => 'Other (please specify)']"
+                    :value="old('student_category')" placeholder="Select category..." />
+                <div id="otherCategoryField" class="hidden">
+                    <x-input name="student_category_other" label="Please specify category" placeholder="e.g. Diploma Project" :value="old('student_category_other')" />
+                </div>
                 <x-input name="programme_name" label="Programme" placeholder="e.g. Master of Computer Science" :value="old('programme_name')" />
                 <x-input name="supervisor_email" type="email" label="Supervisor Email" placeholder="supervisor@university.edu" />
                 <x-input name="cosupervisor_email" type="email" label="Co-Supervisor Email (Optional)" placeholder="cosupervisor@university.edu" />
@@ -110,7 +116,28 @@
             const studentFields = document.getElementById('studentFields');
             const supervisorFields = document.getElementById('supervisorFields');
 
-            const optionalFields = ['cosupervisor_email', 'matric_number'];
+            const optionalFields = ['cosupervisor_email', 'matric_number', 'student_category_other'];
+            const categorySelect = document.querySelector('select[name="student_category"]');
+            const otherCategoryField = document.getElementById('otherCategoryField');
+            const otherCategoryInput = otherCategoryField?.querySelector('input');
+
+            if (categorySelect) {
+                categorySelect.addEventListener('change', function() {
+                    if (this.value === 'other') {
+                        otherCategoryField.classList.remove('hidden');
+                        otherCategoryInput.required = true;
+                    } else {
+                        otherCategoryField.classList.add('hidden');
+                        otherCategoryInput.required = false;
+                        otherCategoryInput.value = '';
+                    }
+                });
+                // Initialize on load
+                if (categorySelect.value === 'other') {
+                    otherCategoryField.classList.remove('hidden');
+                    otherCategoryInput.required = true;
+                }
+            }
 
             roleInputs.forEach(input => {
                 input.addEventListener('change', function() {

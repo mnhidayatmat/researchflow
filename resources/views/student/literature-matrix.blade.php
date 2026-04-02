@@ -531,11 +531,34 @@
                     </svg>
                     <p class="text-sm font-medium text-primary dark:text-dark-primary mb-1">Drop file here or click to browse</p>
                     <p class="text-xs text-secondary dark:text-dark-secondary mb-4">Supports .xlsx, .xls, .csv (max 5MB)</p>
-                    <label class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-accent text-white hover:bg-amber-700 cursor-pointer transition-all">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        Choose File
-                        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="handleImportFile($event.target.files[0])">
-                    </label>
+                    <div class="flex items-center justify-center gap-2">
+                        <label class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-accent text-white hover:bg-amber-700 cursor-pointer transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Choose File
+                            <input type="file" accept=".xlsx,.xls,.csv" class="hidden" @change="handleImportFile($event.target.files[0])">
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-4 p-4 rounded-xl bg-surface dark:bg-dark-surface border border-border dark:border-dark-border">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-primary dark:text-dark-primary mb-1">Need a template?</p>
+                            <p class="text-xs text-secondary dark:text-dark-secondary mb-2">Download a sample Excel file with the correct column headers and example data. Fill it with your literature entries and upload it here.</p>
+                            <a href="{{ route('literature.template', $student) }}"
+                               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-info hover:bg-info/10 border border-info/30 transition-all">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3"/>
+                                </svg>
+                                Download Sample Template
+                            </a>
+                            <p class="text-[10px] text-tertiary dark:text-dark-tertiary mt-2">Columns not in your current setup will be auto-created as custom columns on import.</p>
+                        </div>
+                    </div>
                 </div>
                 <div x-show="importError" class="mt-3 p-3 rounded-xl bg-danger/10 text-danger text-xs" x-text="importError"></div>
                 <div x-show="importUploading" class="mt-4 text-center">
@@ -550,6 +573,17 @@
             {{-- Step 2: Mapping --}}
             <div x-show="importStep === 2">
                 <p class="text-xs text-secondary dark:text-dark-secondary mb-3" x-text="`Found ${importTotalRows} rows. Map each file column to a field:`"></p>
+                <div x-show="importNewColumns.length > 0" class="mb-3 p-3 rounded-xl bg-info/10 border border-info/20">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-4 h-4 text-info shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-medium text-info" x-text="`${importNewColumns.length} new column(s) detected`"></p>
+                            <p class="text-[10px] text-info/80 mt-0.5">These will be auto-created as custom columns when you import.</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="space-y-2 max-h-[50vh] overflow-y-auto">
                     <template x-for="(header, colKey) in importHeaders" :key="colKey">
                         <div class="flex items-center gap-3 p-3 rounded-xl bg-surface dark:bg-dark-surface">
@@ -578,6 +612,9 @@
                                 <option value="notes">Notes</option>
                                 <template x-for="cc in columns.filter(c => c.custom)" :key="cc.key">
                                     <option :value="cc.key" x-text="cc.label"></option>
+                                </template>
+                                <template x-for="nc in importNewColumns" :key="nc.key">
+                                    <option :value="nc.key" x-text="nc.label + ' (new)'"></option>
                                 </template>
                             </select>
                         </div>
@@ -663,6 +700,7 @@ function literatureMatrix({ studentId, entries, columns, csrfToken }) {
         importTotalRows: 0,
         importFilePath: '',
         importMapping: {},
+        importNewColumns: [],
         importUploading: false,
         importError: '',
         importing: false,
@@ -951,6 +989,7 @@ function literatureMatrix({ studentId, entries, columns, csrfToken }) {
 
                 // Auto-map columns
                 this.importMapping = {};
+                this.importNewColumns = [];
                 const fieldMap = {
                     'author': 'author', 'authors': 'author', 'year': 'year', 'title': 'title',
                     'journal': 'journal', 'source': 'journal', 'doi': 'doi_url', 'url': 'doi_url', 'doi/url': 'doi_url',
@@ -962,9 +1001,30 @@ function literatureMatrix({ studentId, entries, columns, csrfToken }) {
                     'relevance': 'relevance', 'keywords': 'keywords', 'keyword': 'keywords',
                     'notes': 'notes', 'note': 'notes',
                 };
+                // Also map existing custom columns by label
+                const customMap = {};
+                this.columns.filter(c => c.custom).forEach(c => {
+                    customMap[c.label.toLowerCase().trim()] = c.key;
+                });
+
+                // Find next custom column number
+                const existingNums = this.columns.filter(c => c.custom).map(c => parseInt(c.key.replace('custom_', '')) || 0);
+                let nextCustom = existingNums.length ? Math.max(...existingNums) + 1 : 1;
+
                 for (const [colKey, header] of Object.entries(this.importHeaders)) {
                     const h = (header || '').toLowerCase().trim();
-                    this.importMapping[colKey] = fieldMap[h] || 'skip';
+                    if (!h) { this.importMapping[colKey] = 'skip'; continue; }
+
+                    if (fieldMap[h]) {
+                        this.importMapping[colKey] = fieldMap[h];
+                    } else if (customMap[h]) {
+                        this.importMapping[colKey] = customMap[h];
+                    } else {
+                        // Auto-create a new custom column for unrecognized headers
+                        const newKey = `custom_${nextCustom++}`;
+                        this.importNewColumns.push({ key: newKey, label: header.trim() });
+                        this.importMapping[colKey] = newKey;
+                    }
                 }
 
                 this.importStep = 2;
@@ -978,14 +1038,26 @@ function literatureMatrix({ studentId, entries, columns, csrfToken }) {
             this.importing = true;
             this.importResult = null;
             try {
+                const payload = {
+                    filePath: this.importFilePath,
+                    mapping: this.importMapping,
+                };
+                // Pass new columns to backend for auto-creation
+                if (this.importNewColumns && this.importNewColumns.length > 0) {
+                    payload.newColumns = this.importNewColumns;
+                }
                 const res = await fetch(`/students/${this.studentId}/literature/import`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
-                    body: JSON.stringify({ filePath: this.importFilePath, mapping: this.importMapping }),
+                    body: JSON.stringify(payload),
                 });
                 const data = await res.json();
                 if (data.entries) {
                     this.entries.push(...data.entries);
+                }
+                // Sync columns from backend (includes any auto-created custom columns)
+                if (data.columns) {
+                    this.columns = data.columns;
                 }
                 this.importResult = data.count || 0;
             } catch {
@@ -1001,6 +1073,7 @@ function literatureMatrix({ studentId, entries, columns, csrfToken }) {
             this.importHeaders = {};
             this.importPreview = [];
             this.importMapping = {};
+            this.importNewColumns = [];
             this.importFilePath = '';
             this.importError = '';
             this.importResult = null;

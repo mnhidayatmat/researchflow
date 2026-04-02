@@ -197,9 +197,33 @@ class LiteratureMatrixController extends Controller
         $student = $this->getStudent($student);
 
         $request->validate([
-            'filePath' => 'required|string',
-            'mapping'  => 'required|array',
+            'filePath'    => 'required|string',
+            'mapping'     => 'required|array',
+            'newColumns'  => 'sometimes|array',
+            'newColumns.*.key'   => 'required|string',
+            'newColumns.*.label' => 'required|string|max:100',
         ]);
+
+        // Auto-create new custom columns if provided
+        $newColumns = $request->input('newColumns', []);
+        if (!empty($newColumns)) {
+            $config = $this->getConfig($student);
+            $columns = $config->columns;
+            foreach ($newColumns as $nc) {
+                // Avoid duplicates
+                $exists = collect($columns)->firstWhere('key', $nc['key']);
+                if (!$exists) {
+                    $columns[] = [
+                        'key'        => $nc['key'],
+                        'label'      => $nc['label'],
+                        'visible'    => true,
+                        'sort_order' => count($columns),
+                        'custom'     => true,
+                    ];
+                }
+            }
+            $config->update(['columns' => $columns]);
+        }
 
         $filePath = $request->input('filePath');
         abort_unless(Storage::disk('local')->exists($filePath), 422, 'Uploaded file not found.');
@@ -244,7 +268,94 @@ class LiteratureMatrixController extends Controller
 
         Storage::disk('local')->delete($filePath);
 
-        return response()->json(['entries' => $created, 'count' => count($created)]);
+        // Return updated columns so frontend can sync
+        $updatedConfig = $this->getConfig($student);
+
+        return response()->json([
+            'entries' => $created,
+            'count'   => count($created),
+            'columns' => $updatedConfig->columns,
+        ]);
+    }
+
+    // ── Sample template download ────────────────────────────────────────────
+
+    public function template(int $student): StreamedResponse
+    {
+        $student = $this->getStudent($student);
+        $config  = $this->getConfig($student);
+
+        $visibleColumns = collect($config->columns)
+            ->where('visible', true)
+            ->sortBy('sort_order')
+            ->values();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Literature Template');
+
+        // Header row
+        $col = 1;
+        foreach ($visibleColumns as $column) {
+            $cell = $sheet->getCellByColumnAndRow($col, 1);
+            $cell->setValue($column['label']);
+
+            $sheet->getStyleByColumnAndRow($col, 1)->applyFromArray([
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D97706']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'wrapText' => true],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+            ]);
+
+            $sheet->getColumnDimensionByColumn($col)->setAutoSize(true);
+            $col++;
+        }
+
+        // Two sample rows for guidance
+        $sampleData = [
+            ['author' => 'Smith, J. & Lee, K.', 'year' => '2024', 'title' => 'Sample Research Paper Title',
+             'journal' => 'Journal of Example Studies', 'doi_url' => 'https://doi.org/10.1000/example',
+             'research_objective' => 'To investigate the effect of X on Y',
+             'methodology' => 'Quantitative survey (n=200)', 'dataset' => 'Survey responses',
+             'findings' => 'Significant positive correlation found', 'limitations' => 'Small sample size',
+             'relevance' => 'Directly related to RQ1', 'keywords' => 'keyword1, keyword2',
+             'notes' => 'Important reference for literature review'],
+            ['author' => 'Brown, A.', 'year' => '2023', 'title' => 'Another Example Study on Topic Z',
+             'journal' => 'International Review of Research', 'doi_url' => 'https://doi.org/10.1000/example2',
+             'research_objective' => 'To compare methods A and B',
+             'methodology' => 'Mixed methods case study', 'dataset' => 'Interview transcripts',
+             'findings' => 'Method A outperformed Method B', 'limitations' => 'Single case study',
+             'relevance' => 'Supports methodology choice', 'keywords' => 'method A, method B',
+             'notes' => 'Referenced by multiple authors'],
+        ];
+
+        foreach ($sampleData as $rowIdx => $row) {
+            $col = 1;
+            foreach ($visibleColumns as $column) {
+                $value = $row[$column['key']] ?? ($column['custom'] ?? false ? 'Custom field value' : '');
+                $sheet->getCellByColumnAndRow($col, $rowIdx + 2)->setValue($value);
+
+                $sheet->getStyleByColumnAndRow($col, $rowIdx + 2)->applyFromArray([
+                    'font'      => ['color' => ['rgb' => '999999'], 'italic' => true],
+                    'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
+                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E5E5E4']]],
+                ]);
+
+                $col++;
+            }
+        }
+
+        $sheet->getRowDimension(1)->setRowHeight(25);
+        $sheet->freezePane('A2');
+
+        $filename = 'literature-matrix-template.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     // ── Excel export ──────────────────────────────────────────────────────────

@@ -165,6 +165,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/students/{student}/literature/reorder', [LiteratureMatrixController::class, 'reorder'])->name('literature.reorder');
     Route::post('/students/{student}/literature/config', [LiteratureMatrixController::class, 'updateConfig'])->name('literature.config');
     Route::get('/students/{student}/literature/export', [LiteratureMatrixController::class, 'export'])->name('literature.export');
+    Route::get('/students/{student}/literature/template', [LiteratureMatrixController::class, 'template'])->name('literature.template');
     Route::post('/students/{student}/literature/import/preview', [LiteratureMatrixController::class, 'importPreview'])->name('literature.import.preview');
     Route::post('/students/{student}/literature/import', [LiteratureMatrixController::class, 'import'])->name('literature.import');
 

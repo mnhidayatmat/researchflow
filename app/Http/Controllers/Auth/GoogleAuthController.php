@@ -94,10 +94,12 @@ class GoogleAuthController extends Controller
         ];
 
         if ($role === 'student') {
-            $rules['matric_number']      = 'nullable|string|unique:users,matric_number';
-            $rules['programme_name']     = 'required|string|max:255';
-            $rules['supervisor_email']   = 'required|email';
-            $rules['cosupervisor_email'] = 'nullable|email|different:supervisor_email';
+            $rules['matric_number']           = 'nullable|string|unique:users,matric_number';
+            $rules['student_category']        = 'required|in:fyp,master,phd,other';
+            $rules['student_category_other']  = 'required_if:student_category,other|nullable|string|max:255';
+            $rules['programme_name']          = 'required|string|max:255';
+            $rules['supervisor_email']        = 'required|email';
+            $rules['cosupervisor_email']      = 'nullable|email|different:supervisor_email';
         } else {
             $rules['title']      = 'required|string|max:50';
             $rules['staff_id']   = 'required|string|unique:users,staff_id';
@@ -153,8 +155,13 @@ class GoogleAuthController extends Controller
         $user = User::create($userData);
 
         if ($role === 'student') {
+            $category = $validated['student_category'] === 'other'
+                ? $validated['student_category_other']
+                : $validated['student_category'];
+
             $student = $user->student()->create([
                 'programme_name'    => $validated['programme_name'],
+                'student_category'  => $category,
                 'supervisor_id'     => $supervisor?->id,
                 'cosupervisor_id'   => $cosupervisor?->id,
                 'supervisor_email'  => $validated['supervisor_email'],

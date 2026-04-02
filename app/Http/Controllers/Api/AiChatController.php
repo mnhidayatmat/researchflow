@@ -671,36 +671,36 @@ class AiChatController extends Controller
                 return mb_substr(Storage::disk('local')->get($ctxFile->path), 0, $maxChars);
             }
 
-            // PDF — page-by-page extraction with memory guard
+            // PDF — use pdftotext CLI (memory-safe), fallback to PHP parser for small files
             if ($ext === 'pdf') {
+                // Try pdftotext first (poppler-utils) — processes externally, no PHP memory issue
+                $pdftotext = collect(['/usr/bin/pdftotext', '/usr/local/bin/pdftotext'])
+                    ->first(fn ($p) => is_file($p));
+
+                if ($pdftotext) {
+                    $tmpOut = tempnam(sys_get_temp_dir(), 'pdf_');
+                    $escaped = escapeshellarg($fullPath);
+                    $escapedOut = escapeshellarg($tmpOut);
+                    exec("{$pdftotext} -layout -l 30 {$escaped} {$escapedOut} 2>/dev/null", $out, $code);
+
+                    if ($code === 0 && file_exists($tmpOut)) {
+                        $text = file_get_contents($tmpOut);
+                        @unlink($tmpOut);
+                        return mb_substr(trim($text), 0, $maxChars) ?: null;
+                    }
+                    @unlink($tmpOut);
+                }
+
+                // Fallback: PHP parser only for files under 5MB
                 $fileSize = filesize($fullPath);
-                // Skip files over 15MB to avoid memory exhaustion
-                if ($fileSize > 15 * 1024 * 1024) {
-                    \Log::info("AI context: skipping large PDF ({$ctxFile->original_name}, " . round($fileSize / 1024 / 1024, 1) . "MB)");
-                    return "[Document too large for inline analysis. File: {$ctxFile->original_name}, Size: " . round($fileSize / 1024 / 1024, 1) . "MB]";
+                if ($fileSize > 5 * 1024 * 1024) {
+                    return "[PDF too large to parse in-memory (" . round($fileSize / 1024 / 1024, 1) . "MB). Install poppler-utils on the server for large PDF support: sudo apt install poppler-utils]";
                 }
 
                 $parser = new \Smalot\PdfParser\Parser();
                 $pdf = $parser->parseFile($fullPath);
-                $pages = $pdf->getPages();
-                $text = '';
-
-                foreach ($pages as $i => $page) {
-                    $pageText = $page->getText();
-                    $text .= $pageText . "\n";
-                    // Stop once we have enough text
-                    if (mb_strlen($text) >= $maxChars) {
-                        $text = mb_substr($text, 0, $maxChars);
-                        $remaining = count($pages) - $i - 1;
-                        if ($remaining > 0) {
-                            $text .= "\n[... {$remaining} more page(s) truncated]";
-                        }
-                        break;
-                    }
-                }
-
-                // Free memory immediately
-                unset($pdf, $pages, $parser);
+                $text = mb_substr($pdf->getText(), 0, $maxChars);
+                unset($pdf, $parser);
 
                 return $text ?: null;
             }

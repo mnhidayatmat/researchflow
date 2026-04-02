@@ -75,7 +75,8 @@
                 <x-input name="matric_number" label="Matric Number" :value="old('matric_number')" />
                 <x-select name="student_category" label="Student Category" required
                     :options="['fyp' => 'Final Year Project (FYP)', 'master' => 'Master', 'phd' => 'PhD', 'other' => 'Other (please specify)']"
-                    :value="old('student_category')" placeholder="Select category..." />
+                    :value="old('student_category')" placeholder="Select category..."
+                    :error="$errors->first('student_category')" />
                 <div id="otherCategoryField" class="hidden">
                     <x-input name="student_category_other" label="Please specify category" placeholder="e.g. Diploma Project" :value="old('student_category_other')" />
                 </div>

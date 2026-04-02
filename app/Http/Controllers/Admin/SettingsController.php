@@ -166,14 +166,16 @@ class SettingsController extends Controller
 
             // Prepare model data
             $modelData = [
-                'name' => $providerData['name'] ?: $this->getDefaultProviderName($providerData['slug']),
-                'slug' => $providerData['slug'],
-                'api_key' => $providerData['api_key'] ?: null,
-                'model' => $providerData['model'] ?: $this->getDefaultModel($providerData['slug']),
-                'base_url' => $baseUrl,
-                'is_active' => $providerData['is_active'] ?? false,
-                'is_default' => $providerData['is_default'] ?? false,
-                'settings' => $settings,
+                'name'        => $providerData['name'] ?: $this->getDefaultProviderName($providerData['slug']),
+                'slug'        => $providerData['slug'],
+                'api_key'     => $providerData['api_key'] ?: null,
+                'model'       => $providerData['model'] ?: $this->getDefaultModel($providerData['slug']),
+                'base_url'    => $baseUrl,
+                'is_active'   => (bool) ($providerData['is_active'] ?? false),
+                'is_default'  => (bool) ($providerData['is_default'] ?? false),
+                'temperature' => floatval($providerData['temperature'] ?? 0.7),
+                'max_tokens'  => intval($providerData['max_tokens'] ?? 4096),
+                'settings'    => $settings,
             ];
 
             // If ID is provided (existing provider), update it

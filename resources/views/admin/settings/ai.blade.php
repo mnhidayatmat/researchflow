@@ -24,6 +24,29 @@
             </div>
         </div>
 
+        {{-- Success / validation error messages --}}
+        @if(session('success'))
+            <div class="mb-4 p-4 rounded-xl bg-success/10 border border-success/20 flex items-center gap-3">
+                <svg class="w-5 h-5 text-success shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <p class="text-sm font-medium text-success">{{ session('success') }}</p>
+            </div>
+        @endif
+        @if($errors->any())
+            <div class="mb-4 p-4 rounded-xl bg-danger/10 border border-danger/20">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div>
+                        <p class="text-sm font-semibold text-danger mb-1">Please fix the following errors:</p>
+                        <ul class="text-xs text-danger/80 space-y-0.5 list-disc list-inside">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('admin.settings.ai.update') }}">
             @csrf
 
@@ -32,6 +55,10 @@
                 <template x-for="(provider, index) in providers" :key="provider.id">
                     <div class="bg-card dark:bg-dark-card rounded-2xl border border-border dark:border-dark-border overflow-hidden" :class="!provider.is_active && 'opacity-60'">
                         {{-- Provider header --}}
+                        {{-- Always-present hidden inputs: id and is_active --}}
+                        <input type="hidden" :name="`providers[${index}][id]`" :value="provider.id ?? ''">
+                        <input type="hidden" :name="`providers[${index}][is_active]`" value="0">
+
                         <div class="flex items-center justify-between px-6 py-4 border-b border-border dark:border-dark-border bg-surface/50">
                             <div class="flex items-center gap-3">
                                 {{-- Active toggle --}}
@@ -79,7 +106,6 @@
 
                         {{-- Provider config (collapsible) --}}
                         <div x-show="provider.expanded" x-cloak class="p-6">
-                            <input type="hidden" :name="`providers[${index}][id]`" :value="provider.id">
                             <input type="hidden" :name="`providers[${index}][is_default]`" :value="provider.is_default ? 1 : 0">
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -188,11 +214,12 @@
                                     <div class="grid grid-cols-3 gap-3">
                                         @foreach(['feedback' => 'AI Feedback', 'summary' => 'Report Summary', 'suggestions' => 'Task Suggestions'] as $feat => $featlabel)
                                             <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border dark:border-dark-border hover:bg-surface dark:hover:bg-dark-surface dark:bg-dark-surface cursor-pointer transition-colors">
+                                                <input type="hidden" :name="`providers[${index}][features][{{ $feat }}]`" value="0">
                                                 <input
                                                     type="checkbox"
                                                     :name="`providers[${index}][features][{{ $feat }}]`"
                                                     value="1"
-                                                    :checked="provider.features?.{{ $feat }}"
+                                                    x-model="provider.features['{{ $feat }}']"
                                                     class="rounded border-border dark:border-dark-border text-accent focus:ring-accent/30"
                                                 >
                                                 <span class="text-xs text-primary dark:text-dark-primary">{{ $featlabel }}</span>
@@ -244,7 +271,7 @@
                     };
 
                     const newProvider = {
-                        id: Date.now(),
+                        id: null,
                         slug: 'openai',
                         name: defaults.openai.name,
                         api_key: '',
@@ -275,15 +302,19 @@
                 },
                 setProviderDefaults(provider) {
                     const defaults = {
-                        openai: { model: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-                        gemini: { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-                        anthropic: { model: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-                        zai: { model: 'glm-4.7', name: 'Z.Ai' },
-                        custom: { model: '', name: 'Custom Provider' },
+                        openai:    { model: 'gpt-4o-mini',                  name: 'GPT-4o Mini' },
+                        gemini:    { model: 'gemini-2.5-flash',              name: 'Gemini 2.5 Flash' },
+                        anthropic: { model: 'claude-3-5-sonnet-20241022',    name: 'Claude 3.5 Sonnet' },
+                        zai:       { model: 'glm-4.7',                       name: 'Z.Ai' },
+                        custom:    { model: '',                               name: 'Custom Provider' },
                     };
-                    if (defaults[provider.slug] && !provider.name) {
-                        provider.name = defaults[provider.slug].name;
+                    if (defaults[provider.slug]) {
+                        provider.name  = defaults[provider.slug].name;
                         provider.model = defaults[provider.slug].model;
+                    }
+                    // Clear base_url when switching away from zai/custom
+                    if (provider.slug !== 'zai' && provider.slug !== 'custom') {
+                        provider.base_url = '';
                     }
                 },
                 modelPlaceholder(slug) {
@@ -297,13 +328,11 @@
                     return map[slug] || 'Model identifier';
                 },
                 init() {
-                    console.log('AI Settings initialized with', this.providers.length, 'providers');
-                    // Initialize providers with proper structure
                     if (!Array.isArray(this.providers) || this.providers.length === 0) {
                         this.providers = [{
-                            id: Date.now(),
+                            id: null,
                             slug: 'openai',
-                            name: 'GPT-4',
+                            name: 'GPT-4o Mini',
                             api_key: '',
                             model: 'gpt-4o-mini',
                             temperature: 0.7,
@@ -311,16 +340,22 @@
                             is_active: true,
                             is_default: true,
                             has_key: false,
-                            expanded: false,
+                            expanded: true,
                             features: {}
                         }];
                     } else {
-                        // Add features to each provider
-                        this.providers = this.providers.map((p, i) => ({
-                            ...p,
-                            features: p.settings?.features || {},
-                            expanded: Boolean(p.expanded) || (p.slug !== 'openai' && (p.is_default || p.is_active))
-                        }));
+                        this.providers = this.providers.map((p) => {
+                            // Normalize features: could be array [] or object {feedback:'1'}
+                            const rawFeatures = p.settings?.features;
+                            const features = (rawFeatures && !Array.isArray(rawFeatures))
+                                ? rawFeatures
+                                : {};
+                            return {
+                                ...p,
+                                features,
+                                expanded: p.is_default || p.is_active,
+                            };
+                        });
                     }
                 }
             }));

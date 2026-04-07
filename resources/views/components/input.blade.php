@@ -11,8 +11,8 @@
         name="{{ $name }}"
         id="{{ $name }}"
         value="{{ old($name, $attributes->get('value', '')) }}"
-        {{ $required ? 'required' : '' }}
-        {{ $attributes->merge(['class' => 'w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 dark:placeholder-dark-secondary/50 focus:border-accent dark:focus:border-dark-accent focus:ring-1 focus:ring-accent/30 dark:focus:ring-dark-accent/30 outline-none transition-colors']) }}
+        @if($required) required @endif
+        {{ $attributes->except('value')->merge(['class' => 'w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 dark:placeholder-dark-secondary/50 focus:border-accent dark:focus:border-dark-accent focus:ring-1 focus:ring-accent/30 dark:focus:ring-dark-accent/30 outline-none transition-colors']) }}
     >
     @error($name)
         <p class="mt-1 text-xs text-red-500 dark:text-dark-danger">{{ $message }}</p>

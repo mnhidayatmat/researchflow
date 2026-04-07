@@ -9,9 +9,15 @@
             </div>
             <div class="flex items-center gap-2 shrink-0">
                 <x-status-badge :status="$report->status" />
-                @if(in_array($report->status, ['draft', 'revision_needed']) && auth()->id() === $student->user_id)
-                    <x-button href="{{ route('reports.edit', [$student, $report]) }}" variant="secondary" size="sm" class="flex-1 justify-center sm:flex-none">Edit</x-button>
-                @endif
+                @can('update', $report)
+                    <x-button href="{{ route('reports.edit', [$student, $report]) }}" variant="secondary" size="sm">Edit</x-button>
+                @endcan
+                @can('delete', $report)
+                    <form method="POST" action="{{ route('reports.destroy', [$student, $report]) }}" onsubmit="return confirm('Are you sure you want to delete this report? This cannot be undone.')">
+                        @csrf @method('DELETE')
+                        <x-button type="submit" variant="danger" size="sm">Delete</x-button>
+                    </form>
+                @endcan
             </div>
         </div>
 

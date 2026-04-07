@@ -142,6 +142,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/students/{student}/reports/{report}', [ProgressReportController::class, 'show'])->name('reports.show');
     Route::get('/students/{student}/reports/{report}/edit', [ProgressReportController::class, 'edit'])->name('reports.edit');
     Route::put('/students/{student}/reports/{report}', [ProgressReportController::class, 'update'])->name('reports.update');
+    Route::delete('/students/{student}/reports/{report}', [ProgressReportController::class, 'destroy'])->name('reports.destroy');
     Route::post('/students/{student}/reports/{report}/review', [ProgressReportController::class, 'review'])->name('reports.review');
     Route::get('/students/{student}/reports/{report}/attachment', [ProgressReportController::class, 'downloadAttachment'])->name('reports.download-attachment');
     Route::delete('/students/{student}/reports/{report}/attachment', [ProgressReportController::class, 'removeAttachment'])->name('reports.remove-attachment');

@@ -24,7 +24,13 @@ class ProgressReportPolicy
     public function update(User $user, ProgressReport $report): bool
     {
         if ($user->isAdmin()) return true;
-        return $user->id === $report->student->user_id && in_array($report->status, ['draft', 'revision_needed']);
+        return $user->id === $report->student->user_id;
+    }
+
+    public function delete(User $user, ProgressReport $report): bool
+    {
+        if ($user->isAdmin()) return true;
+        return $user->id === $report->student->user_id;
     }
 
     public function manageAttachment(User $user, ProgressReport $report): bool

@@ -93,6 +93,19 @@ class ProgressReportController extends Controller
         return view('reports.show', compact('student', 'report'));
     }
 
+    public function destroy(Student $student, ProgressReport $report)
+    {
+        $this->authorize('delete', $report);
+
+        if ($report->attachment_path) {
+            $this->storageService->deleteReportAttachment($report);
+        }
+
+        $report->delete();
+
+        return redirect()->route('reports.index', $student)->with('success', 'Report deleted.');
+    }
+
     public function edit(Student $student, ProgressReport $report)
     {
         $this->authorize('update', $report);

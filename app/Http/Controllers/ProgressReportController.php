@@ -158,6 +158,56 @@ class ProgressReportController extends Controller
         return redirect()->route('reports.show', [$student, $report])->with('success', 'Report updated.');
     }
 
+    public function removeAttachment(Student $student, ProgressReport $report)
+    {
+        $this->authorize('manageAttachment', $report);
+        abort_unless($report->attachment_path, 404, 'No attachment to remove.');
+
+        $this->storageService->deleteReportAttachment($report);
+        $report->update([
+            'attachment_original_name' => null,
+            'attachment_mime_type' => null,
+            'attachment_size' => null,
+            'attachment_disk' => null,
+            'attachment_path' => null,
+            'attachment_storage_owner_id' => null,
+        ]);
+
+        return back()->with('success', 'Attachment removed.');
+    }
+
+    public function replaceAttachment(Request $request, Student $student, ProgressReport $report)
+    {
+        $this->authorize('manageAttachment', $report);
+
+        $request->validate([
+            'attachment' => 'required|file|max:51200|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,jpg,jpeg,png',
+        ]);
+
+        $storageOwner = $this->resolveStorageOwner($student);
+        if (!$storageOwner) {
+            throw ValidationException::withMessages([
+                'attachment' => 'No supervisor storage owner is assigned for this student.',
+            ]);
+        }
+
+        if ($report->attachment_path) {
+            $this->storageService->deleteReportAttachment($report);
+        }
+
+        try {
+            $report->update(
+                $this->storageService->uploadReportAttachment($request->file('attachment'), $student, $storageOwner)
+            );
+        } catch (\Throwable $e) {
+            throw ValidationException::withMessages([
+                'attachment' => $e->getMessage(),
+            ]);
+        }
+
+        return back()->with('success', 'Attachment replaced.');
+    }
+
     public function downloadAttachment(Student $student, ProgressReport $report)
     {
         $this->authorize('view', $report);

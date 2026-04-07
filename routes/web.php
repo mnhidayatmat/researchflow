@@ -144,6 +144,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/students/{student}/reports/{report}', [ProgressReportController::class, 'update'])->name('reports.update');
     Route::post('/students/{student}/reports/{report}/review', [ProgressReportController::class, 'review'])->name('reports.review');
     Route::get('/students/{student}/reports/{report}/attachment', [ProgressReportController::class, 'downloadAttachment'])->name('reports.download-attachment');
+    Route::delete('/students/{student}/reports/{report}/attachment', [ProgressReportController::class, 'removeAttachment'])->name('reports.remove-attachment');
+    Route::post('/students/{student}/reports/{report}/attachment', [ProgressReportController::class, 'replaceAttachment'])->name('reports.replace-attachment');
 
     // Meetings
     Route::get('/students/{student}/meetings', [MeetingController::class, 'index'])->name('meetings.index');

@@ -7,7 +7,7 @@
                 $usesGoogleDrive = ($storageProfile?->storage_disk ?? 'local') === 'google_drive';
             @endphp
 
-            <form method="POST" action="{{ route('reports.update', [$student, $report]) }}" enctype="multipart/form-data" class="space-y-4" x-data="{ reportType: '{{ old('type', $report->type) }}' }">
+            <form method="POST" action="{{ route('reports.update', [$student, $report]) }}" enctype="multipart/form-data" class="space-y-4" x-data="{ reportType: '{{ old('type', $report->type) }}', submitting: false, submitAction: '' }" @submit="submitting = true">
                 @csrf @method('PUT')
                 <x-input name="title" label="Title" required :value="$report->title" />
                 <x-select name="type" label="Report Type" required :options="$reportTypeOptions" :value="old('type', $report->type)" x-model="reportType" />
@@ -61,8 +61,24 @@
                 </div>
 
                 <div class="flex items-center gap-3 pt-2">
-                    <x-button type="submit" name="save" variant="secondary">Save Draft</x-button>
-                    <x-button type="submit" name="submit" value="1" variant="accent">Submit to Supervisor</x-button>
+                    <button type="submit" name="save" @click="submitAction = 'save'"
+                        :disabled="submitting"
+                        class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-border bg-white hover:bg-gray-50 text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                        <svg x-show="submitting && submitAction === 'save'" class="w-4 h-4 animate-spin text-secondary" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span x-text="submitting && submitAction === 'save' ? 'Saving...' : 'Save Draft'"></span>
+                    </button>
+                    <button type="submit" name="submit" value="1" @click="submitAction = 'submit'"
+                        :disabled="submitting"
+                        class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-accent text-white hover:bg-amber-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                        <svg x-show="submitting && submitAction === 'submit'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span x-text="submitting && submitAction === 'submit' ? 'Submitting...' : 'Submit to Supervisor'"></span>
+                    </button>
                 </div>
             </form>
         </x-card>

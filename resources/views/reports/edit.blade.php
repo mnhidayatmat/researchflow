@@ -4,7 +4,7 @@
     <div class="max-w-2xl">
         <x-card>
             @php
-                $usesGoogleDrive = ($storageProfile->storage_disk ?? 'local') === 'google_drive';
+                $usesGoogleDrive = ($storageProfile?->storage_disk ?? 'local') === 'google_drive';
             @endphp
 
             <form method="POST" action="{{ route('reports.update', [$student, $report]) }}" enctype="multipart/form-data" class="space-y-4" x-data="{ reportType: '{{ old('type', $report->type) }}' }">
@@ -48,8 +48,12 @@
                     @endif
 
                     <div class="mt-3">
-                        <input type="file" name="attachment" class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary dark:text-dark-primary">
-                        <p class="text-xs text-secondary dark:text-dark-secondary mt-2">Upload a new file to replace the current attachment.</p>
+                        @if($storageOwner)
+                            <input type="file" name="attachment" class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary dark:text-dark-primary">
+                            <p class="text-xs text-secondary dark:text-dark-secondary mt-2">Upload a new file to replace the current attachment.</p>
+                        @else
+                            <p class="text-xs text-tertiary italic">Attachment upload is unavailable until a supervisor is assigned.</p>
+                        @endif
                         @error('attachment')
                             <p class="text-xs text-danger mt-2">{{ $message }}</p>
                         @enderror

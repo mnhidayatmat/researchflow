@@ -5,7 +5,7 @@
         <x-card>
             <form method="POST" action="{{ route('reports.store', $student) }}" enctype="multipart/form-data" class="space-y-4" x-data="{ reportType: '{{ old('type', 'progress_report') }}' }">
                 @php
-                    $usesGoogleDrive = ($storageProfile->storage_disk ?? 'local') === 'google_drive';
+                    $usesGoogleDrive = ($storageProfile?->storage_disk ?? 'local') === 'google_drive';
                 @endphp
                 @csrf
                 <x-input name="title" label="Title" required placeholder="e.g. Week 12 Progress Report" />
@@ -36,7 +36,11 @@
                         </span>
                     </div>
                     <div class="mt-3">
-                        <input type="file" name="attachment" class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary dark:text-dark-primary">
+                        @if($storageOwner)
+                            <input type="file" name="attachment" class="w-full rounded-xl border border-border dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary dark:text-dark-primary">
+                        @else
+                            <p class="text-xs text-tertiary italic">Attachment upload is unavailable until a supervisor is assigned.</p>
+                        @endif
                         @error('attachment')
                             <p class="text-xs text-danger mt-2">{{ $message }}</p>
                         @enderror

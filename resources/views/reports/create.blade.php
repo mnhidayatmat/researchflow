@@ -11,7 +11,15 @@
                 <x-input name="title" label="Title" required placeholder="e.g. Week 12 Progress Report" />
                 <x-select name="type" label="Report Type" required :options="$reportTypeOptions" :value="old('type', 'progress_report')" x-model="reportType" />
                 <div x-show="reportType === 'other'" x-cloak>
-                    <x-input name="custom_type" label="Other Type" required placeholder="e.g. Conference Abstract" :value="old('custom_type')" />
+                    <label for="custom_type" class="block text-sm font-medium text-primary dark:text-dark-primary mb-1">Other Type <span class="text-red-500">*</span></label>
+                    <input type="text" name="custom_type" id="custom_type"
+                        value="{{ old('custom_type') }}"
+                        placeholder="e.g. Conference Abstract"
+                        :required="reportType === 'other'"
+                        class="w-full rounded-lg border border-border dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-sm text-primary dark:text-dark-primary placeholder-secondary/50 dark:placeholder-dark-secondary/50 focus:border-accent dark:focus:border-dark-accent focus:ring-1 focus:ring-accent/30 dark:focus:ring-dark-accent/30 outline-none transition-colors">
+                    @error('custom_type')
+                        <p class="mt-1 text-xs text-red-500 dark:text-dark-danger">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <x-textarea name="content" label="Report Content" required rows="6" placeholder="Describe your progress during this period..." />

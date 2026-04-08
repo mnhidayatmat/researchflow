@@ -229,7 +229,6 @@ class StorageService
             'name' => $name,
             'path' => $path,
             'category' => $category ?? 'other',
-            'size' => 0,
         ]);
     }
 
@@ -339,8 +338,6 @@ class StorageService
             ['name' => 'Data & Results', 'slug' => 'data'],
             ['name' => 'Images & Figures', 'slug' => 'images'],
             ['name' => 'References', 'slug' => 'references'],
-            ['name' => 'Meeting Notes', 'slug' => 'meetings'],
-            ['name' => 'Presentations', 'slug' => 'presentations'],
         ];
 
         foreach ($categories as $category) {

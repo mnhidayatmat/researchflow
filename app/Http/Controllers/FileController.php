@@ -41,6 +41,12 @@ class FileController extends Controller
     {
         $this->authorize('view', $student);
 
+        // Detect when PHP silently discards the upload due to post_max_size being exceeded
+        if (empty($_FILES) && empty($_POST) && $request->server('CONTENT_LENGTH') > 0) {
+            $maxSize = ini_get('post_max_size');
+            return back()->withErrors(['file' => "The uploaded file is too large. The server allows a maximum of {$maxSize}. Please contact the administrator to increase PHP upload limits."])->withInput();
+        }
+
         $request->validate([
             'file' => 'required|file|max:51200',
             'folder_id' => 'nullable|exists:folders,id',
@@ -52,14 +58,20 @@ class FileController extends Controller
             abort(422, 'Selected folder does not belong to this student.');
         }
 
-        $file = $this->storage->upload(
-            $request->file('file'),
-            $student,
-            Auth::id(),
-            $request->folder_id,
-            $request->description,
-            $request->category
-        );
+        try {
+            $file = $this->storage->upload(
+                $request->file('file'),
+                $student,
+                Auth::id(),
+                $request->folder_id,
+                $request->description,
+                $request->category
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['file' => $e->getMessage()])->withInput();
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['file' => $e->getMessage()])->withInput();
+        }
 
         return back()->with('success', "File '{$file->original_name}' uploaded.");
     }
@@ -70,7 +82,13 @@ class FileController extends Controller
 
         $request->validate(['file' => 'required|file|max:51200']);
 
-        $this->storage->uploadNewVersion($request->file('file'), $file, Auth::id());
+        try {
+            $this->storage->uploadNewVersion($request->file('file'), $file, Auth::id());
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['file' => $e->getMessage()])->withInput();
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['file' => $e->getMessage()])->withInput();
+        }
 
         return back()->with('success', 'New version uploaded.');
     }

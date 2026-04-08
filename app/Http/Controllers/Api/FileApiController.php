@@ -118,14 +118,20 @@ class FileApiController extends Controller
             'category' => 'nullable|string|max:50',
         ]);
 
-        $file = $this->storage->upload(
-            $request->file('file'),
-            $student,
-            Auth::id(),
-            $validated['folder_id'] ?? null,
-            $validated['description'] ?? null,
-            $validated['category'] ?? null
-        );
+        try {
+            $file = $this->storage->upload(
+                $request->file('file'),
+                $student,
+                Auth::id(),
+                $validated['folder_id'] ?? null,
+                $validated['description'] ?? null,
+                $validated['category'] ?? null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $this->indexFileForAi($file);
 
@@ -145,22 +151,32 @@ class FileApiController extends Controller
         ]);
 
         $files = [];
-        foreach ($validated['files'] as $uploadedFile) {
-            $file = $this->storage->upload(
-                $uploadedFile,
-                $student,
-                Auth::id(),
-                $validated['folder_id'] ?? null,
-                $validated['description'] ?? null,
-                $validated['category'] ?? null
-            );
-            $this->indexFileForAi($file);
-            $files[] = $file;
+        $errors = [];
+        foreach ($validated['files'] as $index => $uploadedFile) {
+            try {
+                $file = $this->storage->upload(
+                    $uploadedFile,
+                    $student,
+                    Auth::id(),
+                    $validated['folder_id'] ?? null,
+                    $validated['description'] ?? null,
+                    $validated['category'] ?? null
+                );
+                $this->indexFileForAi($file);
+                $files[] = $file;
+            } catch (\InvalidArgumentException|\RuntimeException $e) {
+                $errors[] = "File #{$index}: {$e->getMessage()}";
+            }
+        }
+
+        if (empty($files) && !empty($errors)) {
+            return response()->json(['message' => 'Upload failed.', 'errors' => $errors], 422);
         }
 
         return response()->json([
             'message' => count($files) . ' file(s) uploaded successfully.',
             'files' => $files,
+            'errors' => $errors,
         ], 201);
     }
 
@@ -173,12 +189,18 @@ class FileApiController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
-        $newVersion = $this->storage->uploadNewVersion(
-            $request->file('file'),
-            $file,
-            Auth::id(),
-            $validated['description'] ?? null
-        );
+        try {
+            $newVersion = $this->storage->uploadNewVersion(
+                $request->file('file'),
+                $file,
+                Auth::id(),
+                $validated['description'] ?? null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $this->indexFileForAi($newVersion);
 

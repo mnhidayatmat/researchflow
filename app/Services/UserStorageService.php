@@ -111,12 +111,13 @@ class UserStorageService
 
     public function uploadReportAttachment(UploadedFile $file, Student $student, User $storageOwner): array
     {
-        $profile = $this->profileFor($storageOwner);
-        $disk = $profile->storage_disk ?: 'local';
+        if (!$this->canUseGoogleDrive($storageOwner)) {
+            throw new \RuntimeException('Your assigned supervisor has not connected their Google Drive yet. Please ask them to connect Google Drive in their storage settings before uploading attachments.');
+        }
 
-        return $disk === 'google_drive'
-            ? $this->uploadToGoogleDrive($file, $student, $storageOwner, $profile)
-            : $this->uploadToLocal($file, $student, $storageOwner);
+        $profile = $this->profileFor($storageOwner);
+
+        return $this->uploadToGoogleDrive($file, $student, $storageOwner, $profile);
     }
 
     public function deleteReportAttachment(ProgressReport $report): void

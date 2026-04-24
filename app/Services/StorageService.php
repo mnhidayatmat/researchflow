@@ -64,11 +64,15 @@ class StorageService
         $folder = $folderId ? Folder::find($folderId) : null;
         $storageOwner = $this->resolveStorageOwner($student);
 
-        if ($storageOwner && $this->userStorageService->canUseGoogleDrive($storageOwner)) {
-            return $this->uploadToGoogleDrive($uploadedFile, $student, $userId, $folder, $description, $category, $storageOwner);
+        if (!$storageOwner) {
+            throw new \RuntimeException('No supervisor is assigned to this student. Please contact your administrator to assign one before uploading files.');
         }
 
-        return $this->uploadToLocal($uploadedFile, $student, $userId, $folder, $description, $category);
+        if (!$this->userStorageService->canUseGoogleDrive($storageOwner)) {
+            throw new \RuntimeException('Your assigned supervisor has not connected their Google Drive yet. Please ask them to connect Google Drive in their storage settings before uploading files.');
+        }
+
+        return $this->uploadToGoogleDrive($uploadedFile, $student, $userId, $folder, $description, $category, $storageOwner);
     }
 
     public function uploadNewVersion(
@@ -83,37 +87,11 @@ class StorageService
             ->orWhere('parent_file_id', $parentFile->parent_file_id ?? $parentFile->id)
             ->update(['is_latest' => false]);
 
-        if ($parentFile->disk === 'google_drive' && $parentFile->storageOwner) {
-            return $this->uploadGoogleDriveVersion($uploadedFile, $parentFile, $userId, $description, $parentFile->storageOwner);
+        if ($parentFile->disk !== 'google_drive' || !$parentFile->storageOwner) {
+            throw new \RuntimeException('This file is not on Google Drive. New versions can only be uploaded for files stored on the supervisor\'s Google Drive.');
         }
 
-        $basePath = dirname($parentFile->path);
-        $filename = $this->generateUniqueFilename($uploadedFile);
-        $storedPath = $uploadedFile->storeAs($basePath, $filename, $parentFile->disk);
-
-        $newVersion = File::create([
-            'student_id' => $parentFile->student_id,
-            'folder_id' => $parentFile->folder_id,
-            'uploaded_by' => $userId,
-            'storage_owner_id' => $parentFile->storage_owner_id,
-            'name' => $filename,
-            'original_name' => $uploadedFile->getClientOriginalName(),
-            'mime_type' => $uploadedFile->getMimeType(),
-            'size' => $uploadedFile->getSize(),
-            'disk' => $parentFile->disk,
-            'path' => $storedPath,
-            'version' => $parentFile->version + 1,
-            'parent_file_id' => $parentFile->parent_file_id ?? $parentFile->id,
-            'description' => $description ?? $parentFile->description,
-            'category' => $parentFile->category,
-            'is_latest' => true,
-        ]);
-
-        if ($parentFile->folder) {
-            $parentFile->folder->increment('size', $uploadedFile->getSize());
-        }
-
-        return $newVersion;
+        return $this->uploadGoogleDriveVersion($uploadedFile, $parentFile, $userId, $description, $parentFile->storageOwner);
     }
 
     public function delete(File $file, bool $permanent = false): bool
@@ -126,10 +104,6 @@ class StorageService
 
             foreach ($allVersions as $version) {
                 $this->deleteStoredFile($version);
-            }
-
-            if ($file->folder) {
-                $file->folder->decrement('size', $allVersions->sum('size'));
             }
 
             return $file->forceDelete();
@@ -251,7 +225,6 @@ class StorageService
 
     public function moveFile(File $file, ?Folder $newFolder): File
     {
-        $oldFolder = $file->folder;
         $oldPath = $file->path;
 
         $newPath = $newFolder
@@ -264,13 +237,6 @@ class StorageService
             'folder_id' => $newFolder?->id,
             'path' => $newPath,
         ]);
-
-        if ($oldFolder) {
-            $oldFolder->decrement('size', $file->size);
-        }
-        if ($newFolder) {
-            $newFolder->increment('size', $file->size);
-        }
 
         return $file->fresh();
     }
@@ -300,10 +266,6 @@ class StorageService
             'version' => 1,
             'is_latest' => true,
         ]);
-
-        if ($targetFolder) {
-            $targetFolder->increment('size', $file->size);
-        }
 
         return $newFile;
     }
@@ -373,10 +335,6 @@ class StorageService
             'is_latest' => true,
         ]);
 
-        if ($folder) {
-            $folder->increment('size', $uploadedFile->getSize());
-        }
-
         return $file;
     }
 
@@ -428,10 +386,6 @@ class StorageService
             'category' => $category ?? $this->detectCategory($uploadedFile),
             'is_latest' => true,
         ]);
-
-        if ($folder) {
-            $folder->increment('size', $uploadedFile->getSize());
-        }
 
         return $file;
     }
@@ -486,10 +440,6 @@ class StorageService
             'category' => $parentFile->category,
             'is_latest' => true,
         ]);
-
-        if ($folder) {
-            $folder->increment('size', $uploadedFile->getSize());
-        }
 
         return $newVersion;
     }
@@ -575,12 +525,8 @@ class StorageService
 
         return match (true) {
             str_starts_with($mimeType, 'image/') => 'images',
-            str_starts_with($mimeType, 'video/') => 'media',
-            $mimeType === 'application/pdf' => 'documents',
-            str_contains($mimeType, 'word') || str_contains($mimeType, 'document') => 'documents',
             str_contains($mimeType, 'excel') || str_contains($mimeType, 'spreadsheet') => 'data',
-            str_contains($mimeType, 'powerpoint') || str_contains($mimeType, 'presentation') => 'presentations',
-            str_contains($mimeType, 'zip') || str_contains($mimeType, 'rar') => 'archives',
+            str_contains($mimeType, 'powerpoint') || str_contains($mimeType, 'presentation') => 'presentation',
             default => 'other',
         };
     }

@@ -467,7 +467,7 @@ class StorageService
         $segments = [
             'ResearchFlow',
             'supervisor-' . $storageOwner->id,
-            'student-' . $student->id,
+            $this->studentFolderName($student),
             'files',
         ];
 
@@ -482,6 +482,14 @@ class StorageService
         }
 
         return [...$segments, ...$relativeSegments];
+    }
+
+    private function studentFolderName(Student $student): string
+    {
+        $name = trim((string) ($student->user?->name ?? ''));
+        $name = str_replace(['/', '\\'], '-', $name);
+
+        return $name !== '' ? $name : 'student-' . $student->id;
     }
 
     private function resolveStorageOwner(Student $student): ?User

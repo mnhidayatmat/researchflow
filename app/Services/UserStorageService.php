@@ -238,7 +238,7 @@ class UserStorageService
             [
                 'ResearchFlow',
                 'supervisor-' . $storageOwner->id,
-                'student-' . $student->id,
+                $this->studentFolderName($student),
                 'reports',
             ],
             $profile->google_drive_folder_id ?: 'root'
@@ -264,6 +264,14 @@ class UserStorageService
             'attachment_path' => $createdFile->id,
             'attachment_storage_owner_id' => $storageOwner->id,
         ];
+    }
+
+    protected function studentFolderName(Student $student): string
+    {
+        $name = trim((string) ($student->user?->name ?? ''));
+        $name = str_replace(['/', '\\'], '-', $name);
+
+        return $name !== '' ? $name : 'student-' . $student->id;
     }
 
     protected function createGoogleDriveService(User $user): ?Drive
